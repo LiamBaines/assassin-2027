@@ -1,0 +1,39 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+An app for running a real-life game of Assassin. The full design and phased build order are in `docs/architecture.md`, and the key decisions are in `docs/adr/`.
+
+**Architecture (three tiers):**
+- `web/`: Next.js, deployed on Vercel
+- `api/`: Spring Boot 3.5, Java 21, Maven, deployed on Fly.io
+- Supabase Postgres for data, plus Supabase Auth for magic-link login
+
+**Rules that are easy to get wrong:**
+- **The web app never touches game tables.** It uses Supabase only for auth. All game data goes through the Spring API, called server-side only (Server Components and Server Actions) with the Supabase access token as a bearer token.
+- **Flyway in `api/` is the only schema source of truth.** Never create `supabase/migrations`.
+  - Game tables live in Postgres schema `game`. PostgREST doesn't expose it, `anon` and `authenticated` have all grants revoked, and RLS is on with no policies.
+  - `supabase db reset` wipes the `game` schema. Restart the API to re-migrate.
+- **Spring validates Supabase JWTs** as ES256 via JWKS, checking issuer `${SUPABASE_URL}/auth/v1` and audience `authenticated`. `jws-algorithms: ES256` must be set explicitly. Admins are the emails in `APP_ADMIN_EMAILS`.
+- **Terminology:**
+  - The player hunting someone is the **assassin**, and the player being hunted is the **target**. Never use "hunter".
+  - The first ring is the `INITIAL` round. Every later re-allocation is a **shakeup** (`SHAKEUP`); a reshuffle and a shakeup are the same thing.
+  - A ring is a single cycle of all ALIVE players.
+
+## Local toolchain
+JDK 21 and Node 22 are Homebrew keg-only installs that aren't on the default `PATH`. Prefix commands with:
+```sh
+export PATH=/opt/homebrew/opt/openjdk@21/bin:/opt/homebrew/opt/node@22/bin:$PATH JAVA_HOME=/opt/homebrew/opt/openjdk@21
+```
+Docker must be running for Testcontainers and `supabase start`.
+
+## Commands
+```sh
+./scripts/gen-local-signing-key.sh   # once: local ES256 key -> supabase/signing_keys.json (gitignored)
+supabase start                       # local stack: API :54321, DB :54322, Mailpit :54324
+```
+Add the API, web and e2e commands here as those tiers are built.
+
+## Progress log
+- 2026-10-07: Toolchain installed via Homebrew. Supabase local config (`supabase/config.toml`) is set up: site_url localhost:3000, ES256 signing key, magic_link template, `email_sent` rate limit raised to 100. Docs and ADRs written. (Build order step 0)
