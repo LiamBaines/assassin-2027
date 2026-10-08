@@ -2,7 +2,6 @@ package com.assassin.api.targeting;
 
 import com.assassin.api.common.ApiException;
 import com.assassin.api.game.Game;
-import com.assassin.api.game.GameRepository;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
 import com.assassin.api.player.Player;
@@ -38,16 +37,16 @@ public class RingService {
             values (?, ?, ?, ?, ?, 'ACTIVE', ?)
             """;
 
-    private final GameRepository games;
+    private final GameService gameService;
     private final PlayerRepository players;
     private final AssignmentRoundRepository rounds;
     private final AssignmentRepository assignments;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
 
-    public RingService(GameRepository games, PlayerRepository players, AssignmentRoundRepository rounds,
+    public RingService(GameService gameService, PlayerRepository players, AssignmentRoundRepository rounds,
             AssignmentRepository assignments, JdbcTemplate jdbc, RandomGenerator random) {
-        this.games = games;
+        this.gameService = gameService;
         this.players = players;
         this.rounds = rounds;
         this.assignments = assignments;
@@ -56,16 +55,17 @@ public class RingService {
     }
 
     /**
-     * Shuffles every ALIVE player of the live game into one ring. The first ring is the INITIAL round; every later one
-     * is a SHAKEUP that supersedes the active assignments (history is kept).
+     * Shuffles every ALIVE player of the game into one ring. The first ring is the INITIAL round; every later one
+     * is a SHAKEUP that supersedes the active assignments (history is kept). A FINISHED game can't be shuffled.
      *
+     * @param gameId the game
      * @param expectedCurrentRoundNo the round number the caller last saw, or null if it saw no rounds
      * @param createdBy the admin's email
      */
     @Transactional
-    public RingView shuffle(Integer expectedCurrentRoundNo, String createdBy) {
-        // 1. Lock the live game row; concurrent shuffles (and admin edits) queue behind this.
-        Game game = games.findLiveForUpdate().orElseThrow(this::noShufflableGame);
+    public RingView shuffle(UUID gameId, Integer expectedCurrentRoundNo, String createdBy) {
+        // 1. Lock the game row; concurrent shuffles (and admin edits) of this game queue behind this.
+        Game game = gameService.lockForChange(gameId);
 
         // 2. Optimistic check against what the admin saw.
         Integer currentRoundNo = rounds.findCurrentRoundNo(game.getId()).orElse(null);
@@ -117,8 +117,8 @@ public class RingService {
      * assignment in the same round. In a two-player ring (A == T) nothing is inserted, so A is left without a target.
      * Does nothing if the player has no active assignments.
      *
-     * <p>The caller must already hold the live game row lock ({@link GameRepository#findLiveForUpdate()}), so this
-     * serializes with shuffles.
+     * <p>The caller must already hold the lock on the player's game row ({@link GameService#lockForChange(UUID)}), so
+     * this serializes with shuffles of that game.
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void spliceOut(UUID playerId) {
@@ -142,10 +142,10 @@ public class RingService {
                 AssignmentSource.SPLICE.name(), OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
     }
 
-    /** The live game's current round with its active assignments in cycle order, or 404 NO_RING before the first. */
+    /** The game's current round with its active assignments in cycle order, or 404 NO_RING before the first. */
     @Transactional(readOnly = true)
-    public RingView currentRing() {
-        Game game = games.findLive().orElseThrow(GameService::noLiveGame);
+    public RingView currentRing(UUID gameId) {
+        Game game = gameService.find(gameId);
         AssignmentRound round = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_RING", "No ring has been generated yet."));
         return view(game, round);
@@ -173,17 +173,11 @@ public class RingService {
         return new RingView(round.getId(), round.getRoundNo(), round.getReason(), links);
     }
 
-    /** All rounds of the live game, newest first. */
+    /** All rounds of the game, newest first. */
     @Transactional(readOnly = true)
-    public List<AssignmentRound> history() {
-        Game game = games.findLive().orElseThrow(GameService::noLiveGame);
+    public List<AssignmentRound> history(UUID gameId) {
+        Game game = gameService.find(gameId);
         return rounds.findByGameIdOrderByRoundNoDesc(game.getId());
-    }
-
-    private ApiException noShufflableGame() {
-        return games.count() > 0
-                ? new ApiException(HttpStatus.CONFLICT, "GAME_FINISHED", "The game is finished.")
-                : GameService.noLiveGame();
     }
 
     /** A round and its active assignments, in cycle order. */

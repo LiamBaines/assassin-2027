@@ -4,9 +4,8 @@ import com.assassin.api.common.ApiException;
 import com.assassin.api.common.CurrentUser;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameRepository;
-import com.assassin.api.game.GameService;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import com.assassin.api.game.GameStatus;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,17 +24,23 @@ public class PlayerService {
         this.joinCodeLimiter = joinCodeLimiter;
     }
 
-    /** Registers the caller in the live game. {@code joinCode} must already be normalized. */
+    /** The game a join code leads to, for the join page. Unknown codes count towards the attempt limit. */
+    @Transactional(readOnly = true)
+    public JoinPreview preview(CurrentUser user, String joinCode) {
+        Game game = findByJoinCode(user, joinCode, HttpStatus.NOT_FOUND);
+        boolean alreadyJoined = players.existsByGameIdAndAuthUserId(game.getId(), user.authUserId());
+        return new JoinPreview(game.getId(), game.getName(), game.getStatus(), game.isSignupsOpen(), alreadyJoined);
+    }
+
+    public record JoinPreview(UUID gameId, String name, GameStatus status, boolean signupsOpen, boolean alreadyJoined) {
+    }
+
+    /** Registers the caller in the game with this join code. */
     @Transactional
-    public Player signup(CurrentUser user, String displayName, String joinCode) {
-        Game game = games.findLive().orElseThrow(GameService::noLiveGame);
+    public PlayerGame signup(CurrentUser user, String displayName, String joinCode) {
+        Game game = findByJoinCode(user, joinCode, HttpStatus.BAD_REQUEST);
         if (!game.isSignupsOpen()) {
             throw new ApiException(HttpStatus.CONFLICT, "SIGNUPS_CLOSED", "Signups are closed.");
-        }
-        joinCodeLimiter.checkAllowed(user.authUserId());
-        if (!MessageDigest.isEqual(bytes(game.getJoinCode()), bytes(joinCode))) {
-            joinCodeLimiter.recordFailure(user.authUserId());
-            throw new ApiException(HttpStatus.BAD_REQUEST, "BAD_JOIN_CODE", "That join code is not valid.");
         }
         if (user.email() == null || user.email().isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "Your account has no email address.");
@@ -48,7 +53,8 @@ public class PlayerService {
             throw nameTaken();
         }
         try {
-            return players.saveAndFlush(new Player(game.getId(), user.authUserId(), user.email(), displayName));
+            return PlayerGame.from(game,
+                    players.saveAndFlush(new Player(game.getId(), user.authUserId(), user.email(), displayName)));
         } catch (DataIntegrityViolationException e) {
             // Lost a race with a concurrent signup.
             String message = String.valueOf(e.getMostSpecificCause().getMessage());
@@ -76,8 +82,16 @@ public class PlayerService {
         }
     }
 
-    private static byte[] bytes(String s) {
-        return s.getBytes(StandardCharsets.UTF_8);
+    /**
+     * The game that is not FINISHED with this join code. Checks the attempt limit first (429), and records a failure
+     * for an unknown code, answered with {@code BAD_JOIN_CODE} and {@code unknownStatus}.
+     */
+    private Game findByJoinCode(CurrentUser user, String joinCode, HttpStatus unknownStatus) {
+        joinCodeLimiter.checkAllowed(user.authUserId());
+        return games.findLiveByJoinCode(Game.normalizeJoinCode(joinCode)).orElseThrow(() -> {
+            joinCodeLimiter.recordFailure(user.authUserId());
+            return new ApiException(unknownStatus, "BAD_JOIN_CODE", "That join code is not valid.");
+        });
     }
 
     private static ApiException alreadyRegistered() {
