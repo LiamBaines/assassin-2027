@@ -40,10 +40,28 @@ APP_ADMIN_EMAILS=you@example.com ./mvnw spring-boot:run -Dspring-boot.run.profil
 ./mvnw verify                        # unit + *IT.java integration tests (Testcontainers postgres:17, needs Docker)
 ./mvnw -DskipITs verify              # build and unit tests without Docker
 ```
-Add the web and e2e commands here as those tiers are built.
+Web (`cd web`, after `cp .env.example .env.local` and `pnpm install`):
+```sh
+pnpm dev                              # http://localhost:3000
+pnpm lint
+pnpm typecheck                        # next typegen && tsc --noEmit
+pnpm test                             # vitest run (all unit tests)
+pnpm vitest run src/lib/api.test.ts   # single test file
+pnpm build                            # needs NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SITE_URL, API_BASE_URL
+```
+Add the e2e commands here once they exist.
 
-**API layout:** `com.assassin.api.{config,common,game,player,targeting}`; ITs extend `IntegrationTest` (shared context, truncates game tables per test) and mint real ES256 tokens with `JwtTestSupport`.
+**API layout:** `com.assassin.api.{config,common,game,player,targeting}`. ITs extend `IntegrationTest`, which shares one context and truncates the game tables before each test. They mint real ES256 tokens with `JwtTestSupport`.
+
+**Web notes:**
+- Next 16, so the middleware file is `src/proxy.ts` (exports `proxy`).
+- `cacheComponents` is off on purpose, so `redirect()`/`notFound()` give real status codes.
+- All Spring calls go through `src/lib/api.ts` (server-only).
+- No round yet means `expectedCurrentRoundNo: null`.
 
 ## Progress log
 - 2026-10-07: Toolchain installed via Homebrew. Supabase local config (`supabase/config.toml`) is set up: site_url localhost:3000, ES256 signing key, magic_link template, `email_sent` rate limit raised to 100. Docs and ADRs written. (Build order step 0)
 - 2026-10-08: API steps 1-10 on `feat/api`: skeleton (Boot 3.5.16, hand-written pom; Initializr no longer offers 3.5.x), V1 schema + lockdown, ES256 JWT security with admin allowlist, ProblemDetail errors, admin game/players/rings, signup, RingGenerator, RingService, `/api/me/target`. Unit tests pass; the Testcontainers ITs have not run yet because Docker was down. The Bucket4j signup rate limit from the plan's risk notes is not implemented yet.
+- 2026-10-08: Web tier on `feat/web` (Next 16.4, @supabase/ssr 0.12, Vitest 5). Scaffold, Supabase SSR auth (login via Server Actions, `/auth/confirm`, proxy gating with `getClaims()`, sign-out), `lib/api.ts` with unit tests, player pages and admin pages. Lint, typecheck, tests and build pass; not yet run against the real API. (Build order steps 11–15)
+- 2026-10-08: Both branches merged into `feat/mvp`.
+- Decision (2026-10-08): removing a player mid-game **splices them out of the ring**. Their assassin inherits their target, the same way a kill will work. This replaces the plan's `IN_ACTIVE_RING` block, which left no way to remove anyone once the game was ACTIVE.
