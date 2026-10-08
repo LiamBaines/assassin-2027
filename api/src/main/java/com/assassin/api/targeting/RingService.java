@@ -61,7 +61,7 @@ public class RingService {
      * @param createdBy the admin's email
      */
     @Transactional
-    public AssignmentRound shuffle(Integer expectedCurrentRoundNo, String createdBy) {
+    public RingView shuffle(Integer expectedCurrentRoundNo, String createdBy) {
         // 1. Lock the live game row; concurrent shuffles (and admin edits) queue behind this.
         Game game = games.findLiveForUpdate().orElseThrow(this::noShufflableGame);
 
@@ -106,14 +106,19 @@ public class RingService {
         if (game.getStatus() == GameStatus.SETUP) {
             game.start(now);
         }
-        return round;
+        return view(game, round);
     }
 
-    /** The live game's active assignments, in cycle order. */
+    /** The live game's current round with its active assignments in cycle order, or 404 NO_RING before the first. */
     @Transactional(readOnly = true)
-    public CurrentRing currentRing() {
+    public RingView currentRing() {
         Game game = games.findLive().orElseThrow(GameService::noLiveGame);
-        Integer roundNo = rounds.findCurrentRoundNo(game.getId()).orElse(null);
+        AssignmentRound round = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_RING", "No ring has been generated yet."));
+        return view(game, round);
+    }
+
+    private RingView view(Game game, AssignmentRound round) {
         List<Assignment> active = assignments.findByGameIdAndStatusOrderById(game.getId(), AssignmentStatus.ACTIVE);
         Map<UUID, Player> byId = players.findByGameIdOrderByJoinedAtAsc(game.getId()).stream()
                 .collect(Collectors.toMap(Player::getId, Function.identity()));
@@ -122,17 +127,17 @@ public class RingService {
 
         // Walk target -> that target's assignment. Starting from each unvisited row keeps this total if the
         // active assignments ever form more than one cycle.
-        List<CurrentRing.RingLink> links = new ArrayList<>(active.size());
+        List<RingView.RingLink> links = new ArrayList<>(active.size());
         Set<Long> visited = new HashSet<>();
         for (Assignment start : active) {
             Assignment a = start;
             while (a != null && visited.add(a.getId())) {
-                links.add(new CurrentRing.RingLink(
+                links.add(new RingView.RingLink(
                         PlayerRef.from(byId.get(a.getAssassinId())), PlayerRef.from(byId.get(a.getTargetId()))));
                 a = byAssassin.get(a.getTargetId());
             }
         }
-        return new CurrentRing(roundNo, links);
+        return new RingView(round.getId(), round.getRoundNo(), round.getReason(), links);
     }
 
     /** All rounds of the live game, newest first. */
@@ -148,7 +153,8 @@ public class RingService {
                 : GameService.noLiveGame();
     }
 
-    public record CurrentRing(Integer roundNo, List<RingLink> links) {
+    /** A round and its active assignments, in cycle order. */
+    public record RingView(UUID roundId, int roundNo, RoundReason reason, List<RingLink> ring) {
 
         public record RingLink(PlayerRef assassin, PlayerRef target) {
         }

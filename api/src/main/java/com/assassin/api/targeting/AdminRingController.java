@@ -3,6 +3,7 @@ package com.assassin.api.targeting;
 import com.assassin.api.common.CurrentUser;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,12 +25,12 @@ public class AdminRingController {
     /** Generates the initial ring, or shakes up the current one. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RoundResponse shuffle(CurrentUser admin, @RequestBody ShuffleRequest request) {
-        return RoundResponse.from(ringService.shuffle(request.expectedCurrentRoundNo(), admin.email()));
+    public RingService.RingView shuffle(CurrentUser admin, @RequestBody ShuffleRequest request) {
+        return ringService.shuffle(request.expectedCurrentRoundNo(), admin.email());
     }
 
     @GetMapping("/current")
-    public RingService.CurrentRing current() {
+    public RingService.RingView current() {
         return ringService.currentRing();
     }
 
@@ -42,11 +43,11 @@ public class AdminRingController {
     public record ShuffleRequest(Integer expectedCurrentRoundNo) {
     }
 
-    public record RoundResponse(int roundNo, RoundReason reason, int playerCount, String createdBy,
+    public record RoundResponse(UUID roundId, int roundNo, RoundReason reason, int playerCount, String createdBy,
             Instant createdAt) {
 
         static RoundResponse from(AssignmentRound r) {
-            return new RoundResponse(r.getRoundNo(), r.getReason(), r.getPlayerCount(), r.getCreatedBy(),
+            return new RoundResponse(r.getId(), r.getRoundNo(), r.getReason(), r.getPlayerCount(), r.getCreatedBy(),
                     r.getCreatedAt());
         }
     }

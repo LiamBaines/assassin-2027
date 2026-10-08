@@ -1,7 +1,6 @@
 package com.assassin.api.targeting;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -98,9 +97,9 @@ class RingIT extends IntegrationTest {
         shuffle(null)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roundNo").value(1))
+                .andExpect(jsonPath("$.roundId").isNotEmpty())
                 .andExpect(jsonPath("$.reason").value("INITIAL"))
-                .andExpect(jsonPath("$.playerCount").value(5))
-                .andExpect(jsonPath("$.createdBy").value(JwtTestSupport.ADMIN_EMAIL));
+                .andExpect(jsonPath("$.ring.length()").value(5));
 
         Map<String, Object> game = jdbc.queryForMap("select status, started_at from game.game where id = ?", gameId);
         assertThat(game.get("status")).isEqualTo("ACTIVE");
@@ -139,6 +138,9 @@ class RingIT extends IntegrationTest {
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].roundNo").value(2))
                 .andExpect(jsonPath("$[0].reason").value("SHAKEUP"))
+                .andExpect(jsonPath("$[0].roundId").isNotEmpty())
+                .andExpect(jsonPath("$[0].playerCount").value(6))
+                .andExpect(jsonPath("$[0].createdBy").value(JwtTestSupport.ADMIN_EMAIL))
                 .andExpect(jsonPath("$[1].roundNo").value(1))
                 .andExpect(jsonPath("$[1].reason").value("INITIAL"));
     }
@@ -149,7 +151,7 @@ class RingIT extends IntegrationTest {
         addPlayers(2, "DEAD");
         addPlayers(2, "REMOVED");
 
-        shuffle(null).andExpect(status().isCreated()).andExpect(jsonPath("$.playerCount").value(3));
+        shuffle(null).andExpect(status().isCreated()).andExpect(jsonPath("$.ring.length()").value(3));
 
         assertActiveRingCovers(alive);
     }
@@ -197,7 +199,7 @@ class RingIT extends IntegrationTest {
             go.countDown();
             List<Object> results = List.of(a.get(), b.get());
 
-            assertThat(results).filteredOn(AssignmentRound.class::isInstance).hasSize(1);
+            assertThat(results).filteredOn(RingService.RingView.class::isInstance).hasSize(1);
             assertThat(results).filteredOn(ApiException.class::isInstance)
                     .singleElement()
                     .satisfies(e -> assertThat(((ApiException) e).getCode()).isEqualTo("STALE_ROUND"));
@@ -212,9 +214,8 @@ class RingIT extends IntegrationTest {
     @Test
     void currentRingIsReturnedInCycleOrder() throws Exception {
         mvc.perform(asAdmin(get("/api/admin/rings/current")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roundNo").value(nullValue()))
-                .andExpect(jsonPath("$.links.length()").value(0));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NO_RING"));
 
         List<UUID> players = addPlayers(7, "ALIVE");
         shuffle(null).andExpect(status().isCreated());
@@ -223,8 +224,10 @@ class RingIT extends IntegrationTest {
         String body = mvc.perform(asAdmin(get("/api/admin/rings/current")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roundNo").value(1))
+                .andExpect(jsonPath("$.reason").value("INITIAL"))
+                .andExpect(jsonPath("$.roundId").isNotEmpty())
                 .andReturn().getResponse().getContentAsString();
-        JsonNode links = json.readTree(body).get("links");
+        JsonNode links = json.readTree(body).get("ring");
         assertThat(links).hasSize(7);
         for (int i = 0; i < links.size(); i++) {
             JsonNode link = links.get(i);

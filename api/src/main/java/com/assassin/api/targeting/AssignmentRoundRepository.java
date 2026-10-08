@@ -11,5 +11,7 @@ public interface AssignmentRoundRepository extends JpaRepository<AssignmentRound
     @Query("select max(r.roundNo) from AssignmentRound r where r.gameId = :gameId")
     Optional<Integer> findCurrentRoundNo(UUID gameId);
 
+    Optional<AssignmentRound> findFirstByGameIdOrderByRoundNoDesc(UUID gameId);
+
     List<AssignmentRound> findByGameIdOrderByRoundNoDesc(UUID gameId);
 }
