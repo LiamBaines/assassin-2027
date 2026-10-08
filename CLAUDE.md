@@ -101,4 +101,10 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - The image was checked against local Supabase. It migrates, `/actuator/health` is UP, and `/api/me` returns 200 with a real token and 401 without one.
   - The Fly app is created but not deployed yet.
   - Decision: prod email goes out through **Gmail SMTP with an app password** (`smtp.gmail.com:465`, about 500 emails a day), because there is no owned domain for Resend. Supabase locks template editing until custom SMTP is configured, and the default template's link doesn't work with `/auth/confirm`, so SMTP blocks prod login.
+  - **Deployed.** The API is at https://assassin-2027-api.fly.dev and V1 migrated on prod through the session pooler (`aws-1-eu-central-1`, user `postgres.fujwiyboxugxbnlaxfyn`). The web is at https://assassin-2027.vercel.app.
+    - Vercel project `assassin-2027`: Root Directory `web`, Node 22, env set for production only.
+    - Vercel GitHub auto-deploy is not connected yet, because the Vercel account has no GitHub login connection. Deploy from the repo root with `npx vercel deploy --prod`.
+    - Prod JWKS serves ES256 P-256.
+    - The publishable key gets PGRST002 (503) on PostgREST, with the Data API off.
+    - Fly config in `fly.toml`. Secrets: datasource URL/user/password, `SUPABASE_URL`, `APP_ADMIN_EMAILS`.
   - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
