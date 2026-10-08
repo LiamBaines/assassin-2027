@@ -79,6 +79,7 @@ class SecurityIT extends IntegrationTest {
     void allowlistedEmailInMixedCaseIsAdmin() throws Exception {
         insertGame("ABC123", "SETUP", true);
         mvc.perform(as("Admin@Example.COM", get("/api/admin/game"))).andExpect(status().isOk());
-        mvc.perform(as("SECOND.admin@example.com", get("/api/admin/game"))).andExpect(status().isOk());
+        mvc.perform(as("SECOND.admin@example.com", get("/api/admin/players"))).andExpect(status().isOk());
+        mvc.perform(as("Admin@Example.COM", get("/api/admin/rings"))).andExpect(status().isOk());
     }
 }
