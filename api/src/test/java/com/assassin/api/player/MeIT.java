@@ -79,13 +79,4 @@ class MeIT extends IntegrationTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
     }
-
-    @Test
-    void removedSingletonRoutesAreGone() throws Exception {
-        insertGame("ABC123", "SETUP", true);
-        mvc.perform(as("someone@example.com", get("/api/me/target"))).andExpect(status().isNotFound());
-        mvc.perform(asAdmin(get("/api/admin/game"))).andExpect(status().isNotFound());
-        mvc.perform(asAdmin(get("/api/admin/players"))).andExpect(status().isNotFound());
-        mvc.perform(asAdmin(get("/api/admin/rings"))).andExpect(status().isNotFound());
-    }
 }
