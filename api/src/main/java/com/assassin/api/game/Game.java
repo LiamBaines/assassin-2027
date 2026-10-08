@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 
 @Entity
@@ -54,6 +55,11 @@ public class Game {
         this.status = GameStatus.SETUP;
         this.signupsOpen = true;
         this.createdAt = Instant.now();
+    }
+
+    /** Join codes are stored and compared trimmed and uppercased. */
+    public static String normalizeJoinCode(String code) {
+        return code == null ? null : code.strip().toUpperCase(Locale.ROOT);
     }
 
     public void rename(String name) {
