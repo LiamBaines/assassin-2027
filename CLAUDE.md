@@ -57,11 +57,13 @@ Add the e2e commands here once they exist.
 - Next 16, so the middleware file is `src/proxy.ts` (exports `proxy`).
 - `cacheComponents` is off on purpose, so `redirect()`/`notFound()` give real status codes.
 - All Spring calls go through `src/lib/api.ts` (server-only).
-- No round yet means `expectedCurrentRoundNo: null`.
+- No round yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/rings/current` is 404 `NO_RING` (`getCurrentRing()` returns null).
+- Error `code` to message maps live in `src/app/admin/actions.ts` and `src/app/join/actions.ts`; unknown codes fall back to the API `detail`.
 
 ## Progress log
 - 2026-10-07: Toolchain installed via Homebrew. Supabase local config (`supabase/config.toml`) is set up: site_url localhost:3000, ES256 signing key, magic_link template, `email_sent` rate limit raised to 100. Docs and ADRs written. (Build order step 0)
 - 2026-10-08: API steps 1-10 on `feat/api`: skeleton (Boot 3.5.16, hand-written pom; Initializr no longer offers 3.5.x), V1 schema + lockdown, ES256 JWT security with admin allowlist, ProblemDetail errors, admin game/players/rings, signup, RingGenerator, RingService, `/api/me/target`. Unit tests pass; the Testcontainers ITs have not run yet because Docker was down. The Bucket4j signup rate limit from the plan's risk notes is not implemented yet.
 - 2026-10-08: Web tier on `feat/web` (Next 16.4, @supabase/ssr 0.12, Vitest 5). Scaffold, Supabase SSR auth (login via Server Actions, `/auth/confirm`, proxy gating with `getClaims()`, sign-out), `lib/api.ts` with unit tests, player pages and admin pages. Lint, typecheck, tests and build pass; not yet run against the real API. (Build order steps 11–15)
 - 2026-10-08: Both branches merged into `feat/mvp`.
-- Decision (2026-10-08): removing a player mid-game **splices them out of the ring**. Their assassin inherits their target, the same way a kill will work. This replaces the plan's `IN_ACTIVE_RING` block, which left no way to remove anyone once the game was ACTIVE.
+- Decision (2026-10-08): removing a player mid-game **splices them out of the ring**. Their assassin inherits their target, the same way a kill will work. This replaced the plan's `IN_ACTIVE_RING` block, which left no way to remove anyone once the game was ACTIVE. Details are in `docs/architecture.md` (Decisions).
+- 2026-10-08: Contract alignment on `feat/mvp`. Ring POST and `GET /rings/current` now return `{roundId, roundNo, reason, ring}`, and `current` is 404 `NO_RING` before the first round. History rows include `roundId`. The web handles no live game on the players and rings pages, and maps `GAME_FINISHED`, `CONCURRENT_UPDATE`, `INVALID_STATUS`, `PLAYER_NOT_FOUND` and `EMAIL_REQUIRED`. Splice removal is implemented as `RingService.spliceOut` (source `SPLICE`, added to V1), and `IN_ACTIVE_RING` is gone. `-DskipITs verify` and all web checks pass. The ITs compile but have still never run, because Docker was down.

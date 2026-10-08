@@ -32,7 +32,7 @@ The schema and architecture must not block the later features.
 - **Targeting:** **auto ring only**. One button shuffles all ALIVE players into a single cycle. The first run is the initial allocation. Every later run is a **shakeup**, which replaces the active assignments while keeping history. (A reshuffle and a shakeup are the same thing.)
 - **Terminology:** a player hunting someone is the **assassin**, and the player being hunted is the **target**. Use these names in the code, the schema and the UI.
 - **Signups are not auto-closed** when the ring is generated. The admin toggles them manually, and late joiners have no target until the next shakeup.
-- **Removing a player** who is in an active ring while the game is ACTIVE returns 409 `IN_ACTIVE_RING`, and the admin must run a shakeup instead. Proper removal from the ring comes with kill logic later.
+- **Removing a player** mid-game **splices them out of the ring** (decided 2026-10-08, replacing an earlier `IN_ACTIVE_RING` block). In one transaction that holds the game row lock: their two active assignments A→X and X→T become `VOIDED`, and A→T is inserted in the same round with source `SPLICE`. In a two-player ring (A = T) nothing is inserted and A is left without a target. A player with no active assignment just changes status. A restored player has no target until the next shakeup. `RingService.spliceOut` is meant to be reused by kill logic.
 - **Scale:** under 200 players, one live game at a time. A `game` table is kept anyway for future-proofing.
 - **Flyway (in Spring) is the only schema source of truth.**
   - `/supabase` holds auth config only. There is never a `supabase/migrations` dir.
@@ -55,7 +55,7 @@ The schema and architecture must not block the later features.
 - `game`: id uuid, name, join_code (uppercase `^[A-Z0-9]{6,16}$`), status (`SETUP|ACTIVE|FINISHED`), signups_open, created_at/started_at/finished_at, version. A partial unique index allows only one non-FINISHED game.
 - `player`: id, game_id FK, auth_user_id (JWT `sub`, no FK to auth.users), email, display_name, status (`ALIVE|DEAD|REMOVED`), joined_at. Unique on `(game_id, auth_user_id)` and `(game_id, lower(display_name))`, plus `(id, game_id)` as the target for composite FKs.
 - `assignment_round`: id, game_id, round_no (unique per game), reason (`INITIAL|SHAKEUP`), player_count, created_by, created_at.
-- `assignment`: id identity, game_id, round_id, assassin_id, target_id (composite FKs to player), source (`RING|KILL_INHERIT|MANUAL`), status (`ACTIVE|COMPLETED|SUPERSEDED|VOIDED`), created_at, ended_at.
+- `assignment`: id identity, game_id, round_id, assassin_id, target_id (composite FKs to player), source (`RING|KILL_INHERIT|SPLICE|MANUAL`; `SPLICE` is an assassin inheriting a removed player's target), status (`ACTIVE|COMPLETED|SUPERSEDED|VOIDED`), created_at, ended_at.
   - Check: `assassin <> target`.
   - Partial unique indexes keep one ACTIVE row per assassin and one ACTIVE row per target (one assassin per target).
 - RLS is enabled on every table. A guarded `DO` block revokes grants from `anon` and `authenticated` only when those roles exist, so the migration also runs on plain Postgres in Testcontainers.
@@ -67,17 +67,20 @@ The schema and architecture must not block the later features.
   - gallery: Storage with signed URLs from Spring
 
 ## API (Spring, `/api`, ProblemDetail errors with a `code` property)
+Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock), 400 `VALIDATION_FAILED`, and admin routes with 404 `NO_LIVE_GAME` when there is no live game.
+
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/actuator/health` | public | Fly health check |
 | GET | `/api/me` | user | `{email, isAdmin, game, player}` |
-| POST | `/api/players` | user | `{displayName, joinCode}`. Errors: `NO_LIVE_GAME`, `SIGNUPS_CLOSED`, `BAD_JOIN_CODE`, `ALREADY_REGISTERED`, `NAME_TAKEN` |
+| POST | `/api/players` | user | `{displayName, joinCode}`. Errors: `NO_LIVE_GAME`, `SIGNUPS_CLOSED`, `BAD_JOIN_CODE`, `ALREADY_REGISTERED`, `NAME_TAKEN`, `EMAIL_REQUIRED` |
 | GET | `/api/me/target` | user | `{target:{displayName}, assignedAt}` or 404 `NO_TARGET` |
-| GET/POST/PATCH | `/api/admin/game` | admin | Create (`LIVE_GAME_EXISTS`), or edit name, code, signupsOpen, or FINISHED |
+| GET/POST/PATCH | `/api/admin/game` | admin | Create (`LIVE_GAME_EXISTS`), or edit name, code, signupsOpen, or FINISHED (`INVALID_STATUS` for any other status) |
 | GET | `/api/admin/players` | admin | Includes each player's current target |
-| PATCH | `/api/admin/players/{id}` | admin | REMOVED or ALIVE. Returns 409 `IN_ACTIVE_RING` when the game is ACTIVE and the player has an active assignment |
-| POST | `/api/admin/rings` | admin | `{expectedCurrentRoundNo}`. Errors: `NOT_ENOUGH_PLAYERS` (<2), `STALE_ROUND`, `GAME_FINISHED` |
-| GET | `/api/admin/rings/current`, `/api/admin/rings` | admin | Current ring in cycle order, and round history |
+| PATCH | `/api/admin/players/{id}` | admin | `{status}`: REMOVED or ALIVE. Removing a player in the ring splices them out (see Decisions). Errors: `INVALID_STATUS`, `PLAYER_NOT_FOUND` |
+| POST | `/api/admin/rings` | admin | `{expectedCurrentRoundNo}` (null before the first round). 201 with the new ring, same shape as `current`. Errors: `NOT_ENOUGH_PLAYERS` (<2), `STALE_ROUND`, `GAME_FINISHED` |
+| GET | `/api/admin/rings/current` | admin | `{roundId, roundNo, reason, ring:[{assassin:{id,displayName}, target:{id,displayName}}]}` in cycle order, or 404 `NO_RING` before the first round |
+| GET | `/api/admin/rings` | admin | Round history, newest first: `[{roundId, roundNo, reason, playerCount, createdBy, createdAt}]` |
 
 ## Ring assignment
 - **`RingGenerator`** (pure function): runs a Fisher-Yates shuffle with an injected `RandomGenerator` (`SecureRandom` in prod), then emits pairs `p[i] → p[(i+1)%n]`. The result is always one cycle with no self-targets, and every cycle is equally likely.
@@ -143,6 +146,7 @@ The schema and architecture must not block the later features.
     - DEAD and REMOVED players are excluded
     - `STALE_ROUND`
     - two concurrent shuffles: exactly one succeeds
+  - **Splice ITs:** removing a player from an n≥3 ring leaves one cycle of n-1 with a `SPLICE` row in the same round and `/api/me/target` showing the inherited target; a two-player ring leaves the assassin without a target; a player with no assignment just changes status; a restored player has no target until the next shakeup.
   - **Security ITs** use real ES256 tokens from a test key: missing, bad issuer, bad audience or expired returns 401; a non-admin on admin routes gets 403; an allowlisted email in mixed case is accepted.
   - **Signup ITs** cover every error code and case-insensitive join codes.
   - **Lockdown IT:** `anon` has no USAGE on `game`, and RLS is on for every table.
