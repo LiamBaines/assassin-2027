@@ -114,6 +114,7 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - Prod Supabase must have **Email OTP Length = 6**, to match local `otp_length = 6` and the web's 6-digit check. New hosted projects default to 8.
   - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
 - 2026-10-08: Continuous deployment. Vercel builds `main` from GitHub (the user connected the repo). `api.yml` deploys the API to Fly after `verify` passes on push to main. CI runs on main are no longer cancelled midway, so a deploy is never interrupted.
+- 2026-10-08: CD verified. The first CI deploy (Fly release v2) went out after `verify` passed, and the API is healthy. Vercel env vars now also apply to Preview; PR previews failed without them, and they use the prod API and Supabase. The repo is now squash-merge only and deletes branches automatically on merge.
 - 2026-10-08: **Multiple games** on `feat/multi-game` (plan in `plan.md`, decision in ADR 0003).
   - V2 swaps the one-live-game index for `game_join_code_live_uq`.
   - Every route is now scoped by game id. `GET /api/join/{code}` previews a game, and `/api/me` lists every game the user plays in.
