@@ -1,5 +1,6 @@
 package com.assassin.api;
 
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -28,6 +29,21 @@ public abstract class IntegrationTest {
     @BeforeEach
     void truncateGameTables() {
         jdbc.execute("truncate game.assignment, game.assignment_round, game.player, game.game");
+    }
+
+    /** Inserts a game directly; returns its id. */
+    protected UUID insertGame(String joinCode, String status, boolean signupsOpen) {
+        return jdbc.queryForObject(
+                "insert into game.game (name, join_code, status, signups_open) values ('Test game', ?, ?, ?) returning id",
+                UUID.class, joinCode, status, signupsOpen);
+    }
+
+    /** Inserts a player directly, with the {@code sub} test tokens use for {@code email}; returns its id. */
+    protected UUID insertPlayer(UUID gameId, String email, String displayName, String status) {
+        return jdbc.queryForObject("""
+                insert into game.player (game_id, auth_user_id, email, display_name, status)
+                values (?, ?, ?, ?, ?) returning id
+                """, UUID.class, gameId, JwtTestSupport.subFor(email), email, displayName, status);
     }
 
     protected static MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {
