@@ -22,6 +22,14 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
             """)
     Optional<Game> findLiveByJoinCode(String joinCode);
 
+    /** Same as {@link #findLiveByJoinCode(String)} but takes a row lock ({@code SELECT ... FOR UPDATE}). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select g from Game g
+             where g.joinCode = :joinCode and g.status <> com.assassin.api.game.GameStatus.FINISHED
+            """)
+    Optional<Game> findLiveByJoinCodeForUpdate(String joinCode);
+
     /** Every game, newest first. */
     List<Game> findAllByOrderByCreatedAtDesc();
 }

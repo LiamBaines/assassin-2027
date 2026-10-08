@@ -28,7 +28,7 @@ public class PlayerService {
     /** The game a join code leads to, for the join page. Unknown codes count towards the attempt limit. */
     @Transactional(readOnly = true)
     public JoinPreview preview(CurrentUser user, String joinCode) {
-        Game game = findByJoinCode(user, joinCode, HttpStatus.NOT_FOUND);
+        Game game = findByJoinCode(user, joinCode, HttpStatus.NOT_FOUND, false);
         boolean alreadyJoined = players.existsByGameIdAndAuthUserId(game.getId(), user.authUserId());
         return new JoinPreview(game.getId(), game.getName(), game.getStatus(), game.isSignupsOpen(), alreadyJoined);
     }
@@ -39,7 +39,12 @@ public class PlayerService {
     /** Registers the caller in the game with this join code. */
     @Transactional
     public PlayerGame signup(CurrentUser user, String displayName, String joinCode) {
-        Game game = findByJoinCode(user, joinCode, HttpStatus.BAD_REQUEST);
+        // Locked, so a concurrent PATCH that finishes the game or closes signups either commits first (and is seen
+        // here) or waits until this signup has committed.
+        Game game = findByJoinCode(user, joinCode, HttpStatus.BAD_REQUEST, true);
+        if (game.getStatus() == GameStatus.FINISHED) {
+            throw badJoinCode(HttpStatus.BAD_REQUEST);
+        }
         if (!game.isSignupsOpen()) {
             throw new ApiException(HttpStatus.CONFLICT, "SIGNUPS_CLOSED", "Signups are closed.");
         }
@@ -84,16 +89,16 @@ public class PlayerService {
     }
 
     /**
-     * The game that is not FINISHED with this join code. Reserves an attempt first
+     * The game that is not FINISHED with this join code, row-locked if {@code forUpdate}. Reserves an attempt first
      * (429 if the account has none left), keeps it as a failure for an unknown code, answered with
      * {@code BAD_JOIN_CODE} and {@code unknownStatus}, and releases it for a valid one.
      */
-    private Game findByJoinCode(CurrentUser user, String joinCode, HttpStatus unknownStatus) {
+    private Game findByJoinCode(CurrentUser user, String joinCode, HttpStatus unknownStatus, boolean forUpdate) {
         JoinCodeAttemptLimiter.Reservation attempt = joinCodeLimiter.reserve(user.authUserId());
         String normalized = Game.normalizeJoinCode(joinCode);
         Optional<Game> game;
         try {
-            game = games.findLiveByJoinCode(normalized);
+            game = forUpdate ? games.findLiveByJoinCodeForUpdate(normalized) : games.findLiveByJoinCode(normalized);
         } catch (RuntimeException e) {
             attempt.release(); // Not a wrong guess.
             throw e;

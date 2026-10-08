@@ -8,14 +8,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.assassin.api.IntegrationTest;
 import com.assassin.api.JwtTestSupport;
 import java.util.Map;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
 class SignupIT extends IntegrationTest {
 
     private static final String ALICE = "Alice@Example.com";
+
+    @Autowired
+    private DataSource dataSource;
 
     private ResultActions signup(String email, String displayName, String joinCode) throws Exception {
         String json = """
@@ -176,5 +187,48 @@ class SignupIT extends IntegrationTest {
     void lateJoinerIsAllowedWhileGameIsActive() throws Exception {
         insertGame("ABC123", "ACTIVE", true);
         signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated());
+    }
+
+    @Test
+    void signupWaitsForAConcurrentCloseAndThenSeesIt() throws Exception {
+        UUID gameId = insertGame("ABC123", "ACTIVE", true);
+        int status = signupDuringConcurrentUpdate(gameId, "update game.game set signups_open = false where id = ?");
+        assertThat(status).isEqualTo(409);
+        assertThat(jdbc.queryForObject("select count(*) from game.player", Integer.class)).isZero();
+    }
+
+    @Test
+    void signupWaitsForAConcurrentFinishAndThenSeesIt() throws Exception {
+        UUID gameId = insertGame("ABC123", "ACTIVE", true);
+        int status = signupDuringConcurrentUpdate(gameId, "update game.game set status = 'FINISHED' where id = ?");
+        assertThat(status).isEqualTo(400);
+        assertThat(jdbc.queryForObject("select count(*) from game.player", Integer.class)).isZero();
+    }
+
+    /**
+     * Holds the game's row lock in another transaction (as an admin PATCH does), starts a signup, checks that it
+     * blocks, then applies {@code update} and commits. Returns the signup's HTTP status.
+     */
+    private int signupDuringConcurrentUpdate(UUID gameId, String update) throws Exception {
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try (Connection admin = dataSource.getConnection()) {
+            admin.setAutoCommit(false);
+            try (PreparedStatement lock = admin.prepareStatement("select id from game.game where id = ? for update")) {
+                lock.setObject(1, gameId);
+                lock.executeQuery().close();
+            }
+            Future<Integer> signup = pool.submit(() ->
+                    signup("racer@example.com", "Racer", "ABC123").andReturn().getResponse().getStatus());
+            Thread.sleep(500);
+            assertThat(signup).as("signup waits for the game's row lock").isNotDone();
+            try (PreparedStatement change = admin.prepareStatement(update)) {
+                change.setObject(1, gameId);
+                change.executeUpdate();
+            }
+            admin.commit();
+            return signup.get(10, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }
