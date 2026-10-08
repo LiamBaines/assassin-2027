@@ -96,3 +96,8 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - 16 specs pass: magic link (link and code), the full flow, and the lockdown spec (PGRST106 for `game`).
   - The CI workflows pass action-validator but have not yet run on GitHub.
 - 2026-10-08: Review fixes. Wrong join codes are limited to 5 per account per 10 minutes (429 `TOO_MANY_ATTEMPTS`), using the in-memory `JoinCodeAttemptLimiter` instead of Bucket4j. Display names are measured in code points, so an emoji counts as one character, and control or zero-width characters are rejected (`INVALID_DISPLAY_NAME`). A signup constraint race now maps to the exact constraint. PR #1 is open (feat/mvp → main); deploy (step 18) is next.
+- 2026-10-08: PR #1 merged, and CI (api, web, e2e) passed on GitHub. Step 18 started on `chore/deploy`.
+  - Added `api/Dockerfile` and `api/fly.toml`: app `assassin-2027-api`, region `fra` (next to Supabase eu-central-1), one always-on 512 MB machine, Hikari pool of 5.
+  - The image was checked against local Supabase. It migrates, `/actuator/health` is UP, and `/api/me` returns 200 with a real token and 401 without one.
+  - The Fly app is created but not deployed yet.
+  - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
