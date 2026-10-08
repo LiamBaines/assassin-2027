@@ -5,17 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
 
-@SpringBootTest
-@Import(TestcontainersConfiguration.class)
-class LockdownIT {
-
-    @Autowired
-    JdbcTemplate jdbc;
+class LockdownIT extends IntegrationTest {
 
     @Test
     void apiRolesHaveNoUsageOnGameSchema() {
