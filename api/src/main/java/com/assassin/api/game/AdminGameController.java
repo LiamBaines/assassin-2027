@@ -6,10 +6,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/game")
+@RequestMapping("/api/admin/games")
 public class AdminGameController {
 
     static final String JOIN_CODE_PATTERN = "^[A-Z0-9]{6,16}$";
@@ -29,9 +31,10 @@ public class AdminGameController {
         this.gameService = gameService;
     }
 
+    /** Every game, including FINISHED ones, newest first. */
     @GetMapping
-    public GameResponse get() {
-        return GameResponse.from(gameService.getLive());
+    public List<GameResponse> list() {
+        return gameService.list().stream().map(GameResponse::from).toList();
     }
 
     @PostMapping
@@ -40,10 +43,15 @@ public class AdminGameController {
         return GameResponse.from(gameService.create(request.name(), request.joinCode()));
     }
 
-    @PatchMapping
-    public GameResponse update(@Valid @RequestBody UpdateGameRequest request) {
+    @GetMapping("/{gameId}")
+    public GameResponse get(@PathVariable UUID gameId) {
+        return GameResponse.from(gameService.get(gameId));
+    }
+
+    @PatchMapping("/{gameId}")
+    public GameResponse update(@PathVariable UUID gameId, @Valid @RequestBody UpdateGameRequest request) {
         return GameResponse.from(gameService.update(
-                request.name(), request.joinCode(), request.signupsOpen(), request.status()));
+                gameId, request.name(), request.joinCode(), request.signupsOpen(), request.status()));
     }
 
     public record CreateGameRequest(
@@ -69,11 +77,12 @@ public class AdminGameController {
     }
 
     public record GameResponse(UUID id, String name, String joinCode, GameStatus status, boolean signupsOpen,
-            Instant createdAt, Instant startedAt, Instant finishedAt) {
+            Instant createdAt, Instant startedAt, Instant finishedAt, long playerCount) {
 
-        static GameResponse from(Game g) {
+        static GameResponse from(GameService.GameWithCount gc) {
+            Game g = gc.game();
             return new GameResponse(g.getId(), g.getName(), g.getJoinCode(), g.getStatus(), g.isSignupsOpen(),
-                    g.getCreatedAt(), g.getStartedAt(), g.getFinishedAt());
+                    g.getCreatedAt(), g.getStartedAt(), g.getFinishedAt(), gc.playerCount());
         }
     }
 

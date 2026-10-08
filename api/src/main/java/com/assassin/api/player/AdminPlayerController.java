@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/players")
+@RequestMapping("/api/admin/games/{gameId}/players")
 public class AdminPlayerController {
 
     private final AdminPlayerService adminPlayerService;
@@ -22,13 +22,14 @@ public class AdminPlayerController {
     }
 
     @GetMapping
-    public List<AdminPlayerService.AdminPlayer> list() {
-        return adminPlayerService.list();
+    public List<AdminPlayerService.AdminPlayer> list(@PathVariable UUID gameId) {
+        return adminPlayerService.list(gameId);
     }
 
-    @PatchMapping("/{id}")
-    public PlayerSummary update(@PathVariable UUID id, @Valid @RequestBody UpdatePlayerRequest request) {
-        return PlayerSummary.from(adminPlayerService.updateStatus(id, request.status()));
+    @PatchMapping("/{playerId}")
+    public PlayerSummary update(@PathVariable UUID gameId, @PathVariable UUID playerId,
+            @Valid @RequestBody UpdatePlayerRequest request) {
+        return PlayerSummary.from(adminPlayerService.updateStatus(gameId, playerId, request.status()));
     }
 
     public record UpdatePlayerRequest(@NotNull PlayerStatus status) {
