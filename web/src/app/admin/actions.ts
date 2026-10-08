@@ -99,8 +99,10 @@ export async function shuffleRingAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const expected = Number(formData.get("expectedCurrentRoundNo"));
-  if (!Number.isInteger(expected) || expected < 0) {
+  // Empty means no ring has been generated yet; the API expects null in that case.
+  const raw = formData.get("expectedCurrentRoundNo");
+  const expected = raw ? Number(raw) : null;
+  if (expected !== null && (!Number.isInteger(expected) || expected < 1)) {
     return { error: "Invalid request." };
   }
   return run(() => shuffleRing(expected));

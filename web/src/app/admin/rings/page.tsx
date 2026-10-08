@@ -50,7 +50,7 @@ export default async function AdminRingsPage() {
               <input
                 type="hidden"
                 name="expectedCurrentRoundNo"
-                value={ring?.roundNo ?? 0}
+                value={ring?.roundNo ?? ""}
               />
               <ConfirmSubmit
                 label={isShakeup ? "Shake up" : "Generate ring"}

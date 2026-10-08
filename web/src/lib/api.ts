@@ -139,7 +139,7 @@ export const setPlayerStatus = (id: string, status: "ALIVE" | "REMOVED") =>
  * admin saw (0 when there is no round yet) so concurrent runs fail with
  * STALE_ROUND.
  */
-export const shuffleRing = (expectedCurrentRoundNo: number) =>
+export const shuffleRing = (expectedCurrentRoundNo: number | null) =>
   request<Ring>("POST", "/api/admin/rings", { expectedCurrentRoundNo });
 
 /** The active ring in cycle order, or null before the first round. */

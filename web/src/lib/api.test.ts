@@ -59,10 +59,10 @@ describe("request plumbing", () => {
 
   it("serialises the JSON body on POST", async () => {
     fetchMock.mockResolvedValue(Response.json({ roundNo: 1 }));
-    await shuffleRing(0);
+    await shuffleRing(null);
     const [, init] = fetchMock.mock.calls[0];
     expect(init?.method).toBe("POST");
-    expect(init?.body).toBe(JSON.stringify({ expectedCurrentRoundNo: 0 }));
+    expect(init?.body).toBe(JSON.stringify({ expectedCurrentRoundNo: null }));
     expect((init?.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
   });
 
