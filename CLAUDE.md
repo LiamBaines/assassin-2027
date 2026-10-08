@@ -26,7 +26,10 @@ JDK 21 and Node 22 are Homebrew keg-only installs that aren't on the default `PA
 ```sh
 export PATH=/opt/homebrew/opt/openjdk@21/bin:/opt/homebrew/opt/node@22/bin:$PATH JAVA_HOME=/opt/homebrew/opt/openjdk@21
 ```
-Docker must be running for Testcontainers and `supabase start`.
+Docker is provided by **Colima**, not Docker Desktop. Start it with `colima start`. Testcontainers also needs:
+```sh
+export DOCKER_HOST=unix://$HOME/.colima/default/docker.sock TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+```
 
 ## Commands
 ```sh
@@ -67,3 +70,4 @@ Add the e2e commands here once they exist.
 - 2026-10-08: Both branches merged into `feat/mvp`.
 - Decision (2026-10-08): removing a player mid-game **splices them out of the ring**. Their assassin inherits their target, the same way a kill will work. This replaced the plan's `IN_ACTIVE_RING` block, which left no way to remove anyone once the game was ACTIVE. Details are in `docs/architecture.md` (Decisions).
 - 2026-10-08: Contract alignment on `feat/mvp`. Ring POST and `GET /rings/current` now return `{roundId, roundNo, reason, ring}`, and `current` is 404 `NO_RING` before the first round. History rows include `roundId`. The web handles no live game on the players and rings pages, and maps `GAME_FINISHED`, `CONCURRENT_UPDATE`, `INVALID_STATUS`, `PLAYER_NOT_FOUND` and `EMAIL_REQUIRED`. Splice removal is implemented as `RingService.spliceOut` (source `SPLICE`, added to V1), and `IN_ACTIVE_RING` is gone. `-DskipITs verify` and all web checks pass. The ITs compile but have still never run, because Docker was down.
+- 2026-10-08: Docker Desktop replaced with Colima. First real IT run found that V1 hung forever: it ran `ALTER` on `game.flyway_schema_history`, which Flyway locks while migrating. That table is now left alone; the revoked schema USAGE still protects it. `./mvnw verify` passes: 12 unit tests and 56 ITs.

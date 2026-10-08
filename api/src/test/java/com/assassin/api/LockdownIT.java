@@ -22,9 +22,10 @@ class LockdownIT extends IntegrationTest {
                 select c.relname, c.relrowsecurity
                   from pg_class c join pg_namespace n on n.oid = c.relnamespace
                  where n.nspname = 'game' and c.relkind in ('r', 'p')
+                   and c.relname <> 'flyway_schema_history'
                 """);
         assertThat(tables).extracting(t -> t.get("relname"))
-                .contains("game", "player", "assignment_round", "assignment", "flyway_schema_history");
+                .contains("game", "player", "assignment_round", "assignment");
         assertThat(tables).allSatisfy(t -> assertThat(t.get("relrowsecurity")).as("%s", t.get("relname")).isEqualTo(true));
     }
 }

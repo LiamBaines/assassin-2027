@@ -68,8 +68,8 @@ alter table game.game enable row level security;
 alter table game.player enable row level security;
 alter table game.assignment_round enable row level security;
 alter table game.assignment enable row level security;
--- Flyway creates its history table in this schema before running V1.
-alter table game.flyway_schema_history enable row level security;
+-- game.flyway_schema_history is deliberately left alone: Flyway holds a lock on it while
+-- migrating, so altering it here blocks forever. Revoking schema USAGE below covers it.
 
 -- Lock out the Supabase API roles. Guarded so this also runs on plain Postgres.
 do $$
