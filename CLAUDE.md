@@ -96,3 +96,17 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - 16 specs pass: magic link (link and code), the full flow, and the lockdown spec (PGRST106 for `game`).
   - The CI workflows pass action-validator but have not yet run on GitHub.
 - 2026-10-08: Review fixes. Wrong join codes are limited to 5 per account per 10 minutes (429 `TOO_MANY_ATTEMPTS`), using the in-memory `JoinCodeAttemptLimiter` instead of Bucket4j. Display names are measured in code points, so an emoji counts as one character, and control or zero-width characters are rejected (`INVALID_DISPLAY_NAME`). A signup constraint race now maps to the exact constraint. PR #1 is open (feat/mvp → main); deploy (step 18) is next.
+- 2026-10-08: PR #1 merged, and CI (api, web, e2e) passed on GitHub. Step 18 started on `chore/deploy`.
+  - Added `api/Dockerfile` and `api/fly.toml`: app `assassin-2027-api`, region `fra` (next to Supabase eu-central-1), one always-on 512 MB machine, Hikari pool of 5.
+  - The image was checked against local Supabase. It migrates, `/actuator/health` is UP, and `/api/me` returns 200 with a real token and 401 without one.
+  - The Fly app is created but not deployed yet.
+  - Decision: prod email goes out through **Gmail SMTP with an app password** (`smtp.gmail.com:465`, about 500 emails a day), because there is no owned domain for Resend. Supabase locks template editing until custom SMTP is configured, and the default template's link doesn't work with `/auth/confirm`, so SMTP blocks prod login.
+  - **Deployed.** The API is at https://assassin-2027-api.fly.dev and V1 migrated on prod through the session pooler (`aws-1-eu-central-1`, user `postgres.fujwiyboxugxbnlaxfyn`). The web is at https://assassin-2027.vercel.app.
+    - Vercel project `assassin-2027`: Root Directory `web`, Node 22, env set for production only.
+    - Vercel GitHub auto-deploy is not connected yet, because the Vercel account has no GitHub login connection. Deploy from the repo root with `npx vercel deploy --prod`.
+    - Prod JWKS serves ES256 P-256.
+    - The publishable key gets PGRST002 (503) on PostgREST, with the Data API off.
+    - Fly config in `fly.toml`. Secrets: datasource URL/user/password, `SUPABASE_URL`, `APP_ADMIN_EMAILS`.
+  - **Prod smoke test passed** (user, 2026-10-08): Gmail SMTP sends mail, both the link and 6-digit code logins work, an admin created a game, two accounts joined, the ring was generated, and both `/target` pages were correct. The first SMTP attempt timed out (504 on `/auth/v1/otp`); the user fixed the SMTP settings. The login action now logs `signInWithOtp` errors to the Vercel logs.
+  - Prod Supabase must have **Email OTP Length = 6**, to match local `otp_length = 6` and the web's 6-digit check. New hosted projects default to 8.
+  - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
