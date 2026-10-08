@@ -10,7 +10,7 @@ import {
   secondaryButtonClass,
 } from "@/components/ui";
 import { getAdminPlayers, type AdminPlayer } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, removePlayerMessage } from "@/lib/format";
 import { setPlayerStatusAction } from "../actions";
 
 const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
@@ -110,7 +110,7 @@ function PlayerAction({ player }: { player: AdminPlayer }) {
         <ConfirmSubmit
           label="Remove"
           confirmLabel="Remove"
-          message={`Remove ${player.displayName}?`}
+          message={removePlayerMessage(player)}
           className={secondaryButtonClass}
           confirmClassName={dangerButtonClass}
         />
