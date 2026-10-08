@@ -58,5 +58,8 @@ describe("returnPathFromConfirm", () => {
     expect(
       returnPathFromConfirm(params(`redirect_to=${encodeURIComponent("http://x/auth/confirm?next=%2F%2Fevil.com")}`)),
     ).toBe("/");
+    expect(
+      returnPathFromConfirm(params(`redirect_to=${encodeURIComponent("http://x/auth/confirm?next=%2F.%2F%2Fevil.com")}`)),
+    ).toBe("/");
   });
 });

@@ -12,6 +12,8 @@ export function safeNextPath(next: string | null | undefined): string {
     const base = "http://localhost";
     const url = new URL(next, base);
     if (url.origin !== base) return "/";
+    // Dot segments resolve away, so "/.//host" becomes "//host": check again.
+    if (url.pathname.startsWith("//") || url.pathname.startsWith("/\\")) return "/";
     return url.pathname + url.search + url.hash;
   } catch {
     return "/";
