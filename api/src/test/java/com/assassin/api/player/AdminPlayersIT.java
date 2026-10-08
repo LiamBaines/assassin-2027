@@ -38,7 +38,11 @@ class AdminPlayersIT extends IntegrationTest {
     }
 
     private ResultActions setStatus(UUID id, String status) throws Exception {
-        return mvc.perform(asAdmin(patch("/api/admin/players/" + id)
+        return setStatus(gameId, id, status);
+    }
+
+    private ResultActions setStatus(UUID game, UUID id, String status) throws Exception {
+        return mvc.perform(asAdmin(patch("/api/admin/games/" + game + "/players/" + id)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"" + status + "\"}")));
     }
 
@@ -47,7 +51,7 @@ class AdminPlayersIT extends IntegrationTest {
     }
 
     private void shuffle(Integer expected) throws Exception {
-        mvc.perform(asAdmin(post("/api/admin/rings").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/rings").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expectedCurrentRoundNo\": " + expected + "}")))
                 .andExpect(status().isCreated());
     }
@@ -71,12 +75,12 @@ class AdminPlayersIT extends IntegrationTest {
     }
 
     private ResultActions myTarget(UUID playerId) throws Exception {
-        return mvc.perform(as(column("email", playerId), get("/api/me/target")));
+        return mvc.perform(as(column("email", playerId), get("/api/me/games/" + gameId + "/target")));
     }
 
     @Test
     void listsPlayersWithoutTargetsBeforeRing() throws Exception {
-        mvc.perform(asAdmin(get("/api/admin/players")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/players")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
                 .andExpect(jsonPath("$[0].displayName").value("Alice"))
@@ -88,7 +92,7 @@ class AdminPlayersIT extends IntegrationTest {
     @Test
     void listIncludesCurrentTargetMatchingTheRing() throws Exception {
         shuffle();
-        String body = mvc.perform(asAdmin(get("/api/admin/players")))
+        String body = mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/players")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         for (JsonNode p : json.readTree(body)) {
@@ -137,7 +141,7 @@ class AdminPlayersIT extends IntegrationTest {
         myTarget(a).andExpect(status().isOk())
                 .andExpect(jsonPath("$.target.displayName").value(column("display_name", t)));
         myTarget(x).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NO_TARGET"));
-        mvc.perform(asAdmin(get("/api/admin/rings/current")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings/current")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roundNo").value(1))
                 .andExpect(jsonPath("$.ring.length()").value(4));
@@ -161,7 +165,7 @@ class AdminPlayersIT extends IntegrationTest {
         assertThat(count("select count(*) from game.assignment where status = 'ACTIVE'")).isZero();
         assertThat(count("select count(*) from game.assignment where source = 'SPLICE'")).isZero();
         myTarget(bob).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NO_TARGET"));
-        mvc.perform(asAdmin(get("/api/admin/rings/current")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings/current")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ring.length()").value(0));
     }
@@ -193,7 +197,7 @@ class AdminPlayersIT extends IntegrationTest {
         setStatus(carol, "DEAD")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_STATUS"));
-        mvc.perform(asAdmin(patch("/api/admin/players/" + carol)
+        mvc.perform(asAdmin(patch("/api/admin/games/" + gameId + "/players/" + carol)
                         .contentType(MediaType.APPLICATION_JSON).content("{}")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
@@ -204,5 +208,60 @@ class AdminPlayersIT extends IntegrationTest {
         setStatus(UUID.randomUUID(), "REMOVED")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("PLAYER_NOT_FOUND"));
+    }
+
+    @Test
+    void listOnlyShowsThatGamesPlayers() throws Exception {
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        insertPlayer(other, "alice@example.com", "Alice Elsewhere", "ALIVE");
+        insertPlayer(other, "zed@example.com", "Zed", "ALIVE");
+
+        mvc.perform(asAdmin(get("/api/admin/games/" + other + "/players")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].displayName").value("Alice Elsewhere"))
+                .andExpect(jsonPath("$[1].displayName").value("Zed"));
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/players")))
+                .andExpect(jsonPath("$.length()").value(3));
+    }
+
+    @Test
+    void unknownGameIsNotFound() throws Exception {
+        mvc.perform(asAdmin(get("/api/admin/games/" + UUID.randomUUID() + "/players")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
+        setStatus(UUID.randomUUID(), alice, "REMOVED")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
+    }
+
+    @Test
+    void aPlayerOfAnotherGameIsNotFound() throws Exception {
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        insertPlayer(other, "zed@example.com", "Zed", "ALIVE");
+
+        setStatus(other, alice, "REMOVED")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PLAYER_NOT_FOUND"));
+        assertThat(column("status", alice)).isEqualTo("ALIVE");
+    }
+
+    @Test
+    void playersOfAFinishedGameCannotBeChanged() throws Exception {
+        shuffle();
+        jdbc.update("update game.game set status = 'FINISHED', finished_at = now() where id = ?", gameId);
+
+        setStatus(bob, "REMOVED")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GAME_FINISHED"));
+        setStatus(bob, "ALIVE")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GAME_FINISHED"));
+        assertThat(column("status", bob)).isEqualTo("ALIVE");
+        assertActiveRingCovers(List.of(alice, bob, carol));
+        // Still readable.
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/players")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3));
     }
 }

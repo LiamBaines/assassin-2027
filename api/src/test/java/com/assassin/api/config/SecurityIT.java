@@ -2,6 +2,8 @@ package com.assassin.api.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,6 +13,8 @@ import com.assassin.api.IntegrationTest;
 import com.assassin.api.JwtTestSupport;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,7 +40,8 @@ class SecurityIT extends IntegrationTest {
     @Test
     void missingTokenIsUnauthorized() throws Exception {
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/admin/game")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/admin/games")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/join/ABC123")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -74,9 +79,25 @@ class SecurityIT extends IntegrationTest {
 
     @Test
     void nonAdminIsForbiddenOnAdminRoutes() throws Exception {
-        mvc.perform(as(USER, get("/api/admin/game"))).andExpect(status().isForbidden());
-        mvc.perform(as(USER, get("/api/admin/players"))).andExpect(status().isForbidden());
-        mvc.perform(as(USER, get("/api/admin/rings"))).andExpect(status().isForbidden());
+        UUID gameId = insertGame("ABC123", "SETUP", true);
+        UUID playerId = insertPlayer(gameId, USER, "Player", "ALIVE");
+        String game = "/api/admin/games/" + gameId;
+        String json = MediaType.APPLICATION_JSON_VALUE;
+        for (MockHttpServletRequestBuilder request : List.of(
+                get("/api/admin/games"),
+                post("/api/admin/games").contentType(json).content("{\"name\": \"x\", \"joinCode\": \"XYZ789\"}"),
+                get(game),
+                patch(game).contentType(json).content("{\"name\": \"x\"}"),
+                get(game + "/players"),
+                patch(game + "/players/" + playerId).contentType(json).content("{\"status\": \"REMOVED\"}"),
+                post(game + "/rings").contentType(json).content("{\"expectedCurrentRoundNo\": null}"),
+                get(game + "/rings/current"),
+                get(game + "/rings"))) {
+            mvc.perform(as(USER, request)).andExpect(status().isForbidden());
+        }
+        assertThat(jdbc.queryForObject("select count(*) from game.game", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select name from game.game", String.class)).isEqualTo("Test game");
+        assertThat(jdbc.queryForObject("select status from game.player", String.class)).isEqualTo("ALIVE");
     }
 
     @Test
@@ -100,7 +121,7 @@ class SecurityIT extends IntegrationTest {
 
     @Test
     void forbiddenIsProblemDetailWithCode() throws Exception {
-        mvc.perform(as(USER, get("/api/admin/game")))
+        mvc.perform(as(USER, get("/api/admin/games")))
                 .andExpect(status().isForbidden())
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
                         org.hamcrest.Matchers.containsString("insufficient_scope")))
@@ -111,9 +132,10 @@ class SecurityIT extends IntegrationTest {
 
     @Test
     void allowlistedEmailInMixedCaseIsAdmin() throws Exception {
-        insertGame("ABC123", "SETUP", true);
-        mvc.perform(as("Admin@Example.COM", get("/api/admin/game"))).andExpect(status().isOk());
-        mvc.perform(as("SECOND.admin@example.com", get("/api/admin/players"))).andExpect(status().isOk());
-        mvc.perform(as("Admin@Example.COM", get("/api/admin/rings"))).andExpect(status().isOk());
+        UUID gameId = insertGame("ABC123", "SETUP", true);
+        mvc.perform(as("Admin@Example.COM", get("/api/admin/games"))).andExpect(status().isOk());
+        mvc.perform(as("SECOND.admin@example.com", get("/api/admin/games/" + gameId + "/players")))
+                .andExpect(status().isOk());
+        mvc.perform(as("Admin@Example.COM", get("/api/admin/games/" + gameId + "/rings"))).andExpect(status().isOk());
     }
 }

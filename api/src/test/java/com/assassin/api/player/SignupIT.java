@@ -30,8 +30,15 @@ class SignupIT extends IntegrationTest {
 
         signup(ALICE, "  Alice ", " abc123 ")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.displayName").value("Alice"))
-                .andExpect(jsonPath("$.status").value("ALIVE"));
+                .andExpect(jsonPath("$.game.id").value(gameId.toString()))
+                .andExpect(jsonPath("$.game.name").value("Test game"))
+                .andExpect(jsonPath("$.game.status").value("SETUP"))
+                .andExpect(jsonPath("$.game.signupsOpen").value(true))
+                .andExpect(jsonPath("$.game.joinCode").doesNotExist())
+                .andExpect(jsonPath("$.player.id").isNotEmpty())
+                .andExpect(jsonPath("$.player.displayName").value("Alice"))
+                .andExpect(jsonPath("$.player.status").value("ALIVE"))
+                .andExpect(jsonPath("$.player.joinedAt").isNotEmpty());
 
         Map<String, Object> row = jdbc.queryForMap("select * from game.player");
         assertThat(row.get("game_id")).isEqualTo(gameId);
@@ -41,11 +48,28 @@ class SignupIT extends IntegrationTest {
     }
 
     @Test
-    void noLiveGame() throws Exception {
+    void aFinishedGamesCodeIsABadJoinCode() throws Exception {
         insertGame("ABC123", "FINISHED", true);
-        signup(ALICE, "Alice", "ABC123")
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("NO_LIVE_GAME"));
+        signup("finished.code@example.com", "Alice", "ABC123")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_JOIN_CODE"));
+    }
+
+    @Test
+    void theCodePicksTheGame() throws Exception {
+        insertGame("Old", "ABC123", "FINISHED", true);
+        UUID one = insertGame("One", "ABC123", "ACTIVE", true);
+        UUID two = insertGame("Two", "XYZ789", "SETUP", true);
+
+        signup(ALICE, "Alice", "xyz789").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.game.id").value(two.toString()))
+                .andExpect(jsonPath("$.game.name").value("Two"));
+        // The same account and display name may join another game.
+        signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.game.id").value(one.toString()));
+
+        assertThat(jdbc.queryForList("select game_id from game.player", UUID.class))
+                .containsExactlyInAnyOrder(one, two);
     }
 
     @Test
@@ -57,9 +81,16 @@ class SignupIT extends IntegrationTest {
     }
 
     @Test
+    void closedSignupsInOneGameDoNotAffectAnother() throws Exception {
+        insertGame("ABC123", "SETUP", false);
+        insertGame("XYZ789", "SETUP", true);
+        signup(ALICE, "Alice", "XYZ789").andExpect(status().isCreated());
+    }
+
+    @Test
     void badJoinCode() throws Exception {
         insertGame("ABC123", "SETUP", true);
-        signup(ALICE, "Alice", "ABC124")
+        signup("bad.code@example.com", "Alice", "ABC124")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_JOIN_CODE"));
     }
@@ -95,6 +126,17 @@ class SignupIT extends IntegrationTest {
         insertGame("ABC123", "SETUP", true);
         signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated());
         signup(ALICE, "Alice Again", "ABC123")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ALREADY_REGISTERED"));
+    }
+
+    @Test
+    void alreadyRegisteredIsPerGame() throws Exception {
+        insertGame("ABC123", "SETUP", true);
+        insertGame("XYZ789", "SETUP", true);
+        signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated());
+        signup(ALICE, "Alice", "XYZ789").andExpect(status().isCreated());
+        signup(ALICE, "Alice", "XYZ789")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ALREADY_REGISTERED"));
     }

@@ -42,17 +42,30 @@ class RingIT extends IntegrationTest {
     }
 
     private List<UUID> addPlayers(int n, String status) {
+        return addPlayers(gameId, "", n, status);
+    }
+
+    private List<UUID> addPlayers(UUID game, String prefix, int n, String status) {
         List<UUID> ids = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            String name = status.toLowerCase() + i;
-            ids.add(insertPlayer(gameId, name + "@example.com", name, status));
+            String name = prefix + status.toLowerCase() + i;
+            ids.add(insertPlayer(game, name + "@example.com", name, status));
         }
         return ids;
     }
 
     private ResultActions shuffle(Integer expected) throws Exception {
+        return shuffle(gameId, expected);
+    }
+
+    private ResultActions shuffle(UUID game, Integer expected) throws Exception {
         String body = "{\"expectedCurrentRoundNo\": " + expected + "}";
-        return mvc.perform(asAdmin(post("/api/admin/rings").contentType(MediaType.APPLICATION_JSON).content(body)));
+        return mvc.perform(asAdmin(post("/api/admin/games/" + game + "/rings")
+                .contentType(MediaType.APPLICATION_JSON).content(body)));
+    }
+
+    private int countRounds(UUID game) {
+        return jdbc.queryForObject("select count(*) from game.assignment_round where game_id = ?", Integer.class, game);
     }
 
     private int countAssignments(String status) {
@@ -112,7 +125,7 @@ class RingIT extends IntegrationTest {
         assertActiveRingCovers(players);
         assertThat(jdbc.queryForObject("select started_at from game.game", Object.class)).isEqualTo(startedAt);
 
-        mvc.perform(asAdmin(get("/api/admin/rings")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].roundNo").value(2))
@@ -146,16 +159,103 @@ class RingIT extends IntegrationTest {
     }
 
     @Test
-    void finishedGameIsRejected() throws Exception {
+    void finishedGameIsRejectedButStillReadable() throws Exception {
         addPlayers(3, "ALIVE");
+        shuffle(null).andExpect(status().isCreated());
         jdbc.update("update game.game set status = 'FINISHED', finished_at = now()");
+
+        shuffle(1).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GAME_FINISHED"));
         shuffle(null).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GAME_FINISHED"));
+        assertThat(countRounds(gameId)).isEqualTo(1);
+
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings/current")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ring.length()").value(3));
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
     }
 
     @Test
-    void noGameAtAllIsNotFound() throws Exception {
-        jdbc.execute("truncate game.game cascade");
-        shuffle(null).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NO_LIVE_GAME"));
+    void unknownGameIsNotFound() throws Exception {
+        UUID unknown = UUID.randomUUID();
+        shuffle(unknown, null).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
+        mvc.perform(asAdmin(get("/api/admin/games/" + unknown + "/rings/current")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
+        mvc.perform(asAdmin(get("/api/admin/games/" + unknown + "/rings")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
+    }
+
+    @Test
+    void twoLiveGamesAreShuffledIndependently() throws Exception {
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        List<UUID> mine = addPlayers(4, "ALIVE");
+        List<UUID> theirs = addPlayers(other, "other", 3, "ALIVE");
+
+        shuffle(null).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.roundNo").value(1))
+                .andExpect(jsonPath("$.ring.length()").value(4));
+        // The other game has its own round numbers, so it starts at null -> INITIAL too.
+        shuffle(other, null).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.roundNo").value(1))
+                .andExpect(jsonPath("$.reason").value("INITIAL"))
+                .andExpect(jsonPath("$.ring.length()").value(3));
+        assertActiveRingCovers(gameId, mine);
+        assertActiveRingCovers(other, theirs);
+
+        // A shakeup of one game leaves the other's assignments alone.
+        Map<UUID, UUID> theirRing = assertActiveRingCovers(other, theirs);
+        shuffle(1).andExpect(status().isCreated()).andExpect(jsonPath("$.roundNo").value(2));
+        assertActiveRingCovers(gameId, mine);
+        assertThat(assertActiveRingCovers(other, theirs)).isEqualTo(theirRing);
+        assertThat(jdbc.queryForObject(
+                "select count(*) from game.assignment where game_id = ? and status <> 'ACTIVE'", Integer.class, other))
+                .isZero();
+        assertThat(countRounds(gameId)).isEqualTo(2);
+        assertThat(countRounds(other)).isEqualTo(1);
+
+        // Each game's ring and history only show its own players and rounds.
+        mvc.perform(asAdmin(get("/api/admin/games/" + other + "/rings/current")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roundNo").value(1))
+                .andExpect(jsonPath("$.ring.length()").value(3));
+        mvc.perform(asAdmin(get("/api/admin/games/" + other + "/rings")))
+                .andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings")))
+                .andExpect(jsonPath("$.length()").value(2));
+
+        // Finishing one game doesn't stop the other.
+        jdbc.update("update game.game set status = 'FINISHED', finished_at = now() where id = ?", gameId);
+        shuffle(other, 1).andExpect(status().isCreated()).andExpect(jsonPath("$.roundNo").value(2));
+        assertActiveRingCovers(other, theirs);
+    }
+
+    @Test
+    void concurrentShufflesOfDifferentGamesBothSucceed() throws Exception {
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        List<UUID> mine = addPlayers(20, "ALIVE");
+        List<UUID> theirs = addPlayers(other, "other", 20, "ALIVE");
+        CountDownLatch go = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<RingService.RingView> a = pool.submit(() -> {
+                go.await();
+                return ringService.shuffle(gameId, null, JwtTestSupport.ADMIN_EMAIL);
+            });
+            Future<RingService.RingView> b = pool.submit(() -> {
+                go.await();
+                return ringService.shuffle(other, null, JwtTestSupport.ADMIN_EMAIL);
+            });
+            go.countDown();
+            assertThat(a.get().roundNo()).isEqualTo(1);
+            assertThat(b.get().roundNo()).isEqualTo(1);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertActiveRingCovers(gameId, mine);
+        assertActiveRingCovers(other, theirs);
     }
 
     @Test
@@ -166,7 +266,7 @@ class RingIT extends IntegrationTest {
         Callable<Object> task = () -> {
             go.await();
             try {
-                return ringService.shuffle(null, JwtTestSupport.ADMIN_EMAIL);
+                return ringService.shuffle(gameId, null, JwtTestSupport.ADMIN_EMAIL);
             } catch (ApiException e) {
                 return e;
             }
@@ -192,7 +292,7 @@ class RingIT extends IntegrationTest {
 
     @Test
     void currentRingIsReturnedInCycleOrder() throws Exception {
-        mvc.perform(asAdmin(get("/api/admin/rings/current")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings/current")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NO_RING"));
 
@@ -200,7 +300,7 @@ class RingIT extends IntegrationTest {
         shuffle(null).andExpect(status().isCreated());
         Map<UUID, UUID> next = assertActiveRingCovers(players);
 
-        String body = mvc.perform(asAdmin(get("/api/admin/rings/current")))
+        String body = mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rings/current")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roundNo").value(1))
                 .andExpect(jsonPath("$.reason").value("INITIAL"))

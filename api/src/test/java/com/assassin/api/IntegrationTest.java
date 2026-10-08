@@ -38,9 +38,13 @@ public abstract class IntegrationTest {
 
     /** Inserts a game directly; returns its id. */
     protected UUID insertGame(String joinCode, String status, boolean signupsOpen) {
+        return insertGame("Test game", joinCode, status, signupsOpen);
+    }
+
+    protected UUID insertGame(String name, String joinCode, String status, boolean signupsOpen) {
         return jdbc.queryForObject(
-                "insert into game.game (name, join_code, status, signups_open) values ('Test game', ?, ?, ?) returning id",
-                UUID.class, joinCode, status, signupsOpen);
+                "insert into game.game (name, join_code, status, signups_open) values (?, ?, ?, ?) returning id",
+                UUID.class, name, joinCode, status, signupsOpen);
     }
 
     /** Inserts a player directly, with the {@code sub} test tokens use for {@code email}; returns its id. */
@@ -51,13 +55,27 @@ public abstract class IntegrationTest {
                 """, UUID.class, gameId, JwtTestSupport.subFor(email), email, displayName, status);
     }
 
-    /** assassin -> target for ACTIVE rows, checked to form one cycle over exactly {@code players}. */
+    /** assassin -> target for all ACTIVE rows, checked to form one cycle over exactly {@code players}. */
     protected Map<UUID, UUID> assertActiveRingCovers(List<UUID> players) {
         Map<UUID, UUID> next = new HashMap<>();
         jdbc.query("select assassin_id, target_id from game.assignment where status = 'ACTIVE'",
                 rs -> {
                     next.put(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class));
                 });
+        return assertOneCycle(next, players);
+    }
+
+    /** Same as {@link #assertActiveRingCovers(List)}, for the ACTIVE rows of one game only. */
+    protected Map<UUID, UUID> assertActiveRingCovers(UUID gameId, List<UUID> players) {
+        Map<UUID, UUID> next = new HashMap<>();
+        jdbc.query("select assassin_id, target_id from game.assignment where status = 'ACTIVE' and game_id = ?",
+                rs -> {
+                    next.put(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class));
+                }, gameId);
+        return assertOneCycle(next, players);
+    }
+
+    private static Map<UUID, UUID> assertOneCycle(Map<UUID, UUID> next, List<UUID> players) {
         assertThat(next.keySet()).containsExactlyInAnyOrderElementsOf(players);
         assertThat(next.values()).containsExactlyInAnyOrderElementsOf(players);
         UUID start = players.getFirst();
