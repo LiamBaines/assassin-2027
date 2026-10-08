@@ -1,5 +1,6 @@
 package com.assassin.api.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.DispatcherType;
 import java.util.Collection;
 import org.springframework.context.annotation.Bean;
@@ -24,10 +25,11 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder, AppProperties props)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder, AppProperties props,
+            ObjectMapper objectMapper) throws Exception {
         JwtAuthenticationConverter authConverter = new JwtAuthenticationConverter();
         authConverter.setJwtGrantedAuthoritiesConverter(new AdminAuthoritiesConverter(props.adminEmails()));
+        ProblemDetailSecurityErrors securityErrors = new ProblemDetailSecurityErrors(objectMapper);
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -38,9 +40,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
-                .oauth2ResourceServer(rs -> rs.jwt(jwt -> jwt
-                        .decoder(jwtDecoder)
-                        .jwtAuthenticationConverter(authConverter)))
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(securityErrors)
+                        .accessDeniedHandler(securityErrors))
+                .oauth2ResourceServer(rs -> rs
+                        .authenticationEntryPoint(securityErrors)
+                        .accessDeniedHandler(securityErrors)
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder)
+                                .jwtAuthenticationConverter(authConverter)))
                 .build();
     }
 

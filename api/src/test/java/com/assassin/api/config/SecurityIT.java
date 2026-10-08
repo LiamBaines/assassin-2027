@@ -2,6 +2,9 @@ package com.assassin.api.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.assassin.api.IntegrationTest;
@@ -10,6 +13,7 @@ import java.time.Instant;
 import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 class SecurityIT extends IntegrationTest {
@@ -73,6 +77,36 @@ class SecurityIT extends IntegrationTest {
         mvc.perform(as(USER, get("/api/admin/game"))).andExpect(status().isForbidden());
         mvc.perform(as(USER, get("/api/admin/players"))).andExpect(status().isForbidden());
         mvc.perform(as(USER, get("/api/admin/rings"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unauthorizedIsProblemDetailWithCode() throws Exception {
+        mvc.perform(get("/api/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+
+        String expired = JwtTestSupport.sign(JwtTestSupport.claims(USER)
+                .expirationTime(Date.from(Instant.now().minusSeconds(60)))
+                .build());
+        mvc.perform(withToken(expired, get("/api/me")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
+                        org.hamcrest.Matchers.containsString("invalid_token")))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void forbiddenIsProblemDetailWithCode() throws Exception {
+        mvc.perform(as(USER, get("/api/admin/game")))
+                .andExpect(status().isForbidden())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
+                        org.hamcrest.Matchers.containsString("insufficient_scope")))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test
