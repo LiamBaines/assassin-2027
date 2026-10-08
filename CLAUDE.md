@@ -107,4 +107,6 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
     - Prod JWKS serves ES256 P-256.
     - The publishable key gets PGRST002 (503) on PostgREST, with the Data API off.
     - Fly config in `fly.toml`. Secrets: datasource URL/user/password, `SUPABASE_URL`, `APP_ADMIN_EMAILS`.
+  - **Prod smoke test passed** (user, 2026-10-08): Gmail SMTP sends mail, both the link and 6-digit code logins work, an admin created a game, two accounts joined, the ring was generated, and both `/target` pages were correct. The first SMTP attempt timed out (504 on `/auth/v1/otp`); the user fixed the SMTP settings. The login action now logs `signInWithOtp` errors to the Vercel logs.
+  - Prod Supabase must have **Email OTP Length = 6**, to match local `otp_length = 6` and the web's 6-digit check. New hosted projects default to 8.
   - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.

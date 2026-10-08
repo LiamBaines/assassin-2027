@@ -33,6 +33,8 @@ async function requestCode(formData: FormData): Promise<LoginState> {
     },
   });
   if (error) {
+    // The user sees a generic message; the real cause (often SMTP) goes to the logs.
+    console.error("signInWithOtp failed", error.status, error.code, error.message);
     return {
       step: "email",
       email,
