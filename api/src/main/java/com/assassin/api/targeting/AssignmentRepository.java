@@ -15,11 +15,11 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
     Optional<Assignment> findByAssassinIdAndStatus(UUID assassinId, AssignmentStatus status);
 
     @Query("""
-            select count(a) > 0 from Assignment a
+            select count(a) from Assignment a
             where a.status = com.assassin.api.targeting.AssignmentStatus.ACTIVE
               and (a.assassinId = :playerId or a.targetId = :playerId)
             """)
-    boolean isInActiveAssignment(UUID playerId);
+    long countActiveInvolving(UUID playerId);
 
     /** Bulk-marks every ACTIVE assignment of the game SUPERSEDED. Runs immediately, after flushing pending changes. */
     @Modifying(flushAutomatically = true)

@@ -57,7 +57,7 @@ public class AdminPlayerService {
         Game game = games.findLiveForUpdate().orElseThrow(GameService::noLiveGame);
         Player player = players.findByIdAndGameId(playerId, game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAYER_NOT_FOUND", "No such player in the live game."));
-        if (game.getStatus() == GameStatus.ACTIVE && assignments.isInActiveAssignment(player.getId())) {
+        if (game.getStatus() == GameStatus.ACTIVE && assignments.countActiveInvolving(player.getId()) > 0) {
             throw new ApiException(HttpStatus.CONFLICT, "IN_ACTIVE_RING",
                     "This player is in the active ring, so they cannot be changed while the game is active.");
         }
