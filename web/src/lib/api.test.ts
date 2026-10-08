@@ -12,9 +12,17 @@ class RedirectError extends Error {
     super(`NEXT_REDIRECT ${url}`);
   }
 }
+class NotFoundError extends Error {
+  constructor() {
+    super("NEXT_NOT_FOUND");
+  }
+}
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
     throw new RedirectError(url);
+  },
+  notFound: () => {
+    throw new NotFoundError();
   },
 }));
 
@@ -27,6 +35,7 @@ const {
   getMyTarget,
   getRingHistory,
   joinGame,
+  requireAdmin,
   setPlayerStatus,
   shuffleRing,
   toApiError,
@@ -179,5 +188,22 @@ describe("admin contracts", () => {
     expect(url).toBe("http://api.test/api/admin/players/p%201");
     expect(init?.method).toBe("PATCH");
     expect(init?.body).toBe(JSON.stringify({ status: "REMOVED" }));
+  });
+});
+
+describe("requireAdmin", () => {
+  it("returns the caller when they are an admin", async () => {
+    const me = { email: "admin@b.c", isAdmin: true, game: null, player: null };
+    fetchMock.mockResolvedValue(Response.json(me));
+    await expect(requireAdmin()).resolves.toEqual(me);
+  });
+
+  it("404s a non-admin before any admin endpoint is called", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ email: "a@b.c", isAdmin: false, game: null, player: null }),
+    );
+    await expect(requireAdmin()).rejects.toBeInstanceOf(NotFoundError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me");
   });
 });

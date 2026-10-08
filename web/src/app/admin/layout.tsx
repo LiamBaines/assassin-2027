@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
-import { getMe } from "@/lib/api";
+import { requireAdmin } from "@/lib/api";
 
 export const metadata: Metadata = { title: "Admin · Assassin 2027" };
 
@@ -14,8 +13,7 @@ const NAV = [
 ] as const;
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const me = await getMe();
-  if (!me.isAdmin) notFound();
+  const me = await requireAdmin();
 
   return (
     <div className="flex flex-1 flex-col">

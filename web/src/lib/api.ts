@@ -1,5 +1,6 @@
 import "server-only";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AdminGame,
@@ -103,7 +104,19 @@ async function orNull<T>(p: Promise<T>): Promise<T | null> {
 
 // Player
 
-export const getMe = () => request<Me>("GET", "/api/me");
+/** The signed-in user. Deduplicated per request, so layouts and pages can both call it. */
+export const getMe = cache(() => request<Me>("GET", "/api/me"));
+
+/**
+ * 404s unless the caller is an admin. Next renders a layout and its page
+ * concurrently, so every admin page must call this before it fetches admin
+ * data, not just the admin layout.
+ */
+export async function requireAdmin(): Promise<Me> {
+  const me = await getMe();
+  if (!me.isAdmin) notFound();
+  return me;
+}
 
 export const joinGame = (req: JoinRequest) =>
   request<MePlayer>("POST", "/api/players", req);

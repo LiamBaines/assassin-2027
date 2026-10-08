@@ -4,6 +4,7 @@ import {
   getAdminGame,
   getCurrentRing,
   getRingHistory,
+  requireAdmin,
   type RoundReason,
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -15,6 +16,7 @@ const REASON_LABEL: Record<RoundReason, string> = {
 };
 
 export default async function AdminRingsPage() {
+  await requireAdmin();
   const [game, ring, history] = await Promise.all([
     getAdminGame(),
     getCurrentRing(),

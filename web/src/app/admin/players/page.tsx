@@ -9,7 +9,7 @@ import {
   dangerButtonClass,
   secondaryButtonClass,
 } from "@/components/ui";
-import { getAdminPlayers, type AdminPlayer } from "@/lib/api";
+import { getAdminPlayers, requireAdmin, type AdminPlayer } from "@/lib/api";
 import { formatDateTime, removePlayerMessage } from "@/lib/format";
 import { setPlayerStatusAction } from "../actions";
 
@@ -20,6 +20,7 @@ const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
 };
 
 export default async function AdminPlayersPage() {
+  await requireAdmin();
   const players = await getAdminPlayers();
   if (!players) {
     return (

@@ -11,7 +11,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/ui";
-import { getAdminGame, type AdminGame } from "@/lib/api";
+import { getAdminGame, requireAdmin, type AdminGame } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import {
   createGameAction,
@@ -21,6 +21,7 @@ import {
 } from "./actions";
 
 export default async function AdminGamePage() {
+  await requireAdmin();
   const game = await getAdminGame();
 
   return (
