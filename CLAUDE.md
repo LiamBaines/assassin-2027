@@ -66,7 +66,7 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
 - It logs in admin@e2e.test and player1..3@e2e.test with `auth.admin.generateLink({type:'magiclink'})` and `/auth/confirm?type=email`, then saves cookies to `web/e2e/.auth/` (gitignored).
 - `generateLink` reports `signup` for new users. `verifyOtp` with type `email` accepts both.
 - Reuse is off under `CI=1`. A stale server already on :3000 or :8080 (wrong env, old build) is reused locally, so stop it first.
-- CI (`.github/workflows/`): `api.yml` (`mvnw verify`), `web.yml` (lint, typecheck, test, build) and `e2e.yml` (`scripts/e2e.sh`, uploads the report on failure).
+- CI (`.github/workflows/`): `api.yml` (`mvnw verify`, then on push to main `flyctl deploy` with the `FLY_API_TOKEN` repo secret, a one-year deploy token named `github-actions`), `web.yml` (lint, typecheck, test, build) and `e2e.yml` (`scripts/e2e.sh`, uploads the report on failure).
 - If `supabase start` fails with `docker-credential-desktop: executable file not found`, `~/.docker/config.json` still has Docker Desktop's `"credsStore": "desktop"`. Remove that line, or point `DOCKER_CONFIG` at a copy without it.
 
 **API layout:** `com.assassin.api.{config,common,game,player,targeting}`. ITs extend `IntegrationTest`, which shares one context and truncates the game tables before each test. They mint real ES256 tokens with `JwtTestSupport`.
@@ -110,3 +110,4 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - **Prod smoke test passed** (user, 2026-10-08): Gmail SMTP sends mail, both the link and 6-digit code logins work, an admin created a game, two accounts joined, the ring was generated, and both `/target` pages were correct. The first SMTP attempt timed out (504 on `/auth/v1/otp`); the user fixed the SMTP settings. The login action now logs `signInWithOtp` errors to the Vercel logs.
   - Prod Supabase must have **Email OTP Length = 6**, to match local `otp_length = 6` and the web's 6-digit check. New hosted projects default to 8.
   - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
+- 2026-10-08: Continuous deployment. Vercel builds `main` from GitHub (the user connected the repo). `api.yml` deploys the API to Fly after `verify` passes on push to main. CI runs on main are no longer cancelled midway, so a deploy is never interrupted.
