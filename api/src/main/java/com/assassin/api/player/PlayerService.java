@@ -5,6 +5,7 @@ import com.assassin.api.common.CurrentUser;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameRepository;
 import com.assassin.api.game.GameStatus;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -83,15 +84,29 @@ public class PlayerService {
     }
 
     /**
-     * The game that is not FINISHED with this join code. Checks the attempt limit first (429), and records a failure
-     * for an unknown code, answered with {@code BAD_JOIN_CODE} and {@code unknownStatus}.
+     * The game that is not FINISHED with this join code. Reserves an attempt first
+     * (429 if the account has none left), keeps it as a failure for an unknown code, answered with
+     * {@code BAD_JOIN_CODE} and {@code unknownStatus}, and releases it for a valid one.
      */
     private Game findByJoinCode(CurrentUser user, String joinCode, HttpStatus unknownStatus) {
-        joinCodeLimiter.checkAllowed(user.authUserId());
-        return games.findLiveByJoinCode(Game.normalizeJoinCode(joinCode)).orElseThrow(() -> {
-            joinCodeLimiter.recordFailure(user.authUserId());
-            return new ApiException(unknownStatus, "BAD_JOIN_CODE", "That join code is not valid.");
-        });
+        JoinCodeAttemptLimiter.Reservation attempt = joinCodeLimiter.reserve(user.authUserId());
+        String normalized = Game.normalizeJoinCode(joinCode);
+        Optional<Game> game;
+        try {
+            game = games.findLiveByJoinCode(normalized);
+        } catch (RuntimeException e) {
+            attempt.release(); // Not a wrong guess.
+            throw e;
+        }
+        if (game.isEmpty()) {
+            throw badJoinCode(unknownStatus);
+        }
+        attempt.release();
+        return game.get();
+    }
+
+    private static ApiException badJoinCode(HttpStatus status) {
+        return new ApiException(status, "BAD_JOIN_CODE", "That join code is not valid.");
     }
 
     private static ApiException alreadyRegistered() {

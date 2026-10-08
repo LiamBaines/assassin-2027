@@ -1,12 +1,19 @@
 package com.assassin.api.player;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.assassin.api.IntegrationTest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
@@ -93,6 +100,49 @@ class JoinPreviewIT extends IntegrationTest {
                 .andExpect(jsonPath("$.code").value("TOO_MANY_ATTEMPTS"));
         // Other accounts are unaffected.
         preview("preview.bystander@example.com", "ABC123").andExpect(status().isOk());
+    }
+
+    @Test
+    void concurrentWrongCodesFromOneAccountCannotExceedTheLimit() throws Exception {
+        insertGame("Real", "ABC123", "SETUP", true);
+        String guesser = "parallel.guesser@example.com";
+        int requests = 20;
+        CountDownLatch go = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(requests);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (int i = 0; i < requests; i++) {
+                String code = "WRNG%02d".formatted(i);
+                results.add(pool.submit(() -> {
+                    go.await();
+                    return preview(guesser, code).andReturn().getResponse().getStatus();
+                }));
+            }
+            go.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                statuses.add(result.get());
+            }
+            assertThat(statuses).filteredOn(s -> s == 404).hasSize(JoinCodeAttemptLimiter.MAX_FAILURES);
+            assertThat(statuses).filteredOn(s -> s == 429).hasSize(requests - JoinCodeAttemptLimiter.MAX_FAILURES);
+        } finally {
+            pool.shutdownNow();
+        }
+        // Even the right code is now refused.
+        preview(guesser, "ABC123").andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void validCodesDoNotCountTowardsTheLimit() throws Exception {
+        insertGame("Real", "ABC123", "SETUP", true);
+        String viewer = "repeat.viewer@example.com";
+        for (int i = 0; i < JoinCodeAttemptLimiter.MAX_FAILURES * 2; i++) {
+            preview(viewer, "ABC123").andExpect(status().isOk());
+        }
+        for (int i = 0; i < JoinCodeAttemptLimiter.MAX_FAILURES; i++) {
+            preview(viewer, "WRONG" + i + "X").andExpect(status().isNotFound());
+        }
+        preview(viewer, "ABC123").andExpect(status().isTooManyRequests());
     }
 
     @Test
