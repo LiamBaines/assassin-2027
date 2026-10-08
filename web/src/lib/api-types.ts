@@ -4,25 +4,36 @@ export type GameStatus = "SETUP" | "ACTIVE" | "FINISHED";
 export type PlayerStatus = "ALIVE" | "DEAD" | "REMOVED";
 export type RoundReason = "INITIAL" | "SHAKEUP";
 
-export type MeGame = {
+export type GameSummary = {
   id: string;
   name: string;
   status: GameStatus;
   signupsOpen: boolean;
 };
 
-export type MePlayer = {
+export type PlayerSummary = {
   id: string;
   displayName: string;
   status: PlayerStatus;
   joinedAt: string;
 };
 
+/** One game the caller plays in, with their player in it. */
+export type MyGame = { game: GameSummary; player: PlayerSummary };
+
 export type Me = {
   email: string;
   isAdmin: boolean;
-  game: MeGame | null;
-  player: MePlayer | null;
+  /** Every game the caller plays in, including finished ones, newest join first. */
+  games: MyGame[];
+};
+
+export type JoinPreview = {
+  gameId: string;
+  name: string;
+  status: GameStatus;
+  signupsOpen: boolean;
+  alreadyJoined: boolean;
 };
 
 export type MyTarget = {
@@ -39,6 +50,7 @@ export type AdminGame = {
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+  playerCount: number;
 };
 
 export type PlayerRef = { id: string; displayName: string };

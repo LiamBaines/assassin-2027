@@ -6,10 +6,12 @@ import type {
   AdminGame,
   AdminPlayer,
   CreateGameRequest,
+  JoinPreview,
   JoinRequest,
   Me,
-  MePlayer,
+  MyGame,
   MyTarget,
+  PlayerSummary,
   Ring,
   RoundSummary,
   UpdateGameRequest,
@@ -92,15 +94,18 @@ async function request<T>(
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-/** Resolves to null on a 404, rethrows anything else. */
-async function orNull<T>(p: Promise<T>): Promise<T | null> {
+/** Resolves to null when the API answers with the given error code, rethrows anything else. */
+async function nullOn<T>(code: string, p: Promise<T>): Promise<T | null> {
   try {
     return await p;
   } catch (e) {
-    if (e instanceof ApiError && e.status === 404) return null;
+    if (e instanceof ApiError && e.code === code) return null;
     throw e;
   }
 }
+
+const seg = encodeURIComponent;
+const gamePath = (gameId: string) => `/api/admin/games/${seg(gameId)}`;
 
 // Player
 
@@ -118,33 +123,54 @@ export async function requireAdmin(): Promise<Me> {
   return me;
 }
 
-export const joinGame = (req: JoinRequest) =>
-  request<MePlayer>("POST", "/api/players", req);
+/** The live game behind a join code, or null when the code is unknown (BAD_JOIN_CODE). */
+export const previewJoin = (code: string) =>
+  nullOn(
+    "BAD_JOIN_CODE",
+    request<JoinPreview>("GET", `/api/join/${seg(code)}`),
+  );
 
-/** The caller's current target, or null when they have none (NO_TARGET). */
-export const getMyTarget = () =>
-  orNull(request<MyTarget>("GET", "/api/me/target"));
+export const joinGame = (req: JoinRequest) =>
+  request<MyGame>("POST", "/api/players", req);
+
+/** The caller's current target in a game, or null when they have none (NO_TARGET). */
+export const getMyTarget = (gameId: string) =>
+  nullOn(
+    "NO_TARGET",
+    request<MyTarget>("GET", `/api/me/games/${seg(gameId)}/target`),
+  );
 
 // Admin
 
-/** The live game, or null when there is none. */
-export const getAdminGame = () =>
-  orNull(request<AdminGame>("GET", "/api/admin/game"));
+/** Every game, newest first, including finished ones. */
+export const listAdminGames = () =>
+  request<AdminGame[]>("GET", "/api/admin/games");
+
+/**
+ * One game, or null when it doesn't exist (GAME_NOT_FOUND). Deduplicated per
+ * request, so the game layout and its pages can both call it.
+ */
+export const getAdminGame = cache((gameId: string) =>
+  nullOn("GAME_NOT_FOUND", request<AdminGame>("GET", gamePath(gameId))),
+);
 
 export const createGame = (req: CreateGameRequest) =>
-  request<AdminGame>("POST", "/api/admin/game", req);
+  request<AdminGame>("POST", "/api/admin/games", req);
 
-export const updateGame = (req: UpdateGameRequest) =>
-  request<AdminGame>("PATCH", "/api/admin/game", req);
+export const updateGame = (gameId: string, req: UpdateGameRequest) =>
+  request<AdminGame>("PATCH", gamePath(gameId), req);
 
-/** Players of the live game, or null when there is no live game. */
-export const getAdminPlayers = () =>
-  orNull(request<AdminPlayer[]>("GET", "/api/admin/players"));
+export const getAdminPlayers = (gameId: string) =>
+  request<AdminPlayer[]>("GET", `${gamePath(gameId)}/players`);
 
-export const setPlayerStatus = (id: string, status: "ALIVE" | "REMOVED") =>
-  request<MePlayer>(
+export const setPlayerStatus = (
+  gameId: string,
+  playerId: string,
+  status: "ALIVE" | "REMOVED",
+) =>
+  request<PlayerSummary>(
     "PATCH",
-    `/api/admin/players/${encodeURIComponent(id)}`,
+    `${gamePath(gameId)}/players/${seg(playerId)}`,
     { status },
   );
 
@@ -153,13 +179,18 @@ export const setPlayerStatus = (id: string, status: "ALIVE" | "REMOVED") =>
  * admin saw (null when there is no round yet) so concurrent runs fail with
  * STALE_ROUND.
  */
-export const shuffleRing = (expectedCurrentRoundNo: number | null) =>
-  request<Ring>("POST", "/api/admin/rings", { expectedCurrentRoundNo });
+export const shuffleRing = (
+  gameId: string,
+  expectedCurrentRoundNo: number | null,
+) =>
+  request<Ring>("POST", `${gamePath(gameId)}/rings`, {
+    expectedCurrentRoundNo,
+  });
 
-/** The active ring in cycle order, or null before the first round (NO_RING) or without a live game. */
-export const getCurrentRing = () =>
-  orNull(request<Ring>("GET", "/api/admin/rings/current"));
+/** The active ring in cycle order, or null before the first round (NO_RING). */
+export const getCurrentRing = (gameId: string) =>
+  nullOn("NO_RING", request<Ring>("GET", `${gamePath(gameId)}/rings/current`));
 
-/** Rounds of the live game, newest first; empty when there is no live game. */
-export const getRingHistory = async () =>
-  (await orNull(request<RoundSummary[]>("GET", "/api/admin/rings"))) ?? [];
+/** Rounds of the game, newest first. */
+export const getRingHistory = (gameId: string) =>
+  request<RoundSummary[]>("GET", `${gamePath(gameId)}/rings`);

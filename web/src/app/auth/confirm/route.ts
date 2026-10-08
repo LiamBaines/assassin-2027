@@ -1,7 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
-import { safeNextPath } from "@/lib/safe-next";
+import { returnPathFromConfirm } from "@/lib/login-next";
 import { createClient } from "@/lib/supabase/server";
 
 const OTP_TYPES: readonly EmailOtpType[] = [
@@ -22,10 +22,15 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = safeNextPath(searchParams.get("next"));
+  const next = returnPathFromConfirm(searchParams);
+
+  // On failure, keep the return path so a fresh login still lands there.
+  const loginWithError = (error: string) =>
+    `/login?error=${error}` +
+    (next === "/" ? "" : `&next=${encodeURIComponent(next)}`);
 
   if (!tokenHash || !isEmailOtpType(type)) {
-    redirect("/login?error=invalid_link");
+    redirect(loginWithError("invalid_link"));
   }
 
   const supabase = await createClient();
@@ -34,7 +39,7 @@ export async function GET(request: NextRequest) {
     type,
   });
   if (error) {
-    redirect("/login?error=link_expired");
+    redirect(loginWithError("link_expired"));
   }
 
   redirect(next);

@@ -5,7 +5,8 @@ import { getMe } from "@/lib/api";
 
 export default async function Home() {
   const me = await getMe();
-  const playerHref = me.player ? "/me" : "/join";
+  const playing = me.games.length > 0;
+  const playerHref = playing ? "/me" : "/join";
 
   if (!me.isAdmin) redirect(playerHref);
 
@@ -24,7 +25,7 @@ export default async function Home() {
           href={playerHref}
           className="block rounded-lg border border-zinc-300 px-4 py-2.5 text-center font-medium"
         >
-          {me.player ? "My player page" : "Join the game"}
+          {playing ? "My games" : "Join a game"}
         </Link>
       </Card>
     </PlayerShell>

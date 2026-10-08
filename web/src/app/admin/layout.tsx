@@ -6,11 +6,7 @@ import { requireAdmin } from "@/lib/api";
 
 export const metadata: Metadata = { title: "Admin · Assassin 2027" };
 
-const NAV = [
-  { href: "/admin", label: "Game" },
-  { href: "/admin/players", label: "Players" },
-  { href: "/admin/rings", label: "Rings" },
-] as const;
+const NAV = [{ href: "/admin", label: "Games" }] as const;
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const me = await requireAdmin();
@@ -32,7 +28,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-4 text-sm text-zinc-600">
-            <Link href={me.player ? "/me" : "/join"} className="hover:text-zinc-900">
+            <Link href={me.games.length > 0 ? "/me" : "/join"} className="hover:text-zinc-900">
               Player view
             </Link>
             <span>{me.email}</span>
