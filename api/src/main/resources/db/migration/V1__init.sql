@@ -47,7 +47,7 @@ create table game.assignment (
     round_id    uuid        not null,
     assassin_id uuid        not null,
     target_id   uuid        not null,
-    source      text        not null check (source in ('RING', 'KILL_INHERIT', 'MANUAL')),
+    source      text        not null check (source in ('RING', 'KILL_INHERIT', 'SPLICE', 'MANUAL')),
     status      text        not null default 'ACTIVE' check (status in ('ACTIVE', 'COMPLETED', 'SUPERSEDED', 'VOIDED')),
     created_at  timestamptz not null default now(),
     ended_at    timestamptz,

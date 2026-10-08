@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Read-side mapping. Ring assignments are batch-inserted with JDBC by {@link RingService}. */
+/** Assignments are inserted with JDBC by {@link RingService}; JPA reads them and ends them. */
 @Entity
 @Table(name = "assignment")
 public class Assignment {
@@ -47,6 +47,12 @@ public class Assignment {
     private Instant endedAt;
 
     protected Assignment() {
+    }
+
+    /** Ends this assignment, for example VOIDED when a player leaves the ring. */
+    void end(AssignmentStatus status, Instant at) {
+        this.status = status;
+        this.endedAt = at;
     }
 
     public Long getId() {

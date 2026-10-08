@@ -4,10 +4,10 @@ import com.assassin.api.common.ApiException;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameRepository;
 import com.assassin.api.game.GameService;
-import com.assassin.api.game.GameStatus;
 import com.assassin.api.targeting.Assignment;
 import com.assassin.api.targeting.AssignmentRepository;
 import com.assassin.api.targeting.AssignmentStatus;
+import com.assassin.api.targeting.RingService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -24,11 +24,14 @@ public class AdminPlayerService {
     private final GameRepository games;
     private final PlayerRepository players;
     private final AssignmentRepository assignments;
+    private final RingService ringService;
 
-    public AdminPlayerService(GameRepository games, PlayerRepository players, AssignmentRepository assignments) {
+    public AdminPlayerService(GameRepository games, PlayerRepository players, AssignmentRepository assignments,
+            RingService ringService) {
         this.games = games;
         this.players = players;
         this.assignments = assignments;
+        this.ringService = ringService;
     }
 
     /** Players of the live game in join order, each with their current target (if any). */
@@ -47,7 +50,10 @@ public class AdminPlayerService {
                 .toList();
     }
 
-    /** Removes or restores a player. Players in the active ring of an ACTIVE game cannot be changed. */
+    /**
+     * Removes or restores a player. Removing a player who is in the ring splices them out, so their assassin inherits
+     * their target. A restored player has no target until the next shakeup.
+     */
     @Transactional
     public Player updateStatus(UUID playerId, PlayerStatus status) {
         if (status != PlayerStatus.REMOVED && status != PlayerStatus.ALIVE) {
@@ -57,9 +63,8 @@ public class AdminPlayerService {
         Game game = games.findLiveForUpdate().orElseThrow(GameService::noLiveGame);
         Player player = players.findByIdAndGameId(playerId, game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAYER_NOT_FOUND", "No such player in the live game."));
-        if (game.getStatus() == GameStatus.ACTIVE && assignments.countActiveInvolving(player.getId()) > 0) {
-            throw new ApiException(HttpStatus.CONFLICT, "IN_ACTIVE_RING",
-                    "This player is in the active ring, so they cannot be changed while the game is active.");
+        if (status == PlayerStatus.REMOVED) {
+            ringService.spliceOut(player.getId());
         }
         player.setStatus(status);
         return player;

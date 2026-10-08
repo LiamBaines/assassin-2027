@@ -1,5 +1,10 @@
 package com.assassin.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +49,26 @@ public abstract class IntegrationTest {
                 insert into game.player (game_id, auth_user_id, email, display_name, status)
                 values (?, ?, ?, ?, ?) returning id
                 """, UUID.class, gameId, JwtTestSupport.subFor(email), email, displayName, status);
+    }
+
+    /** assassin -> target for ACTIVE rows, checked to form one cycle over exactly {@code players}. */
+    protected Map<UUID, UUID> assertActiveRingCovers(List<UUID> players) {
+        Map<UUID, UUID> next = new HashMap<>();
+        jdbc.query("select assassin_id, target_id from game.assignment where status = 'ACTIVE'",
+                rs -> {
+                    next.put(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class));
+                });
+        assertThat(next.keySet()).containsExactlyInAnyOrderElementsOf(players);
+        assertThat(next.values()).containsExactlyInAnyOrderElementsOf(players);
+        UUID start = players.getFirst();
+        UUID current = start;
+        int steps = 0;
+        do {
+            current = next.get(current);
+            steps++;
+        } while (!current.equals(start) && steps <= players.size());
+        assertThat(steps).as("cycle length").isEqualTo(players.size());
+        return next;
     }
 
     protected static MockHttpServletRequestBuilder as(String email, MockHttpServletRequestBuilder request) {

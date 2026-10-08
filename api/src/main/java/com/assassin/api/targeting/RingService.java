@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -33,7 +35,7 @@ public class RingService {
 
     private static final String INSERT_ASSIGNMENT = """
             insert into game.assignment (game_id, round_id, assassin_id, target_id, source, status, created_at)
-            values (?, ?, ?, ?, 'RING', 'ACTIVE', ?)
+            values (?, ?, ?, ?, ?, 'ACTIVE', ?)
             """;
 
     private final GameRepository games;
@@ -99,7 +101,8 @@ public class RingService {
             ps.setObject(2, round.getId());
             ps.setObject(3, link.assassin());
             ps.setObject(4, link.target());
-            ps.setObject(5, createdAt);
+            ps.setString(5, AssignmentSource.RING.name());
+            ps.setObject(6, createdAt);
         });
 
         // 7. The first ring starts the game.
@@ -107,6 +110,36 @@ public class RingService {
             game.start(now);
         }
         return view(game, round);
+    }
+
+    /**
+     * Takes a player out of the ring: their assignments (A -> X and X -> T) are VOIDED and A inherits T as a SPLICE
+     * assignment in the same round. In a two-player ring (A == T) nothing is inserted, so A is left without a target.
+     * Does nothing if the player has no active assignments.
+     *
+     * <p>The caller must already hold the live game row lock ({@link GameRepository#findLiveForUpdate()}), so this
+     * serializes with shuffles.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void spliceOut(UUID playerId) {
+        Optional<Assignment> incoming = assignments.findByTargetIdAndStatus(playerId, AssignmentStatus.ACTIVE);
+        Optional<Assignment> outgoing = assignments.findByAssassinIdAndStatus(playerId, AssignmentStatus.ACTIVE);
+        Instant now = Instant.now();
+        incoming.ifPresent(a -> a.end(AssignmentStatus.VOIDED, now));
+        outgoing.ifPresent(a -> a.end(AssignmentStatus.VOIDED, now));
+        if (incoming.isEmpty() || outgoing.isEmpty()) {
+            return;
+        }
+        Assignment in = incoming.get();
+        UUID assassin = in.getAssassinId();
+        UUID target = outgoing.get().getTargetId();
+        if (assassin.equals(target)) {
+            return;
+        }
+        // The voided rows must reach the database before the new ACTIVE row, or the one-active indexes reject it.
+        assignments.flush();
+        jdbc.update(INSERT_ASSIGNMENT, in.getGameId(), in.getRoundId(), assassin, target,
+                AssignmentSource.SPLICE.name(), OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
     }
 
     /** The live game's current round with its active assignments in cycle order, or 404 NO_RING before the first. */

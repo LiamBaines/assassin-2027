@@ -12,7 +12,6 @@ import com.assassin.api.common.ApiException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,26 +57,6 @@ class RingIT extends IntegrationTest {
 
     private int countAssignments(String status) {
         return jdbc.queryForObject("select count(*) from game.assignment where status = ?", Integer.class, status);
-    }
-
-    /** assassin -> target for ACTIVE rows, checked to form one cycle over exactly {@code players}. */
-    private Map<UUID, UUID> assertActiveRingCovers(List<UUID> players) {
-        Map<UUID, UUID> next = new HashMap<>();
-        jdbc.query("select assassin_id, target_id from game.assignment where status = 'ACTIVE'",
-                rs -> {
-                    next.put(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class));
-                });
-        assertThat(next.keySet()).containsExactlyInAnyOrderElementsOf(players);
-        assertThat(next.values()).containsExactlyInAnyOrderElementsOf(players);
-        UUID start = players.getFirst();
-        UUID current = start;
-        int steps = 0;
-        do {
-            current = next.get(current);
-            steps++;
-        } while (!current.equals(start) && steps <= players.size());
-        assertThat(steps).as("cycle length").isEqualTo(players.size());
-        return next;
     }
 
     @Test
