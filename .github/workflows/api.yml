@@ -13,7 +13,8 @@ on:
 
 concurrency:
   group: api-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a run on main midway through a deploy.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -36,3 +37,20 @@ jobs:
       - name: Verify
         working-directory: api
         run: ./mvnw -B verify
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # FLY_API_TOKEN is a deploy token scoped to the assassin-2027-api app.
+      - name: Deploy to Fly.io
+        working-directory: api
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
