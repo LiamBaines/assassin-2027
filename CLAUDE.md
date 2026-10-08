@@ -76,7 +76,10 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
 - `cacheComponents` is off on purpose, so `redirect()`/`notFound()` give real status codes.
 - All Spring calls go through `src/lib/api.ts` (server-only).
 - Admin pages must call `requireAdmin()` themselves. Layouts render concurrently with pages, so a layout-only gate does not stop the page's admin fetches.
-- No round yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/rings/current` is 404 `NO_RING` (`getCurrentRing()` returns null).
+- Games are scoped by id in every route: `/api/admin/games/{gameId}/…` and `/api/me/games/{gameId}/target` (ADR 0003). There is no "current game".
+- No round yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/games/{gameId}/rings/current` is 404 `NO_RING` (`getCurrentRing(gameId)` returns null).
+- Logged-out visitors go to `/login?next=…`. Every return path goes through `safeNextPath` (`lib/safe-next.ts`). It re-checks the path after dot segments resolve, because `/.//evil.com` turns into `//evil.com`.
+- The magic-link template passes `{{ .RedirectTo }}` as `redirect_to`. The prod dashboard template must match `supabase/templates/magic_link.html`.
 - Error `code` to message maps live in `src/app/admin/actions.ts` and `src/app/join/actions.ts`; unknown codes fall back to the API `detail`.
 
 ## Progress log
@@ -111,3 +114,14 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - Prod Supabase must have **Email OTP Length = 6**, to match local `otp_length = 6` and the web's 6-digit check. New hosted projects default to 8.
   - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
 - 2026-10-08: Continuous deployment. Vercel builds `main` from GitHub (the user connected the repo). `api.yml` deploys the API to Fly after `verify` passes on push to main. CI runs on main are no longer cancelled midway, so a deploy is never interrupted.
+- 2026-10-08: **Multiple games** on `feat/multi-game` (plan in `plan.md`, decision in ADR 0003).
+  - V2 swaps the one-live-game index for `game_join_code_live_uq`.
+  - Every route is now scoped by game id. `GET /api/join/{code}` previews a game, and `/api/me` lists every game the user plays in.
+  - Web: `/me` lists the user's games, with `/games/[id]` for each. `/join/[code]` asks only for a display name. Login returns to `next`. The admin console has a games list and per-game pages, read-only once a game is FINISHED.
+  - Review fixes:
+    - A dot-segment open redirect in `safeNextPath`.
+    - The join-code limiter now reserves an attempt atomically, so parallel guesses can't exceed it.
+    - Signup locks the game row.
+    - Admin server actions call `requireAdmin()` and check that ids are UUIDs.
+  - Checks: `mvnw verify` (17 unit tests, 93 ITs), web (92 unit tests), and e2e (29 specs, including the magic-link return through the real email template from Mailpit). All pass.
+  - **Manual prod step:** set the dashboard magic-link template to the new `redirect_to={{ .RedirectTo }}` link, and allow `https://assassin-2027.vercel.app/**` in Redirect URLs.

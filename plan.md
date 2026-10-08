@@ -88,6 +88,7 @@ The app allows only one game that isn't FINISHED, and finished games disappear f
 - Merging to main deploys the API and the web at the same time.
 - During the short gap between the two deploys, the old web against the new API (or the reverse) will show errors. That's acceptable at this scale.
 - V2 runs on prod automatically.
+- **Manual:** in the prod Supabase dashboard, set the magic-link template link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&redirect_to={{ .RedirectTo }}`, and make sure Redirect URLs include `https://assassin-2027.vercel.app/**`. Until then, magic links land on `/` (code login still returns users to the link).
 
 ## Open questions
 None blocking.
