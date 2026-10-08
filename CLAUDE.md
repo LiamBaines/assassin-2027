@@ -75,6 +75,7 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
 - Next 16, so the middleware file is `src/proxy.ts` (exports `proxy`).
 - `cacheComponents` is off on purpose, so `redirect()`/`notFound()` give real status codes.
 - All Spring calls go through `src/lib/api.ts` (server-only).
+- Admin pages must call `requireAdmin()` themselves. Layouts render concurrently with pages, so a layout-only gate does not stop the page's admin fetches.
 - No round yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/rings/current` is 404 `NO_RING` (`getCurrentRing()` returns null).
 - Error `code` to message maps live in `src/app/admin/actions.ts` and `src/app/join/actions.ts`; unknown codes fall back to the API `detail`.
 
@@ -88,6 +89,9 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
 - 2026-10-08: Docker Desktop replaced with Colima. First real IT run found that V1 hung forever: it ran `ALTER` on `game.flyway_schema_history`, which Flyway locks while migrating. That table is now left alone; the revoked schema USAGE still protects it. `./mvnw verify` passes: 12 unit tests and 56 ITs.
 - 2026-10-08: Steps 16–17 on `feat/mvp`. First full-stack run (Supabase CLI 2.120, Spring, Next prod build, Playwright 1.63 Chromium).
   - JWT setup checked by hand: the JWKS serves one ES256 EC key, and a real token's `iss` is `http://127.0.0.1:54321/auth/v1` with `aud` `authenticated`, which matches the Spring validator. The type pairing (`generateLink` magiclink/signup, verified with `type=email`) works as-is.
-  - No cross-tier app bugs surfaced. Both e2e failures along the way were spec selector issues: Next's route announcer is also `role=alert`, and a display name also appears as another row's target.
+  - Cross-tier bugs found and fixed:
+    - The security filter chain answered 401/403 with empty bodies, so the web saw `HTTP_403` with no `code`. They are now ProblemDetail bodies (`UNAUTHORIZED`/`FORBIDDEN`) that keep the RFC 6750 `WWW-Authenticate` header (`ProblemDetailSecurityErrors`).
+    - Next renders `admin/layout.tsx` and the page concurrently, so a non-admin on `/admin` still triggered admin API calls, and therefore unhandled 403s, behind the layout's `notFound()`. Every admin page now calls `requireAdmin()`, and `getMe` is wrapped in React `cache()`.
+  - Both e2e failures along the way were spec selector issues: Next's route announcer is also `role=alert`, and a display name also appears as another row's target.
   - 16 specs pass: magic link (link and code), the full flow, and the lockdown spec (PGRST106 for `game`).
   - The CI workflows pass action-validator but have not yet run on GitHub.
