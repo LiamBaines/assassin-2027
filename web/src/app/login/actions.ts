@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { confirmRedirectUrl } from "@/lib/login-next";
+import { safeNextPath } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState =
@@ -16,6 +18,11 @@ function siteUrl(): string {
   );
 }
 
+/** Where to go after login, from the form's hidden `next` field. */
+function readNext(formData: FormData): string {
+  return safeNextPath(String(formData.get("next") ?? ""));
+}
+
 async function requestCode(formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "")
     .trim()
@@ -28,7 +35,7 @@ async function requestCode(formData: FormData): Promise<LoginState> {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${siteUrl()}/auth/confirm`,
+      emailRedirectTo: confirmRedirectUrl(siteUrl(), readNext(formData)),
       shouldCreateUser: true,
     },
   });
@@ -68,7 +75,7 @@ async function verifyCode(formData: FormData): Promise<LoginState> {
   if (error) {
     return { step: "code", email, error: "That code is wrong or has expired." };
   }
-  redirect("/");
+  redirect(readNext(formData));
 }
 
 /** Two-step login: send a magic link + code, then verify the code. */

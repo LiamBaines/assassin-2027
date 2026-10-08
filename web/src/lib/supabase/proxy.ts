@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { loginPathWithNext } from "@/lib/login-next";
 
 /** Paths reachable without a session. */
 export function isPublicPath(pathname: string): boolean {
@@ -12,7 +13,7 @@ export function isPublicPath(pathname: string): boolean {
 
 /**
  * Refreshes the Supabase session cookies on every matched request and
- * redirects unauthenticated users on protected routes to /login.
+ * redirects unauthenticated users on protected routes to /login?next=<path>.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -49,9 +50,11 @@ export async function updateSession(request: NextRequest) {
   const claims = data?.claims;
 
   if (!claims && !isPublicPath(request.nextUrl.pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
+    // Keep where the user was going, so a shared join link survives login.
+    const url = new URL(
+      loginPathWithNext(request.nextUrl.pathname, request.nextUrl.search),
+      request.url,
+    );
     const redirect = NextResponse.redirect(url);
     // Carry over any cookie changes (for example a cleared, expired session).
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));

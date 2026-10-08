@@ -10,7 +10,14 @@ const inputClass =
 const buttonClass =
   "w-full rounded-lg bg-zinc-900 px-4 py-2.5 font-medium text-white disabled:opacity-60";
 
-export function LoginForm({ initialError }: { initialError?: string }) {
+export function LoginForm({
+  initialError,
+  next,
+}: {
+  initialError?: string;
+  /** Sanitised path to return to after login; carried through every step. */
+  next: string;
+}) {
   const [state, formAction, pending] = useActionState(
     loginAction,
     initialState,
@@ -26,6 +33,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           Open the link, or enter the code here.
         </p>
         <input type="hidden" name="email" value={state.email} />
+        <input type="hidden" name="next" value={next} />
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">6-digit code</span>
           <input
@@ -65,6 +73,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="next" value={next} />
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Email</span>
         <input

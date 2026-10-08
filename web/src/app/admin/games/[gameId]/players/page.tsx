@@ -3,15 +3,11 @@ import {
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
-import {
-  Alert,
-  Card,
-  dangerButtonClass,
-  secondaryButtonClass,
-} from "@/components/ui";
-import { getAdminPlayers, requireAdmin, type AdminPlayer } from "@/lib/api";
+import { Card, dangerButtonClass, secondaryButtonClass } from "@/components/ui";
+import { getAdminPlayers, type AdminPlayer } from "@/lib/api";
 import { formatDateTime, removePlayerMessage } from "@/lib/format";
-import { setPlayerStatusAction } from "../actions";
+import { setPlayerStatusAction } from "../../../actions";
+import { loadAdminGame } from "../load-game";
 
 const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
   ALIVE: "bg-emerald-100 text-emerald-800",
@@ -19,23 +15,18 @@ const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
   REMOVED: "bg-zinc-200 text-zinc-700",
 };
 
-export default async function AdminPlayersPage() {
-  await requireAdmin();
-  const players = await getAdminPlayers();
-  if (!players) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Players</h1>
-        <Alert tone="info">There is no live game. Create one first.</Alert>
-      </div>
-    );
-  }
+export default async function AdminPlayersPage(props: {
+  params: Promise<{ gameId: string }>;
+}) {
+  const game = await loadAdminGame(props.params);
+  const players = await getAdminPlayers(game.id);
+  const editable = game.status !== "FINISHED";
   const alive = players.filter((p) => p.status === "ALIVE").length;
 
   return (
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Players</h1>
+        <h2 className="text-xl font-semibold">Players</h2>
         <p className="text-sm text-zinc-600">
           {players.length} registered, {alive} alive
         </p>
@@ -52,9 +43,11 @@ export default async function AdminPlayersPage() {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Current target</th>
                 <th className="px-4 py-3 font-medium">Joined</th>
-                <th className="px-4 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
+                {editable && (
+                  <th className="px-4 py-3 font-medium">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -77,9 +70,11 @@ export default async function AdminPlayersPage() {
                   <td className="px-4 py-3 whitespace-nowrap text-zinc-600">
                     {formatDateTime(p.joinedAt)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <PlayerAction player={p} />
-                  </td>
+                  {editable && (
+                    <td className="px-4 py-3 text-right">
+                      <PlayerAction gameId={game.id} player={p} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -90,11 +85,11 @@ export default async function AdminPlayersPage() {
   );
 }
 
-function PlayerAction({ player }: { player: AdminPlayer }) {
+function PlayerAction({ gameId, player }: { gameId: string; player: AdminPlayer }) {
   const restoring = player.status === "REMOVED";
   return (
     <ActionForm
-      action={setPlayerStatusAction}
+      action={setPlayerStatusAction.bind(null, gameId)}
       className="flex flex-wrap items-center justify-end gap-2"
     >
       <input type="hidden" name="playerId" value={player.id} />

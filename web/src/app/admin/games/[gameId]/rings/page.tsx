@@ -1,52 +1,50 @@
 import { ActionForm, ConfirmSubmit } from "@/components/action-form";
 import { Alert, Card, primaryButtonClass } from "@/components/ui";
-import {
-  getAdminGame,
-  getCurrentRing,
-  getRingHistory,
-  requireAdmin,
-  type RoundReason,
-} from "@/lib/api";
+import { getCurrentRing, getRingHistory, type RoundReason } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { shuffleRingAction } from "../actions";
+import { shuffleRingAction } from "../../../actions";
+import { loadAdminGame } from "../load-game";
 
 const REASON_LABEL: Record<RoundReason, string> = {
   INITIAL: "Initial",
   SHAKEUP: "Shakeup",
 };
 
-export default async function AdminRingsPage() {
-  await requireAdmin();
-  const [game, ring, history] = await Promise.all([
-    getAdminGame(),
-    getCurrentRing(),
-    getRingHistory(),
+export default async function AdminRingsPage(props: {
+  params: Promise<{ gameId: string }>;
+}) {
+  const game = await loadAdminGame(props.params);
+  const [ring, history] = await Promise.all([
+    getCurrentRing(game.id),
+    getRingHistory(game.id),
   ]);
 
-  const canShuffle = game !== null && game.status !== "FINISHED";
+  const canShuffle = game.status !== "FINISHED";
   const isShakeup = ring !== null;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Rings</h1>
+      <h2 className="text-xl font-semibold">Rings</h2>
 
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">
+            <h3 className="text-lg font-semibold">
               {ring
                 ? `Current ring — round ${ring.roundNo} (${REASON_LABEL[ring.reason]})`
                 : "No ring yet"}
-            </h2>
-            <p className="text-sm text-zinc-600">
-              {isShakeup
-                ? "A shakeup puts every alive player into a new ring. Current assignments are replaced and kept in history."
-                : "Generating the ring gives every alive player a target and starts the game."}
-            </p>
+            </h3>
+            {canShuffle && (
+              <p className="text-sm text-zinc-600">
+                {isShakeup
+                  ? "A shakeup puts every alive player into a new ring. Current assignments are replaced and kept in history."
+                  : "Generating the ring gives every alive player a target and starts the game."}
+              </p>
+            )}
           </div>
           {canShuffle && (
             <ActionForm
-              action={shuffleRingAction}
+              action={shuffleRingAction.bind(null, game.id)}
               className="flex max-w-md flex-wrap items-center justify-end gap-3"
             >
               <input
@@ -68,10 +66,7 @@ export default async function AdminRingsPage() {
           )}
         </div>
 
-        {!game && <Alert tone="info">Create a game before generating a ring.</Alert>}
-        {game?.status === "FINISHED" && (
-          <Alert tone="info">The game has finished.</Alert>
-        )}
+        {!canShuffle && <Alert tone="info">The game has finished.</Alert>}
 
         {ring && (
           <ol data-testid="current-ring" className="divide-y divide-zinc-100 text-sm">
@@ -96,7 +91,7 @@ export default async function AdminRingsPage() {
       </Card>
 
       <Card className="overflow-x-auto p-0">
-        <h2 className="px-5 pt-5 text-lg font-semibold">Round history</h2>
+        <h3 className="px-5 pt-5 text-lg font-semibold">Round history</h3>
         {history.length === 0 ? (
           <p className="p-5 text-sm text-zinc-600">No rounds yet.</p>
         ) : (

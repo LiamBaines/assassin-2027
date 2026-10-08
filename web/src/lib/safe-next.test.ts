@@ -20,6 +20,11 @@ describe("safeNextPath", () => {
     ["/\\evil.example"],
     ["/\t/evil.example"],
     ["javascript:alert(1)"],
+    ["/.//evil.example"],
+    ["/..//evil.example"],
+    ["/%2e%2e//evil.example"],
+    ["/a/..//evil.example"],
+    ["/.\\/evil.example"],
   ])("falls back to / for %s", (input) => {
     expect(safeNextPath(input)).toBe("/");
   });

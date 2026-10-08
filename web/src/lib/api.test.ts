@@ -28,6 +28,7 @@ vi.mock("next/navigation", () => ({
 
 const {
   ApiError,
+  createGame,
   getAdminGame,
   getAdminPlayers,
   getCurrentRing,
@@ -35,10 +36,13 @@ const {
   getMyTarget,
   getRingHistory,
   joinGame,
+  listAdminGames,
+  previewJoin,
   requireAdmin,
   setPlayerStatus,
   shuffleRing,
   toApiError,
+  updateGame,
 } = await import("./api");
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -65,7 +69,7 @@ afterEach(() => {
 
 describe("request plumbing", () => {
   it("sends the bearer token, no-store, and parses JSON", async () => {
-    const me = { email: "a@b.c", isAdmin: false, game: null, player: null };
+    const me = { email: "a@b.c", isAdmin: false, games: [] };
     fetchMock.mockResolvedValue(Response.json(me));
 
     await expect(getMe()).resolves.toEqual(me);
@@ -79,8 +83,9 @@ describe("request plumbing", () => {
 
   it("serialises the JSON body on POST", async () => {
     fetchMock.mockResolvedValue(Response.json({ roundNo: 1 }));
-    await shuffleRing(null);
-    const [, init] = fetchMock.mock.calls[0];
+    await shuffleRing("g1", null);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/admin/games/g1/rings");
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(JSON.stringify({ expectedCurrentRoundNo: null }));
     expect((init?.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
@@ -135,16 +140,22 @@ describe("error mapping", () => {
     });
   });
 
-  it("returns null for 404 on optional resources", async () => {
+  it("returns null for the expected 404 code on optional resources", async () => {
     fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_TARGET", detail: "No target" }));
-    await expect(getMyTarget()).resolves.toBeNull();
-    fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_LIVE_GAME" }));
-    await expect(getAdminGame()).resolves.toBeNull();
+    await expect(getMyTarget("g1")).resolves.toBeNull();
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "GAME_NOT_FOUND" }));
+    await expect(getAdminGame("g-missing")).resolves.toBeNull();
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "BAD_JOIN_CODE" }));
+    await expect(previewJoin("NOPE12")).resolves.toBeNull();
   });
 
-  it("still throws non-404 errors on optional resources", async () => {
+  it("still throws other errors on optional resources", async () => {
     fetchMock.mockResolvedValue(problem(500, { detail: "boom" }));
-    await expect(getMyTarget()).rejects.toMatchObject({ status: 500, detail: "boom" });
+    await expect(getMyTarget("g1")).rejects.toMatchObject({ status: 500, detail: "boom" });
+    fetchMock.mockResolvedValue(problem(404, { code: "SOMETHING_ELSE" }));
+    await expect(getMyTarget("g1")).rejects.toMatchObject({ code: "SOMETHING_ELSE" });
+    fetchMock.mockResolvedValue(problem(429, { code: "TOO_MANY_ATTEMPTS" }));
+    await expect(previewJoin("ABC123")).rejects.toMatchObject({ code: "TOO_MANY_ATTEMPTS" });
   });
 
   it("toApiError ignores a non-string code", async () => {
@@ -153,7 +164,53 @@ describe("error mapping", () => {
   });
 });
 
+describe("player contracts", () => {
+  it("scopes the target to a game and encodes the id", async () => {
+    fetchMock.mockResolvedValue(Response.json({ target: { displayName: "B" }, assignedAt: "t" }));
+    await getMyTarget("g/1");
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/target");
+  });
+
+  it("previews a join code", async () => {
+    const preview = {
+      gameId: "g1",
+      name: "Spring",
+      status: "SETUP",
+      signupsOpen: true,
+      alreadyJoined: false,
+    };
+    fetchMock.mockResolvedValue(Response.json(preview));
+    await expect(previewJoin("ABC123")).resolves.toEqual(preview);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/join/ABC123");
+  });
+
+  it("POSTs the join and returns the game and player", async () => {
+    const joined = {
+      game: { id: "g1", name: "Spring", status: "SETUP", signupsOpen: true },
+      player: { id: "p1", displayName: "Bob", status: "ALIVE", joinedAt: "t" },
+    };
+    fetchMock.mockResolvedValue(Response.json(joined, { status: 201 }));
+    await expect(joinGame({ displayName: "Bob", joinCode: "ABC123" })).resolves.toEqual(joined);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/players");
+    expect(init?.body).toBe(JSON.stringify({ displayName: "Bob", joinCode: "ABC123" }));
+  });
+});
+
 describe("admin contracts", () => {
+  it("lists, creates and updates games on the game-scoped routes", async () => {
+    fetchMock.mockImplementation(async () => Response.json([]));
+    await listAdminGames();
+    await createGame({ name: "Spring", joinCode: "ABC123" });
+    await updateGame("g1", { status: "FINISHED" });
+    const calls = fetchMock.mock.calls.map(([url, init]) => [init?.method, url]);
+    expect(calls).toEqual([
+      ["GET", "http://api.test/api/admin/games"],
+      ["POST", "http://api.test/api/admin/games"],
+      ["PATCH", "http://api.test/api/admin/games/g1"],
+    ]);
+  });
+
   it("returns the ring in the plan's shape and null before the first round", async () => {
     const ring = {
       roundId: "r1",
@@ -165,27 +222,31 @@ describe("admin contracts", () => {
       ],
     };
     fetchMock.mockResolvedValueOnce(Response.json(ring));
-    await expect(getCurrentRing()).resolves.toEqual(ring);
-    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/admin/rings/current");
+    await expect(getCurrentRing("g1")).resolves.toEqual(ring);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/admin/games/g1/rings/current");
 
     fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_RING" }));
-    await expect(getCurrentRing()).resolves.toBeNull();
+    await expect(getCurrentRing("g1")).resolves.toBeNull();
   });
 
-  it("treats a missing live game as no players and no history", async () => {
-    fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_LIVE_GAME" }));
-    await expect(getAdminPlayers()).resolves.toBeNull();
-    fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_LIVE_GAME" }));
-    await expect(getRingHistory()).resolves.toEqual([]);
+  it("throws GAME_NOT_FOUND from players and history", async () => {
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "GAME_NOT_FOUND" }));
+    await expect(getAdminPlayers("g1")).rejects.toMatchObject({ code: "GAME_NOT_FOUND" });
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "GAME_NOT_FOUND" }));
+    await expect(getRingHistory("g1")).rejects.toMatchObject({ code: "GAME_NOT_FOUND" });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://api.test/api/admin/games/g1/players",
+      "http://api.test/api/admin/games/g1/rings",
+    ]);
   });
 
-  it("PATCHes the player status", async () => {
+  it("PATCHes the player status under its game", async () => {
     fetchMock.mockResolvedValue(
       Response.json({ id: "p 1", displayName: "A", status: "REMOVED", joinedAt: "t" }),
     );
-    await setPlayerStatus("p 1", "REMOVED");
+    await setPlayerStatus("g 1", "p 1", "REMOVED");
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("http://api.test/api/admin/players/p%201");
+    expect(url).toBe("http://api.test/api/admin/games/g%201/players/p%201");
     expect(init?.method).toBe("PATCH");
     expect(init?.body).toBe(JSON.stringify({ status: "REMOVED" }));
   });
@@ -193,14 +254,14 @@ describe("admin contracts", () => {
 
 describe("requireAdmin", () => {
   it("returns the caller when they are an admin", async () => {
-    const me = { email: "admin@b.c", isAdmin: true, game: null, player: null };
+    const me = { email: "admin@b.c", isAdmin: true, games: [] };
     fetchMock.mockResolvedValue(Response.json(me));
     await expect(requireAdmin()).resolves.toEqual(me);
   });
 
   it("404s a non-admin before any admin endpoint is called", async () => {
     fetchMock.mockResolvedValue(
-      Response.json({ email: "a@b.c", isAdmin: false, game: null, player: null }),
+      Response.json({ email: "a@b.c", isAdmin: false, games: [] }),
     );
     await expect(requireAdmin()).rejects.toBeInstanceOf(NotFoundError);
     expect(fetchMock).toHaveBeenCalledTimes(1);

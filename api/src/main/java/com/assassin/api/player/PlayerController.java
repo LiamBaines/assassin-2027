@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -22,8 +24,14 @@ public class PlayerController {
 
     @PostMapping("/api/players")
     @ResponseStatus(HttpStatus.CREATED)
-    public PlayerSummary signup(CurrentUser user, @Valid @RequestBody SignupRequest request) {
-        return PlayerSummary.from(playerService.signup(user, request.displayName(), request.joinCode()));
+    public PlayerGame signup(CurrentUser user, @Valid @RequestBody SignupRequest request) {
+        return playerService.signup(user, request.displayName(), request.joinCode());
+    }
+
+    /** Which game a join code leads to. Any logged-in user may ask; wrong codes count towards the attempt limit. */
+    @GetMapping("/api/join/{code}")
+    public PlayerService.JoinPreview joinPreview(CurrentUser user, @PathVariable String code) {
+        return playerService.preview(user, code);
     }
 
     public record SignupRequest(

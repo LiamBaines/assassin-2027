@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/rings")
+@RequestMapping("/api/admin/games/{gameId}/rings")
 public class AdminRingController {
 
     private final RingService ringService;
@@ -25,18 +26,19 @@ public class AdminRingController {
     /** Generates the initial ring, or shakes up the current one. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RingService.RingView shuffle(CurrentUser admin, @RequestBody ShuffleRequest request) {
-        return ringService.shuffle(request.expectedCurrentRoundNo(), admin.email());
+    public RingService.RingView shuffle(@PathVariable UUID gameId, CurrentUser admin,
+            @RequestBody ShuffleRequest request) {
+        return ringService.shuffle(gameId, request.expectedCurrentRoundNo(), admin.email());
     }
 
     @GetMapping("/current")
-    public RingService.RingView current() {
-        return ringService.currentRing();
+    public RingService.RingView current(@PathVariable UUID gameId) {
+        return ringService.currentRing(gameId);
     }
 
     @GetMapping
-    public List<RoundResponse> history() {
-        return ringService.history().stream().map(RoundResponse::from).toList();
+    public List<RoundResponse> history(@PathVariable UUID gameId) {
+        return ringService.history(gameId).stream().map(RoundResponse::from).toList();
     }
 
     /** @param expectedCurrentRoundNo the current round number the admin saw, or null if there were no rounds */
