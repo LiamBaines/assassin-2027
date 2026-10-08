@@ -32,8 +32,18 @@ Docker must be running for Testcontainers and `supabase start`.
 ```sh
 ./scripts/gen-local-signing-key.sh   # once: local ES256 key -> supabase/signing_keys.json (gitignored)
 supabase start                       # local stack: API :54321, DB :54322, Mailpit :54324
+
+# API (run from api/)
+APP_ADMIN_EMAILS=you@example.com ./mvnw spring-boot:run -Dspring-boot.run.profiles=local   # :8080, needs supabase start
+./mvnw test                          # unit tests only (no Docker)
+./mvnw test -Dtest=RingGeneratorTest # a single test class
+./mvnw verify                        # unit + *IT.java integration tests (Testcontainers postgres:17, needs Docker)
+./mvnw -DskipITs verify              # build and unit tests without Docker
 ```
-Add the API, web and e2e commands here as those tiers are built.
+Add the web and e2e commands here as those tiers are built.
+
+**API layout:** `com.assassin.api.{config,common,game,player,targeting}`; ITs extend `IntegrationTest` (shared context, truncates game tables per test) and mint real ES256 tokens with `JwtTestSupport`.
 
 ## Progress log
 - 2026-10-07: Toolchain installed via Homebrew. Supabase local config (`supabase/config.toml`) is set up: site_url localhost:3000, ES256 signing key, magic_link template, `email_sent` rate limit raised to 100. Docs and ADRs written. (Build order step 0)
+- 2026-10-08: API steps 1-10 on `feat/api`: skeleton (Boot 3.5.16, hand-written pom; Initializr no longer offers 3.5.x), V1 schema + lockdown, ES256 JWT security with admin allowlist, ProblemDetail errors, admin game/players/rings, signup, RingGenerator, RingService, `/api/me/target`. Unit tests pass; the Testcontainers ITs have not run yet because Docker was down. The Bucket4j signup rate limit from the plan's risk notes is not implemented yet.
