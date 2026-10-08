@@ -6,6 +6,7 @@ import type { ActionResult } from "@/components/action-form";
 import {
   createGame,
   isApiError,
+  requireAdmin,
   setPlayerStatus,
   shuffleRing,
   updateGame,
@@ -13,8 +14,13 @@ import {
   type UpdateGameRequest,
 } from "@/lib/api";
 import { normalizeJoinCode } from "@/lib/join-code";
+import { isUuid } from "@/lib/uuid";
 
-// Actions that act on one game take its id as the first, bound argument.
+// Every action checks that the caller is an admin first: server actions are public endpoints, so the admin pages'
+// own requireAdmin() does not protect them. Actions that act on one game take its id as the first, bound argument,
+// which the client can change, so it is checked too.
+
+const INVALID_REQUEST: ActionResult = { error: "Invalid request." };
 
 const MESSAGES: Record<string, string> = {
   JOIN_CODE_TAKEN:
@@ -30,6 +36,7 @@ const MESSAGES: Record<string, string> = {
     "Someone else changed this at the same time. The page has been refreshed; try again.",
   INVALID_STATUS: "That status change isn't allowed.",
   PLAYER_NOT_FOUND: "That player is no longer in the game. The page has been refreshed.",
+  FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
 /** Runs an API mutation, revalidates every page, and maps API errors. */
@@ -62,6 +69,7 @@ export async function createGameAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireAdmin();
   const fields = readGameFields(formData);
   if ("error" in fields) return { error: fields.error };
   let game: AdminGame | undefined;
@@ -77,6 +85,8 @@ export async function updateGameAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
   const fields = readGameFields(formData);
   if ("error" in fields) return { error: fields.error };
   return run(() => updateGame(gameId, fields));
@@ -87,6 +97,8 @@ export async function setSignupsAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
   const patch: UpdateGameRequest = {
     signupsOpen: formData.get("signupsOpen") === "true",
   };
@@ -94,6 +106,8 @@ export async function setSignupsAction(
 }
 
 export async function finishGameAction(gameId: string): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
   return run(() => updateGame(gameId, { status: "FINISHED" }));
 }
 
@@ -102,10 +116,12 @@ export async function setPlayerStatusAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
   const playerId = String(formData.get("playerId") ?? "");
   const status = formData.get("status");
-  if (!playerId || (status !== "ALIVE" && status !== "REMOVED")) {
-    return { error: "Invalid request." };
+  if (!isUuid(playerId) || (status !== "ALIVE" && status !== "REMOVED")) {
+    return INVALID_REQUEST;
   }
   return run(() => setPlayerStatus(gameId, playerId, status));
 }
@@ -115,11 +131,13 @@ export async function shuffleRingAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
   // Empty means no ring has been generated yet; the API expects null in that case.
   const raw = formData.get("expectedCurrentRoundNo");
   const expected = raw ? Number(raw) : null;
   if (expected !== null && (!Number.isInteger(expected) || expected < 1)) {
-    return { error: "Invalid request." };
+    return INVALID_REQUEST;
   }
   return run(() => shuffleRing(gameId, expected));
 }
