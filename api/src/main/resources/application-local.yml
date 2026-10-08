@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:54322/postgres
+    username: postgres
+    password: postgres
+
+app:
+  supabase-url: http://127.0.0.1:54321
+  admin-emails: ${APP_ADMIN_EMAILS:admin@example.com}

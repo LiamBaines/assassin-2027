@@ -1,0 +1,24 @@
+package com.assassin.api.common;
+
+import org.springframework.http.HttpStatus;
+
+/** A business error, rendered as an RFC 9457 ProblemDetail with a machine-readable {@code code}. */
+public class ApiException extends RuntimeException {
+
+    private final HttpStatus status;
+    private final String code;
+
+    public ApiException(HttpStatus status, String code, String detail) {
+        super(detail);
+        this.status = status;
+        this.code = code;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+
+    public String getCode() {
+        return code;
+    }
+}

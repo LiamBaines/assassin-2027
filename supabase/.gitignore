@@ -1,0 +1,11 @@
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local
+
+# Local-only JWT signing key (generate with scripts/gen-local-signing-key.sh)
+signing_keys.json
