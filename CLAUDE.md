@@ -100,4 +100,5 @@ cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if 
   - Added `api/Dockerfile` and `api/fly.toml`: app `assassin-2027-api`, region `fra` (next to Supabase eu-central-1), one always-on 512 MB machine, Hikari pool of 5.
   - The image was checked against local Supabase. It migrates, `/actuator/health` is UP, and `/api/me` returns 200 with a real token and 401 without one.
   - The Fly app is created but not deployed yet.
+  - Decision: prod email goes out through **Gmail SMTP with an app password** (`smtp.gmail.com:465`, about 500 emails a day), because there is no owned domain for Resend. Supabase locks template editing until custom SMTP is configured, and the default template's link doesn't work with `/auth/confirm`, so SMTP blocks prod login.
   - Prod Supabase must have **Confirm email turned off**, to match local `enable_confirmations = false`. Otherwise new users get the "Confirm signup" email instead of the token_hash magic link.
