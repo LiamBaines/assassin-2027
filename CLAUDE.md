@@ -52,7 +52,22 @@ pnpm test                             # vitest run (all unit tests)
 pnpm vitest run src/lib/api.test.ts   # single test file
 pnpm build                            # needs NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SITE_URL, API_BASE_URL
 ```
-Add the e2e commands here once they exist.
+Full stack and e2e (from the repo root; `scripts/supabase-env.sh` starts or reuses Supabase and exports every env var from `supabase status -o env`):
+```sh
+./scripts/dev.sh                     # Supabase + API (local profile, admin admin@e2e.test) + pnpm dev; Ctrl-C stops API and web
+APP_ADMIN_EMAILS=you@example.com ./scripts/dev.sh
+./scripts/e2e.sh                     # Playwright: starts API + `pnpm build && pnpm start` itself, reuses ones already on :8080/:3000
+./scripts/e2e.sh e2e/full-flow.spec.ts                 # a single spec through the script
+cd web && pnpm exec playwright test e2e/full-flow.spec.ts   # a single spec, if the env from supabase-env.sh is already exported
+```
+**E2E notes:**
+- Specs live in `web/e2e/` and run serially with 1 worker, because they share one live game.
+- Global setup truncates every `game.*` table except `flyway_schema_history`, connecting straight to the DB (`E2E_DATABASE_URL`). It never goes through the API.
+- It logs in admin@e2e.test and player1..3@e2e.test with `auth.admin.generateLink({type:'magiclink'})` and `/auth/confirm?type=email`, then saves cookies to `web/e2e/.auth/` (gitignored).
+- `generateLink` reports `signup` for new users. `verifyOtp` with type `email` accepts both.
+- Reuse is off under `CI=1`. A stale server already on :3000 or :8080 (wrong env, old build) is reused locally, so stop it first.
+- CI (`.github/workflows/`): `api.yml` (`mvnw verify`), `web.yml` (lint, typecheck, test, build) and `e2e.yml` (`scripts/e2e.sh`, uploads the report on failure).
+- If `supabase start` fails with `docker-credential-desktop: executable file not found`, `~/.docker/config.json` still has Docker Desktop's `"credsStore": "desktop"`. Remove that line, or point `DOCKER_CONFIG` at a copy without it.
 
 **API layout:** `com.assassin.api.{config,common,game,player,targeting}`. ITs extend `IntegrationTest`, which shares one context and truncates the game tables before each test. They mint real ES256 tokens with `JwtTestSupport`.
 
@@ -71,3 +86,8 @@ Add the e2e commands here once they exist.
 - Decision (2026-10-08): removing a player mid-game **splices them out of the ring**. Their assassin inherits their target, the same way a kill will work. This replaced the plan's `IN_ACTIVE_RING` block, which left no way to remove anyone once the game was ACTIVE. Details are in `docs/architecture.md` (Decisions).
 - 2026-10-08: Contract alignment on `feat/mvp`. Ring POST and `GET /rings/current` now return `{roundId, roundNo, reason, ring}`, and `current` is 404 `NO_RING` before the first round. History rows include `roundId`. The web handles no live game on the players and rings pages, and maps `GAME_FINISHED`, `CONCURRENT_UPDATE`, `INVALID_STATUS`, `PLAYER_NOT_FOUND` and `EMAIL_REQUIRED`. Splice removal is implemented as `RingService.spliceOut` (source `SPLICE`, added to V1), and `IN_ACTIVE_RING` is gone. `-DskipITs verify` and all web checks pass. The ITs compile but have still never run, because Docker was down.
 - 2026-10-08: Docker Desktop replaced with Colima. First real IT run found that V1 hung forever: it ran `ALTER` on `game.flyway_schema_history`, which Flyway locks while migrating. That table is now left alone; the revoked schema USAGE still protects it. `./mvnw verify` passes: 12 unit tests and 56 ITs.
+- 2026-10-08: Steps 16–17 on `feat/mvp`. First full-stack run (Supabase CLI 2.120, Spring, Next prod build, Playwright 1.63 Chromium).
+  - JWT setup checked by hand: the JWKS serves one ES256 EC key, and a real token's `iss` is `http://127.0.0.1:54321/auth/v1` with `aud` `authenticated`, which matches the Spring validator. The type pairing (`generateLink` magiclink/signup, verified with `type=email`) works as-is.
+  - No cross-tier app bugs surfaced. Both e2e failures along the way were spec selector issues: Next's route announcer is also `role=alert`, and a display name also appears as another row's target.
+  - 16 specs pass: magic link (link and code), the full flow, and the lockdown spec (PGRST106 for `game`).
+  - The CI workflows pass action-validator but have not yet run on GitHub.
