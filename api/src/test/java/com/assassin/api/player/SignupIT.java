@@ -65,6 +65,32 @@ class SignupIT extends IntegrationTest {
     }
 
     @Test
+    void wrongJoinCodesAreRateLimitedPerAccount() throws Exception {
+        insertGame("ABC123", "SETUP", true);
+        String guesser = "guesser@example.com";
+        for (int i = 0; i < JoinCodeAttemptLimiter.MAX_FAILURES; i++) {
+            signup(guesser, "Guesser", "WRONG" + i + "X").andExpect(status().isBadRequest());
+        }
+        signup(guesser, "Guesser", "ABC123")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("TOO_MANY_ATTEMPTS"));
+        // Other accounts are unaffected.
+        signup("bystander@example.com", "Bystander", "ABC123").andExpect(status().isCreated());
+    }
+
+    @Test
+    void displayNamesAreMeasuredInCodePointsAndMustBeVisible() throws Exception {
+        insertGame("ABC123", "SETUP", true);
+        signup(ALICE, "\uD83D\uDD2A", "ABC123")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_DISPLAY_NAME"));
+        signup(ALICE, "Ali\u200Bce", "ABC123")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_DISPLAY_NAME"));
+        signup(ALICE, "\uD83D\uDD2A\uD83D\uDD2A", "ABC123").andExpect(status().isCreated());
+    }
+
+    @Test
     void alreadyRegistered() throws Exception {
         insertGame("ABC123", "SETUP", true);
         signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated());

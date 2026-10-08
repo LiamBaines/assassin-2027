@@ -17,6 +17,10 @@ const MESSAGES: Record<string, string> = {
   BAD_JOIN_CODE: "That join code isn't right. Check it with the organiser.",
   ALREADY_REGISTERED: "You're already registered for this game.",
   NAME_TAKEN: "Someone already has that name. Pick another one.",
+  INVALID_DISPLAY_NAME:
+    "Your name must be 2–32 visible characters (an emoji counts as one).",
+  TOO_MANY_ATTEMPTS:
+    "Too many wrong join codes. Wait a few minutes and try again.",
   EMAIL_REQUIRED:
     "Your account has no email address. Sign out and sign in again with your email.",
   VALIDATION_FAILED:
@@ -33,7 +37,9 @@ export async function joinAction(
     .toUpperCase();
   const echo = { displayName, joinCode };
 
-  if (displayName.length < 2 || displayName.length > 32) {
+  // Count code points like the API does, so an emoji is one character.
+  const nameLength = [...displayName].length;
+  if (nameLength < 2 || nameLength > 32) {
     return {
       ...echo,
       code: "VALIDATION_FAILED",
