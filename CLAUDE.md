@@ -33,7 +33,19 @@ Docker must be running for Testcontainers and `supabase start`.
 ./scripts/gen-local-signing-key.sh   # once: local ES256 key -> supabase/signing_keys.json (gitignored)
 supabase start                       # local stack: API :54321, DB :54322, Mailpit :54324
 ```
-Add the API, web and e2e commands here as those tiers are built.
+Web (`cd web`, after `cp .env.example .env.local` and `pnpm install`):
+```sh
+pnpm dev                              # http://localhost:3000
+pnpm lint
+pnpm typecheck                        # next typegen && tsc --noEmit
+pnpm test                             # vitest run (all unit tests)
+pnpm vitest run src/lib/api.test.ts   # single test file
+pnpm build                            # needs NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SITE_URL, API_BASE_URL
+```
+Add the API and e2e commands here as those tiers are built.
+
+**Web notes:** Next 16, so the middleware file is `src/proxy.ts` (exports `proxy`). `cacheComponents` is off on purpose, so `redirect()`/`notFound()` give real status codes. All Spring calls go through `src/lib/api.ts` (server-only). No round yet means `expectedCurrentRoundNo: 0`.
 
 ## Progress log
 - 2026-10-07: Toolchain installed via Homebrew. Supabase local config (`supabase/config.toml`) is set up: site_url localhost:3000, ES256 signing key, magic_link template, `email_sent` rate limit raised to 100. Docs and ADRs written. (Build order step 0)
+- 2026-10-08: Web tier on `feat/web` (Next 16.4, @supabase/ssr 0.12, Vitest 5). Scaffold, Supabase SSR auth (login via Server Actions, `/auth/confirm`, proxy gating with `getClaims()`, sign-out), `lib/api.ts` with unit tests, player pages and admin pages. Lint, typecheck, tests and build pass; not yet run against the real API. (Build order steps 11–15)
