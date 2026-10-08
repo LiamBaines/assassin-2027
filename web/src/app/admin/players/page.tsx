@@ -3,7 +3,12 @@ import {
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
-import { Card, dangerButtonClass, secondaryButtonClass } from "@/components/ui";
+import {
+  Alert,
+  Card,
+  dangerButtonClass,
+  secondaryButtonClass,
+} from "@/components/ui";
 import { getAdminPlayers, type AdminPlayer } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { setPlayerStatusAction } from "../actions";
@@ -16,6 +21,14 @@ const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
 
 export default async function AdminPlayersPage() {
   const players = await getAdminPlayers();
+  if (!players) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">Players</h1>
+        <Alert tone="info">There is no live game. Create one first.</Alert>
+      </div>
+    );
+  }
   const alive = players.filter((p) => p.status === "ALIVE").length;
 
   return (

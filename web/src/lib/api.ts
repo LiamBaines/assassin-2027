@@ -124,11 +124,12 @@ export const createGame = (req: CreateGameRequest) =>
 export const updateGame = (req: UpdateGameRequest) =>
   request<AdminGame>("PATCH", "/api/admin/game", req);
 
+/** Players of the live game, or null when there is no live game. */
 export const getAdminPlayers = () =>
-  request<AdminPlayer[]>("GET", "/api/admin/players");
+  orNull(request<AdminPlayer[]>("GET", "/api/admin/players"));
 
 export const setPlayerStatus = (id: string, status: "ALIVE" | "REMOVED") =>
-  request<AdminPlayer>(
+  request<MePlayer>(
     "PATCH",
     `/api/admin/players/${encodeURIComponent(id)}`,
     { status },
@@ -136,15 +137,16 @@ export const setPlayerStatus = (id: string, status: "ALIVE" | "REMOVED") =>
 
 /**
  * Generates the initial ring or runs a shakeup. Pass the round number the
- * admin saw (0 when there is no round yet) so concurrent runs fail with
+ * admin saw (null when there is no round yet) so concurrent runs fail with
  * STALE_ROUND.
  */
 export const shuffleRing = (expectedCurrentRoundNo: number | null) =>
   request<Ring>("POST", "/api/admin/rings", { expectedCurrentRoundNo });
 
-/** The active ring in cycle order, or null before the first round. */
+/** The active ring in cycle order, or null before the first round (NO_RING) or without a live game. */
 export const getCurrentRing = () =>
   orNull(request<Ring>("GET", "/api/admin/rings/current"));
 
-export const getRingHistory = () =>
-  request<RoundSummary[]>("GET", "/api/admin/rings");
+/** Rounds of the live game, newest first; empty when there is no live game. */
+export const getRingHistory = async () =>
+  (await orNull(request<RoundSummary[]>("GET", "/api/admin/rings"))) ?? [];

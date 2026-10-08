@@ -18,8 +18,19 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { ApiError, getMe, getMyTarget, getAdminGame, joinGame, shuffleRing, toApiError } =
-  await import("./api");
+const {
+  ApiError,
+  getAdminGame,
+  getAdminPlayers,
+  getCurrentRing,
+  getMe,
+  getMyTarget,
+  getRingHistory,
+  joinGame,
+  setPlayerStatus,
+  shuffleRing,
+  toApiError,
+} = await import("./api");
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -130,5 +141,43 @@ describe("error mapping", () => {
   it("toApiError ignores a non-string code", async () => {
     const err = await toApiError(problem(400, { code: 42, detail: "bad" }));
     expect(err).toMatchObject({ status: 400, code: "HTTP_400", detail: "bad" });
+  });
+});
+
+describe("admin contracts", () => {
+  it("returns the ring in the plan's shape and null before the first round", async () => {
+    const ring = {
+      roundId: "r1",
+      roundNo: 1,
+      reason: "INITIAL",
+      ring: [
+        { assassin: { id: "a", displayName: "A" }, target: { id: "b", displayName: "B" } },
+        { assassin: { id: "b", displayName: "B" }, target: { id: "a", displayName: "A" } },
+      ],
+    };
+    fetchMock.mockResolvedValueOnce(Response.json(ring));
+    await expect(getCurrentRing()).resolves.toEqual(ring);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/admin/rings/current");
+
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_RING" }));
+    await expect(getCurrentRing()).resolves.toBeNull();
+  });
+
+  it("treats a missing live game as no players and no history", async () => {
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_LIVE_GAME" }));
+    await expect(getAdminPlayers()).resolves.toBeNull();
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "NO_LIVE_GAME" }));
+    await expect(getRingHistory()).resolves.toEqual([]);
+  });
+
+  it("PATCHes the player status", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ id: "p 1", displayName: "A", status: "REMOVED", joinedAt: "t" }),
+    );
+    await setPlayerStatus("p 1", "REMOVED");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/admin/players/p%201");
+    expect(init?.method).toBe("PATCH");
+    expect(init?.body).toBe(JSON.stringify({ status: "REMOVED" }));
   });
 });

@@ -16,11 +16,14 @@ const MESSAGES: Record<string, string> = {
   NO_LIVE_GAME: "There is no live game. Create one first.",
   VALIDATION_FAILED:
     "Check the form: the name is required and the join code is 6–16 letters or numbers.",
-  IN_ACTIVE_RING: "Player is in the active ring — run a shakeup first",
   NOT_ENOUGH_PLAYERS: "At least 2 alive players are needed to make a ring.",
   STALE_ROUND:
     "Someone else changed the ring since you loaded this page. Review the current ring and try again.",
-  GAME_FINISHED: "The game has finished.",
+  GAME_FINISHED: "The game has finished, so the ring can't change.",
+  CONCURRENT_UPDATE:
+    "Someone else changed this at the same time. The page has been refreshed; try again.",
+  INVALID_STATUS: "That status change isn't allowed.",
+  PLAYER_NOT_FOUND: "That player is no longer in the game. The page has been refreshed.",
 };
 
 /** Runs an API mutation, revalidates every page, and maps API errors. */

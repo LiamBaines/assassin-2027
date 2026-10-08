@@ -17,6 +17,8 @@ const MESSAGES: Record<string, string> = {
   BAD_JOIN_CODE: "That join code isn't right. Check it with the organiser.",
   ALREADY_REGISTERED: "You're already registered for this game.",
   NAME_TAKEN: "Someone already has that name. Pick another one.",
+  EMAIL_REQUIRED:
+    "Your account has no email address. Sign out and sign in again with your email.",
   VALIDATION_FAILED:
     "Check your details: your name must be 2–32 characters and the join code 6–16 letters or numbers.",
 };
