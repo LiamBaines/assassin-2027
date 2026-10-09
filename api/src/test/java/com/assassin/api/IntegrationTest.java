@@ -33,7 +33,7 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     void truncateGameTables() {
-        jdbc.execute("truncate game.assignment, game.assignment_round, game.player, game.game");
+        jdbc.execute("truncate game.kill, game.assignment, game.assignment_round, game.player, game.game");
     }
 
     /** Inserts a game directly; returns its id. */
