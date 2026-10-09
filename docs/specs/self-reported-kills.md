@@ -48,7 +48,7 @@ All confirm paths run under `GameService.lockForChange`, re-check the claim is o
 6. [x] Web `api.ts` calls + types, Vitest for helpers.
 7. [x] Web: `/games/[gameId]` gets a "Register kill" button (with confirm) and status line for the killer, plus an accept/contest banner for the victim. Server actions with code -> message maps in a new `games/[gameId]/actions.ts`.
 8. [x] Web: admin "Kill claims" card on `admin/games/[gameId]/players` (or its own page) with Confirm/Dismiss, calling `requireAdmin()`.
-9. [ ] Playwright e2e (`claims.spec.ts`, own game code): accept path, contest then admin dismiss, contest then admin confirm. Switch `roster.spec.ts` off `setPlayerStatusInDb` if cheap.
+9. [x] Playwright e2e (`claims.spec.ts`, own game code): accept path, contest then admin dismiss, contest then admin confirm. Switch `roster.spec.ts` off `setPlayerStatusInDb` if cheap.
 10. [ ] Docs: `architecture.md` (data model, API), `progress.md` entry.
 
 One task at a time, stop after each.
