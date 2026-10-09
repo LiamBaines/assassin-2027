@@ -23,7 +23,7 @@ In one transaction holding `GameService.lockForChange`:
 3. [x] `KillService.register(...)` + `AdminKillController` (path above). Reuse `ApiException` codes style; `Game` gets a finish method if missing.
 4. [x] API ITs (extend `IntegrationTest`): 3+ ring kill, two-player kill finishes game, victim not alive, not in ring, SETUP game, non-admin 403, victim in other game 404.
 5. [x] Web: `api.ts` call, server action in `admin/actions.ts` with code->message map, button + confirm on `admin/games/[gameId]/players`. Vitest for the api helper.
-6. [ ] Playwright e2e: register a kill, assert victim DEAD and killer's new target.
+6. [x] Playwright e2e: register a kill, assert victim DEAD and killer's new target.
 7. [ ] Docs: architecture.md (data model, API), progress.md entry.
 
 Per your workflow I'll do one task at a time and stop after each.
