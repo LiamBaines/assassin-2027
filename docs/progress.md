@@ -38,3 +38,11 @@ History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom
   - Checks: `mvnw verify` (17 unit tests, 93 ITs), web (92 unit tests), and e2e (29 specs, including the magic-link return through the real email template from Mailpit). All pass.
   - **Manual prod step:** set the dashboard magic-link template to the new `redirect_to={{ .RedirectTo }}` link, and allow `https://assassin-2027.vercel.app/**` in Redirect URLs.
 - 2026-10-09: Slimmed `CLAUDE.md`. Moved this log to `docs/progress.md`, e2e notes to `docs/e2e.md` and prod setup state to `docs/deploy.md`. They are referenced by plain path, not `@` imports, so they load only on demand. The pooler username (it contains the project ref) was left out of the committed docs.
+- 2026-10-09: **Players roster** on `feat/players-roster` (spec in `docs/specs/players-roster.md`). Task 1 (API) done: `GET /api/me/games/{gameId}/players` returns display name and status only, for any member of an `ACTIVE` or `FINISHED` game.
+  - 404 `NOT_IN_GAME` for non-members and unknown games. 404 `GAME_NOT_STARTED` for `SETUP`.
+  - `WAITING` is computed in the API (an `ALIVE` player with no `ACTIVE` assignment as assassin) and never stored. `DEAD` and `REMOVED` never show as `WAITING`.
+  - Ordering is by display name, case-insensitive with the exact name as tie-break, so it reveals neither ring order nor join order.
+  - One query (`PlayerRepository.findRoster`) with a `NOT EXISTS`, not one per player. `RosterIT` has 11 cases; `./mvnw verify` passes. Web, e2e and docs tasks are still to do.
+  - Tasks 2-4 done. Web: `getGamePlayers` (null on `GAME_NOT_STARTED`), `rosterStatusView`, and a Players card on `/games/[gameId]`, hidden for `SETUP` games. The page is a Server Component, so the roster is fetched on load with no polling. Rows are keyed by index because the API returns no ids.
+  - E2E (`roster.spec.ts`, 4 tests, own game `ROSTER1`): no card before the start, sorted and all Alive after the ring with no emails in the HTML, Dead on every player's page, and Waiting for a late joiner.
+  - E2E workarounds: there is no kill feature yet, so DEAD is set by `setPlayerStatusInDb` in `e2e/support.ts` (direct update through `E2E_DATABASE_URL`). Replace it with the real kill flow when that ships. The admin account plays the late joiner, since all three player accounts are already in the game.

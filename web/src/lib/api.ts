@@ -12,6 +12,7 @@ import type {
   MyGame,
   MyTarget,
   PlayerSummary,
+  Roster,
   Ring,
   RoundSummary,
   UpdateGameRequest,
@@ -138,6 +139,13 @@ export const getMyTarget = (gameId: string) =>
   nullOn(
     "NO_TARGET",
     request<MyTarget>("GET", `/api/me/games/${seg(gameId)}/target`),
+  );
+
+/** Every player's display name and status in a started game, or null when it hasn't started. */
+export const getGamePlayers = (gameId: string) =>
+  nullOn(
+    "GAME_NOT_STARTED",
+    request<Roster>("GET", `/api/me/games/${seg(gameId)}/players`),
   );
 
 // Admin

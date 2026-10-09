@@ -32,6 +32,7 @@ const {
   getAdminGame,
   getAdminPlayers,
   getCurrentRing,
+  getGamePlayers,
   getMe,
   getMyTarget,
   getRingHistory,
@@ -169,6 +170,22 @@ describe("player contracts", () => {
     fetchMock.mockResolvedValue(Response.json({ target: { displayName: "B" }, assignedAt: "t" }));
     await getMyTarget("g/1");
     expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/target");
+  });
+
+  it("scopes the roster to a game, encodes the id and returns null before the game starts", async () => {
+    const roster = { players: [{ displayName: "A", status: "WAITING" }] };
+    fetchMock.mockResolvedValueOnce(Response.json(roster));
+    await expect(getGamePlayers("g/1")).resolves.toEqual(roster);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/players");
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "GAME_NOT_STARTED" }));
+    await expect(getGamePlayers("g1")).resolves.toBeNull();
+  });
+
+  it("still throws other roster errors", async () => {
+    fetchMock.mockResolvedValueOnce(problem(404, { code: "NOT_IN_GAME" }));
+    await expect(getGamePlayers("g1")).rejects.toMatchObject({ code: "NOT_IN_GAME" });
+    fetchMock.mockResolvedValueOnce(problem(500, { detail: "boom" }));
+    await expect(getGamePlayers("g1")).rejects.toMatchObject({ status: 500 });
   });
 
   it("previews a join code", async () => {

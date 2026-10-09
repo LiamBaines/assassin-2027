@@ -77,6 +77,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
 | GET | `/api/join/{code}` | user | Join preview for the non-FINISHED game with that code: `{gameId, name, status, signupsOpen, alreadyJoined}`. 404 `BAD_JOIN_CODE` (counts as a wrong code) |
 | POST | `/api/players` | user | `{joinCode, displayName}`, 201 `{game, player}`. Errors: `BAD_JOIN_CODE`, `SIGNUPS_CLOSED`, `ALREADY_REGISTERED`, `NAME_TAKEN`, `INVALID_DISPLAY_NAME`, `EMAIL_REQUIRED`, `TOO_MANY_ATTEMPTS` |
 | GET | `/api/me/games/{gameId}/target` | user | `{target:{displayName}, assignedAt}` or 404 `NO_TARGET` |
+| GET | `/api/me/games/{gameId}/players` | user | Roster of a started game, sorted by display name: `{players:[{displayName, status}]}`, status `ALIVE`/`DEAD`/`REMOVED`/`WAITING` (`WAITING` = alive with no active assignment, computed). 404 `NOT_IN_GAME` (non-member or unknown game), 404 `GAME_NOT_STARTED` (SETUP) |
 | GET/POST | `/api/admin/games` | admin | List every game, newest first, as `{id, name, joinCode, status, signupsOpen, createdAt, startedAt, finishedAt, playerCount}`, or create one `{name, joinCode}` (`JOIN_CODE_TAKEN`) |
 | GET/PATCH | `/api/admin/games/{gameId}` | admin | Read, or edit name, code (`JOIN_CODE_TAKEN`), signupsOpen, or FINISHED (`INVALID_STATUS` for any other status) |
 | GET | `/api/admin/games/{gameId}/players` | admin | Includes each player's current target |
@@ -105,7 +106,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
   - `/join`: a code form that goes to `/join/CODE`
   - `/join/[code]`: "Join <game>" with a display-name field
   - `/me`: the user's games
-  - `/games/[gameId]`: the user's status and target in that game
+  - `/games/[gameId]`: the user's status and target in that game, plus a Players card (everyone's name and status) once the game has started. Server-rendered on load, no polling
 - **Admin (desktop):** `admin/layout.tsx` calls `/api/me` and returns `notFound()` unless `isAdmin`.
   - `/admin`: every game, plus a create form
   - `/admin/games/[gameId]`: details, the shareable join link, edit, toggle signups, finish

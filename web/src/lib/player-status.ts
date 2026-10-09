@@ -1,4 +1,4 @@
-import type { GameStatus, PlayerStatus } from "@/lib/api-types";
+import type { GameStatus, PlayerStatus, RosterStatus } from "@/lib/api-types";
 
 export type StatusView = { label: string; tone: string; hint?: string };
 
@@ -28,6 +28,20 @@ export function playerStatusView(
         tone: "bg-emerald-100 text-emerald-800",
         hint: game === "FINISHED" ? "The game has finished." : undefined,
       };
+  }
+}
+
+/** How a player reads in the roster everyone in the game can see. */
+export function rosterStatusView(status: RosterStatus): StatusView {
+  switch (status) {
+    case "ALIVE":
+      return { label: "Alive", tone: "bg-emerald-100 text-emerald-800" };
+    case "DEAD":
+      return { label: "Dead", tone: "bg-red-100 text-red-800" };
+    case "REMOVED":
+      return { label: "Removed", tone: "bg-zinc-200 text-zinc-800" };
+    case "WAITING":
+      return { label: "Waiting", tone: "bg-amber-100 text-amber-900" };
   }
 }
 

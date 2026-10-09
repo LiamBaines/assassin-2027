@@ -1,6 +1,7 @@
 import path from "node:path";
 import { expect, type Browser, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { Client } from "pg";
 
 export function env(name: string): string {
   const value = process.env[name];
@@ -191,4 +192,26 @@ export async function requestLoginEmail(page: Page, email: string): Promise<Mail
   await page.getByRole("button", { name: "Email me a login link" }).click();
   await expect(page.getByText("Check your email")).toBeVisible();
   return readLoginEmail(email);
+}
+
+/**
+ * Sets a player's status straight in the database. There is no kill feature
+ * yet, so this is the only way to get a DEAD player. e2e only.
+ */
+export async function setPlayerStatusInDb(
+  gameId: string,
+  displayName: string,
+  status: "ALIVE" | "DEAD" | "REMOVED",
+): Promise<void> {
+  const client = new Client({ connectionString: env("E2E_DATABASE_URL") });
+  await client.connect();
+  try {
+    const res = await client.query(
+      "update game.player set status = $1 where game_id = $2 and display_name = $3",
+      [status, gameId, displayName],
+    );
+    if (res.rowCount !== 1) throw new Error(`expected to update one player, got ${res.rowCount}`);
+  } finally {
+    await client.end();
+  }
 }
