@@ -43,3 +43,6 @@ History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom
   - `WAITING` is computed in the API (an `ALIVE` player with no `ACTIVE` assignment as assassin) and never stored. `DEAD` and `REMOVED` never show as `WAITING`.
   - Ordering is by display name, case-insensitive with the exact name as tie-break, so it reveals neither ring order nor join order.
   - One query (`PlayerRepository.findRoster`) with a `NOT EXISTS`, not one per player. `RosterIT` has 11 cases; `./mvnw verify` passes. Web, e2e and docs tasks are still to do.
+  - Tasks 2-4 done. Web: `getGamePlayers` (null on `GAME_NOT_STARTED`), `rosterStatusView`, and a Players card on `/games/[gameId]`, hidden for `SETUP` games. The page is a Server Component, so the roster is fetched on load with no polling. Rows are keyed by index because the API returns no ids.
+  - E2E (`roster.spec.ts`, 4 tests, own game `ROSTER1`): no card before the start, sorted and all Alive after the ring with no emails in the HTML, Dead on every player's page, and Waiting for a late joiner.
+  - E2E workarounds: there is no kill feature yet, so DEAD is set by `setPlayerStatusInDb` in `e2e/support.ts` (direct update through `E2E_DATABASE_URL`). Replace it with the real kill flow when that ships. The admin account plays the late joiner, since all three player accounts are already in the game.
