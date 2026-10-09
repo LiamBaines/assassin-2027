@@ -1,0 +1,40 @@
+# Progress log
+
+History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom. Git history and PRs hold the detail.
+
+- 2026-10-07: Toolchain installed via Homebrew. Supabase local config (`supabase/config.toml`) is set up: site_url localhost:3000, ES256 signing key, magic_link template, `email_sent` rate limit raised to 100. Docs and ADRs written. (Build order step 0)
+- 2026-10-08: API steps 1-10 on `feat/api`: skeleton (Boot 3.5.16, hand-written pom; Initializr no longer offers 3.5.x), V1 schema + lockdown, ES256 JWT security with admin allowlist, ProblemDetail errors, admin game/players/rings, signup, RingGenerator, RingService, `/api/me/target`. Unit tests pass; the Testcontainers ITs have not run yet because Docker was down.
+- 2026-10-08: Web tier on `feat/web` (Next 16.4, @supabase/ssr 0.12, Vitest 5). Scaffold, Supabase SSR auth (login via Server Actions, `/auth/confirm`, proxy gating with `getClaims()`, sign-out), `lib/api.ts` with unit tests, player pages and admin pages. Lint, typecheck, tests and build pass; not yet run against the real API. (Build order steps 11–15)
+- 2026-10-08: Both branches merged into `feat/mvp`.
+- Decision (2026-10-08): removing a player mid-game **splices them out of the ring**. Their assassin inherits their target, the same way a kill will work. This replaced the plan's `IN_ACTIVE_RING` block, which left no way to remove anyone once the game was ACTIVE. Details are in `docs/architecture.md` (Decisions).
+- 2026-10-08: Contract alignment on `feat/mvp`. Ring POST and `GET /rings/current` now return `{roundId, roundNo, reason, ring}`, and `current` is 404 `NO_RING` before the first round. History rows include `roundId`. The web handles no live game on the players and rings pages, and maps `GAME_FINISHED`, `CONCURRENT_UPDATE`, `INVALID_STATUS`, `PLAYER_NOT_FOUND` and `EMAIL_REQUIRED`. Splice removal is implemented as `RingService.spliceOut` (source `SPLICE`, added to V1), and `IN_ACTIVE_RING` is gone. `-DskipITs verify` and all web checks pass. The ITs compile but have still never run, because Docker was down.
+- 2026-10-08: Docker Desktop replaced with Colima. First real IT run found that V1 hung forever: it ran `ALTER` on `game.flyway_schema_history`, which Flyway locks while migrating. That table is now left alone; the revoked schema USAGE still protects it. `./mvnw verify` passes: 12 unit tests and 56 ITs.
+- 2026-10-08: Steps 16–17 on `feat/mvp`. First full-stack run (Supabase CLI 2.120, Spring, Next prod build, Playwright 1.63 Chromium).
+  - JWT setup checked by hand: the JWKS serves one ES256 EC key, and a real token's `iss` is `http://127.0.0.1:54321/auth/v1` with `aud` `authenticated`, which matches the Spring validator. The type pairing (`generateLink` magiclink/signup, verified with `type=email`) works as-is.
+  - Cross-tier bugs found and fixed:
+    - The security filter chain answered 401/403 with empty bodies, so the web saw `HTTP_403` with no `code`. They are now ProblemDetail bodies (`UNAUTHORIZED`/`FORBIDDEN`) that keep the RFC 6750 `WWW-Authenticate` header (`ProblemDetailSecurityErrors`).
+    - Next renders `admin/layout.tsx` and the page concurrently, so a non-admin on `/admin` still triggered admin API calls, and therefore unhandled 403s, behind the layout's `notFound()`. Every admin page now calls `requireAdmin()`, and `getMe` is wrapped in React `cache()`.
+  - Both e2e failures along the way were spec selector issues: Next's route announcer is also `role=alert`, and a display name also appears as another row's target.
+  - 16 specs pass: magic link (link and code), the full flow, and the lockdown spec (PGRST106 for `game`).
+  - The CI workflows pass action-validator but have not yet run on GitHub.
+- 2026-10-08: Review fixes. Wrong join codes are limited to 5 per account per 10 minutes (429 `TOO_MANY_ATTEMPTS`), using the in-memory `JoinCodeAttemptLimiter` instead of Bucket4j. Display names are measured in code points, so an emoji counts as one character, and control or zero-width characters are rejected (`INVALID_DISPLAY_NAME`). A signup constraint race now maps to the exact constraint. PR #1 is open (feat/mvp → main); deploy (step 18) is next.
+- 2026-10-08: PR #1 merged, and CI (api, web, e2e) passed on GitHub. Step 18 started on `chore/deploy`.
+  - Added `api/Dockerfile` and `api/fly.toml`: app `assassin-2027-api`, region `fra` (next to Supabase eu-central-1), one always-on 512 MB machine, Hikari pool of 5.
+  - The image was checked against local Supabase. It migrates, `/actuator/health` is UP, and `/api/me` returns 200 with a real token and 401 without one.
+  - Decision: prod email goes out through **Gmail SMTP with an app password** (`smtp.gmail.com:465`, about 500 emails a day), because there is no owned domain for Resend. Supabase locks template editing until custom SMTP is configured, and the default template's link doesn't work with `/auth/confirm`, so SMTP blocks prod login.
+  - **Deployed.** The API is at https://assassin-2027-api.fly.dev and V1 migrated on prod through the session pooler. The web is at https://assassin-2027.vercel.app. Setup details are in `docs/deploy.md`.
+  - **Prod smoke test passed** (user, 2026-10-08): Gmail SMTP sends mail, both the link and 6-digit code logins work, an admin created a game, two accounts joined, the ring was generated, and both `/target` pages were correct. The first SMTP attempt timed out (504 on `/auth/v1/otp`); the user fixed the SMTP settings. The login action now logs `signInWithOtp` errors to the Vercel logs.
+- 2026-10-08: Continuous deployment. Vercel builds `main` from GitHub (the user connected the repo). `api.yml` deploys the API to Fly after `verify` passes on push to main. CI runs on main are no longer cancelled midway, so a deploy is never interrupted.
+- 2026-10-08: CD verified. The first CI deploy (Fly release v2) went out after `verify` passed, and the API is healthy. Vercel env vars now also apply to Preview; PR previews failed without them, and they use the prod API and Supabase. The repo is now squash-merge only and deletes branches automatically on merge.
+- 2026-10-08: **Multiple games** on `feat/multi-game` (plan in `plan.md`, decision in ADR 0003).
+  - V2 swaps the one-live-game index for `game_join_code_live_uq`.
+  - Every route is now scoped by game id. `GET /api/join/{code}` previews a game, and `/api/me` lists every game the user plays in.
+  - Web: `/me` lists the user's games, with `/games/[id]` for each. `/join/[code]` asks only for a display name. Login returns to `next`. The admin console has a games list and per-game pages, read-only once a game is FINISHED.
+  - Review fixes:
+    - A dot-segment open redirect in `safeNextPath`.
+    - The join-code limiter now reserves an attempt atomically, so parallel guesses can't exceed it.
+    - Signup locks the game row.
+    - Admin server actions call `requireAdmin()` and check that ids are UUIDs.
+  - Checks: `mvnw verify` (17 unit tests, 93 ITs), web (92 unit tests), and e2e (29 specs, including the magic-link return through the real email template from Mailpit). All pass.
+  - **Manual prod step:** set the dashboard magic-link template to the new `redirect_to={{ .RedirectTo }}` link, and allow `https://assassin-2027.vercel.app/**` in Redirect URLs.
+- 2026-10-09: Slimmed `CLAUDE.md`. Moved this log to `docs/progress.md`, e2e notes to `docs/e2e.md` and prod setup state to `docs/deploy.md`. They are referenced by plain path, not `@` imports, so they load only on demand. The pooler username (it contains the project ref) was left out of the committed docs.
