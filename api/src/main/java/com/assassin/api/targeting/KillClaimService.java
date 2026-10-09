@@ -105,6 +105,36 @@ public class KillClaimService {
         return new MyClaims(outgoing, incoming);
     }
 
+    /** Admin: open claims of the game, oldest first. */
+    @Transactional(readOnly = true)
+    public List<AdminClaim> listOpen(UUID gameId) {
+        gameService.find(gameId);
+        return claims.findByGameIdAndStatusInOrderByCreatedAtAsc(gameId, OPEN).stream()
+                .map(c -> new AdminClaim(c.getId(), c.getStatus(),
+                        players.getReferenceById(c.getKillerId()).getDisplayName(),
+                        players.getReferenceById(c.getVictimId()).getDisplayName(), c.getCreatedAt()))
+                .toList();
+    }
+
+    /** Admin: confirms an open claim, whether or not the victim responded. */
+    @Transactional
+    public KillService.KillResult adminConfirm(UUID gameId, long claimId, String adminEmail) {
+        Game game = gameService.lockForChange(gameId);
+        KillClaim claim = requireClaim(gameId, claimId);
+        requireOpen(claim);
+        return confirm(game, claim, adminEmail);
+    }
+
+    /** Admin: dismisses an open claim. */
+    @Transactional
+    public ClaimStatus adminDismiss(UUID gameId, long claimId, String adminEmail) {
+        gameService.lockForChange(gameId);
+        KillClaim claim = requireClaim(gameId, claimId);
+        requireOpen(claim);
+        claim.resolve(KillClaimStatus.DISMISSED, adminEmail, Instant.now());
+        return new ClaimStatus(claim.getId(), claim.getStatus());
+    }
+
     /**
      * Confirms an open claim: re-checks its assignment is still ACTIVE, then applies the kill. The caller must hold
      * the game lock. The open-claim void inside the splice also hits this claim, but the status set here is written
@@ -166,6 +196,10 @@ public class KillClaimService {
     }
 
     public record Incoming(long id, String killerName) {
+    }
+
+    public record AdminClaim(long id, KillClaimStatus status, String killerName, String victimName,
+            Instant createdAt) {
     }
 
     public record MyClaims(ClaimStatus outgoing, Incoming incoming) {
