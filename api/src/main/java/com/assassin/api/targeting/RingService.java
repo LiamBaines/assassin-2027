@@ -122,24 +122,46 @@ public class RingService {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void spliceOut(UUID playerId) {
+        splice(playerId, AssignmentStatus.VOIDED, AssignmentSource.SPLICE);
+    }
+
+    /**
+     * Takes a player out of the ring as {@link #spliceOut} does, but ends their incoming assignment with
+     * {@code incomingEnd} and tags the inheriting assignment with {@code source}. Their outgoing assignment is VOIDED.
+     * Returns empty if the player lacks an incoming or an outgoing assignment (nothing is inserted). When the
+     * assassin and target are the same player nothing is inserted either, and the splice reports them as equal.
+     *
+     * <p>The caller must already hold the lock on the player's game row.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Splice> splice(UUID playerId, AssignmentStatus incomingEnd, AssignmentSource source) {
         Optional<Assignment> incoming = assignments.findByTargetIdAndStatus(playerId, AssignmentStatus.ACTIVE);
         Optional<Assignment> outgoing = assignments.findByAssassinIdAndStatus(playerId, AssignmentStatus.ACTIVE);
         Instant now = Instant.now();
-        incoming.ifPresent(a -> a.end(AssignmentStatus.VOIDED, now));
+        incoming.ifPresent(a -> a.end(incomingEnd, now));
         outgoing.ifPresent(a -> a.end(AssignmentStatus.VOIDED, now));
         if (incoming.isEmpty() || outgoing.isEmpty()) {
-            return;
+            return Optional.empty();
         }
         Assignment in = incoming.get();
         UUID assassin = in.getAssassinId();
         UUID target = outgoing.get().getTargetId();
-        if (assassin.equals(target)) {
-            return;
+        if (!assassin.equals(target)) {
+            // The ended rows must reach the database before the new ACTIVE row, or the one-active indexes reject it.
+            assignments.flush();
+            jdbc.update(INSERT_ASSIGNMENT, in.getGameId(), in.getRoundId(), assassin, target, source.name(),
+                    OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
         }
-        // The voided rows must reach the database before the new ACTIVE row, or the one-active indexes reject it.
-        assignments.flush();
-        jdbc.update(INSERT_ASSIGNMENT, in.getGameId(), in.getRoundId(), assassin, target,
-                AssignmentSource.SPLICE.name(), OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
+        return Optional.of(new Splice(in.getId(), assassin, target));
+    }
+
+    /** The assignment that was ended on the way in, and the assassin who now hunts {@code target}. */
+    public record Splice(long incomingAssignmentId, UUID assassinId, UUID targetId) {
+
+        /** True when only the assassin was left, so no assignment was inserted. */
+        public boolean ringCollapsed() {
+            return assassinId.equals(targetId);
+        }
     }
 
     /** The game's current round with its active assignments in cycle order, or 404 NO_RING before the first. */
