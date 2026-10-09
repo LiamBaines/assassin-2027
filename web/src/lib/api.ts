@@ -8,6 +8,7 @@ import type {
   CreateGameRequest,
   JoinPreview,
   JoinRequest,
+  KillResult,
   Me,
   MyGame,
   MyTarget,
@@ -181,6 +182,9 @@ export const setPlayerStatus = (
     `${gamePath(gameId)}/players/${seg(playerId)}`,
     { status },
   );
+
+export const registerKill = (gameId: string, victimId: string) =>
+  request<KillResult>("POST", `${gamePath(gameId)}/kills`, { victimId });
 
 /**
  * Generates the initial ring or runs a shakeup. Pass the round number the

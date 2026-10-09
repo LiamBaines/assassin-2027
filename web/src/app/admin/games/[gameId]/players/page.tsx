@@ -5,8 +5,12 @@ import {
 } from "@/components/action-form";
 import { Card, dangerButtonClass, secondaryButtonClass } from "@/components/ui";
 import { getAdminPlayers, type AdminPlayer } from "@/lib/api";
-import { formatDateTime, removePlayerMessage } from "@/lib/format";
-import { setPlayerStatusAction } from "../../../actions";
+import {
+  formatDateTime,
+  registerKillMessage,
+  removePlayerMessage,
+} from "@/lib/format";
+import { registerKillAction, setPlayerStatusAction } from "../../../actions";
 import { loadAdminGame } from "../load-game";
 
 const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
@@ -22,6 +26,9 @@ export default async function AdminPlayersPage(props: {
   const players = await getAdminPlayers(game.id);
   const editable = game.status !== "FINISHED";
   const alive = players.filter((p) => p.status === "ALIVE").length;
+  const aliveInRing = players.filter(
+    (p) => p.status === "ALIVE" && p.currentTarget,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -72,7 +79,12 @@ export default async function AdminPlayersPage(props: {
                   </td>
                   {editable && (
                     <td className="px-4 py-3 text-right">
-                      <PlayerAction gameId={game.id} player={p} />
+                      <PlayerAction
+                        gameId={game.id}
+                        player={p}
+                        active={game.status === "ACTIVE"}
+                        aliveInRing={aliveInRing}
+                      />
                     </td>
                   )}
                 </tr>
@@ -85,32 +97,62 @@ export default async function AdminPlayersPage(props: {
   );
 }
 
-function PlayerAction({ gameId, player }: { gameId: string; player: AdminPlayer }) {
+function PlayerAction({
+  gameId,
+  player,
+  active,
+  aliveInRing,
+}: {
+  gameId: string;
+  player: AdminPlayer;
+  active: boolean;
+  aliveInRing: number;
+}) {
   const restoring = player.status === "REMOVED";
+  // Only a player with a target is in the ring, and only a ring player can be killed.
+  const killable =
+    active && player.status === "ALIVE" && player.currentTarget !== null;
   return (
-    <ActionForm
-      action={setPlayerStatusAction.bind(null, gameId)}
-      className="flex flex-wrap items-center justify-end gap-2"
-    >
-      <input type="hidden" name="playerId" value={player.id} />
-      <input
-        type="hidden"
-        name="status"
-        value={restoring ? "ALIVE" : "REMOVED"}
-      />
-      {restoring ? (
-        <SubmitButton className={secondaryButtonClass} pendingLabel="Restoring…">
-          Restore
-        </SubmitButton>
-      ) : (
-        <ConfirmSubmit
-          label="Remove"
-          confirmLabel="Remove"
-          message={removePlayerMessage(player)}
-          className={secondaryButtonClass}
-          confirmClassName={dangerButtonClass}
-        />
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {killable && (
+        <ActionForm
+          action={registerKillAction.bind(null, gameId)}
+          className="flex flex-wrap items-center justify-end gap-2"
+        >
+          <input type="hidden" name="victimId" value={player.id} />
+          <ConfirmSubmit
+            label="Register kill"
+            confirmLabel="Register kill"
+            message={registerKillMessage(player, aliveInRing)}
+            className={secondaryButtonClass}
+            confirmClassName={dangerButtonClass}
+          />
+        </ActionForm>
       )}
-    </ActionForm>
+      <ActionForm
+        action={setPlayerStatusAction.bind(null, gameId)}
+        className="flex flex-wrap items-center justify-end gap-2"
+      >
+        <input type="hidden" name="playerId" value={player.id} />
+        <input
+          type="hidden"
+          name="status"
+          value={restoring ? "ALIVE" : "REMOVED"}
+        />
+        {restoring ? (
+          <SubmitButton className={secondaryButtonClass} pendingLabel="Restoring…">
+            Restore
+          </SubmitButton>
+        ) : (
+          <ConfirmSubmit
+            label="Remove"
+            confirmLabel="Remove"
+            message={removePlayerMessage(player)}
+            className={secondaryButtonClass}
+            confirmClassName={dangerButtonClass}
+          />
+        )}
+      </ActionForm>
+    </div>
   );
 }
