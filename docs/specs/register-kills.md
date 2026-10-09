@@ -20,7 +20,7 @@ In one transaction holding `GameService.lockForChange`:
 ## Tasks
 1. [x] V3 migration: `game.kill` (composite FKs to player/game like `assignment`, RLS on, grants revoked via same guarded block, unique on victim_id: a player dies once). Kill entity + repository.
 2. [x] `RingService`: extract the splice mechanics from `spliceOut` into a shared helper parameterised by end status for the incoming row and the new row's source. `spliceOut` behaviour unchanged (existing tests must still pass).
-3. [ ] `KillService.register(...)` + `AdminKillController` (path above). Reuse `ApiException` codes style; `Game` gets a finish method if missing.
+3. [x] `KillService.register(...)` + `AdminKillController` (path above). Reuse `ApiException` codes style; `Game` gets a finish method if missing.
 4. [ ] API ITs (extend `IntegrationTest`): 3+ ring kill, two-player kill finishes game, victim not alive, not in ring, SETUP game, non-admin 403, victim in other game 404.
 5. [ ] Web: `api.ts` call, server action in `admin/actions.ts` with code->message map, button + confirm on `admin/games/[gameId]/players`. Vitest for the api helper.
 6. [ ] Playwright e2e: register a kill, assert victim DEAD and killer's new target.
