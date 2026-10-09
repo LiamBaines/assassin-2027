@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/action-form";
 import {
+  confirmKillClaim,
   createGame,
+  dismissKillClaim,
   isApiError,
   registerKill,
   requireAdmin,
@@ -40,6 +42,9 @@ const MESSAGES: Record<string, string> = {
   GAME_NOT_STARTED: "The game hasn't started yet. Generate a ring first.",
   PLAYER_NOT_ALIVE: "That player is already dead or removed. The page has been refreshed.",
   NOT_IN_RING: "That player isn't in the ring, so they can't be killed.",
+  CLAIM_NOT_OPEN: "That claim has already been resolved. The page has been refreshed.",
+  CLAIM_STALE:
+    "The ring has changed since this claim was filed, so it's no longer valid. The page has been refreshed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
@@ -156,4 +161,26 @@ export async function shuffleRingAction(
     return INVALID_REQUEST;
   }
   return run(() => shuffleRing(gameId, expected));
+}
+
+export async function confirmClaimAction(
+  gameId: string,
+  claimId: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ActionForm passes (prev, formData) after the bound args
+  _prev: ActionResult,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId) || !Number.isInteger(claimId)) return INVALID_REQUEST;
+  return run(() => confirmKillClaim(gameId, claimId));
+}
+
+export async function dismissClaimAction(
+  gameId: string,
+  claimId: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ActionForm passes (prev, formData) after the bound args
+  _prev: ActionResult,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId) || !Number.isInteger(claimId)) return INVALID_REQUEST;
+  return run(() => dismissKillClaim(gameId, claimId));
 }
