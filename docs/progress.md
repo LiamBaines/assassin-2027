@@ -46,3 +46,9 @@ History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom
   - Tasks 2-4 done. Web: `getGamePlayers` (null on `GAME_NOT_STARTED`), `rosterStatusView`, and a Players card on `/games/[gameId]`, hidden for `SETUP` games. The page is a Server Component, so the roster is fetched on load with no polling. Rows are keyed by index because the API returns no ids.
   - E2E (`roster.spec.ts`, 4 tests, own game `ROSTER1`): no card before the start, sorted and all Alive after the ring with no emails in the HTML, Dead on every player's page, and Waiting for a late joiner.
   - E2E workarounds: there is no kill feature yet, so DEAD is set by `setPlayerStatusInDb` in `e2e/support.ts` (direct update through `E2E_DATABASE_URL`). Replace it with the real kill flow when that ships. The admin account plays the late joiner, since all three player accounts are already in the game.
+- 2026-10-09: **Register kills** on `feature/register-kills` (spec in `docs/specs/register-kills.md`).
+  - V3 adds `game.kill` (unique victim). `RingService.splice(playerId, incomingEnd, source)` is the shared core: `spliceOut` calls it with `VOIDED`/`SPLICE`, `KillService` with `COMPLETED`/`KILL_INHERIT`.
+  - `POST /api/admin/games/{gameId}/kills` takes the victim only and derives the killer. A kill with two players left finishes the game.
+  - Web: a Register kill button per ring player on the admin players page, with a confirm message naming the inherited target.
+  - Checks: `KillIT` (9 cases), `api.test.ts`, and `kills.spec.ts` e2e (3 tests, own game `KILLS01`).
+  - Follow-up: `roster.spec.ts` still sets DEAD with `setPlayerStatusInDb`; it could use the real kill flow now.

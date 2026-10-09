@@ -4,7 +4,7 @@
 The user is running a real-life game of Assassin. In the game, each player hunts an assigned target. A player who kills their target inherits that target's target, and the last player standing wins. The goal is an app that automates the game. The repo is currently empty: a stub CLAUDE.md, an empty `docs/`, and no commits.
 
 Long-term features, out of scope here:
-- kill log, leaderboard and statuses
+- leaderboard and a player-facing kill log
 - anonymous messaging
 - gallery
 - NFC kill confirmation
@@ -32,7 +32,8 @@ The schema and architecture must not block the later features.
 - **Targeting:** **auto ring only**. One button shuffles all ALIVE players into a single cycle. The first run is the initial allocation. Every later run is a **shakeup**, which replaces the active assignments while keeping history. (A reshuffle and a shakeup are the same thing.)
 - **Terminology:** a player hunting someone is the **assassin**, and the player being hunted is the **target**. Use these names in the code, the schema and the UI.
 - **Signups are not auto-closed** when the ring is generated. The admin toggles them manually, and late joiners have no target until the next shakeup.
-- **Removing a player** mid-game **splices them out of the ring** (decided 2026-10-08, replacing an earlier `IN_ACTIVE_RING` block). In one transaction that holds the game row lock: their two active assignments A→X and X→T become `VOIDED`, and A→T is inserted in the same round with source `SPLICE`. In a two-player ring (A = T) nothing is inserted and A is left without a target. A player with no active assignment just changes status. A restored player has no target until the next shakeup. `RingService.spliceOut` is meant to be reused by kill logic.
+- **Removing a player** mid-game **splices them out of the ring** (decided 2026-10-08, replacing an earlier `IN_ACTIVE_RING` block). In one transaction that holds the game row lock: their two active assignments A→X and X→T become `VOIDED`, and A→T is inserted in the same round with source `SPLICE`. In a two-player ring (A = T) nothing is inserted and A is left without a target. A player with no active assignment just changes status. A restored player has no target until the next shakeup. `RingService.splice` is shared with kills.
+- **Registering a kill** (decided 2026-10-09; spec `docs/specs/register-kills.md`) is admin-only and takes the victim only. The killer is the assassin of the victim's ACTIVE assignment. In one transaction holding the game row lock, A→X becomes `COMPLETED`, X→T becomes `VOIDED`, A→T is inserted in the same round with source `KILL_INHERIT`, X becomes `DEAD`, and a `kill` row is written. In a two-player ring (A = T) nothing is inserted and the game is set `FINISHED`, with A as the winner. Only a game in `ACTIVE` accepts kills, and only an ALIVE player in the ring can be killed.
 - **Multiple games** (decided 2026-10-08, see ADR 0003): the admin can run several games at once and still sees FINISHED ones, which are read-only. One account can play in several games. A game's join code is unique among games that aren't FINISHED, and players join through a `/join/CODE` link.
 - **Scale:** under 200 players per game.
 - **Flyway (in Spring) is the only schema source of truth.**
@@ -44,7 +45,7 @@ The schema and architecture must not block the later features.
 ```
 /api        Spring Boot (mvnw, Dockerfile, fly.toml)
             com.assassin.api.{config,common,game,player,targeting}
-            resources/db/migration/V1__init.sql, V2__multi_game.sql
+            resources/db/migration/V1__init.sql, V2__multi_game.sql, V3__kill.sql
 /web        Next.js (src/app, src/lib/supabase, src/lib/api.ts, src/proxy.ts, e2e/)
 /supabase   config.toml, templates/magic_link.html, signing_keys.json (gitignored, local)
 /scripts    dev.sh, e2e.sh, gen-local-signing-key.sh
@@ -52,17 +53,18 @@ The schema and architecture must not block the later features.
 /.github/workflows  api.yml, web.yml, e2e.yml
 ```
 
-## Data model (`V1__init.sql` + `V2__multi_game.sql`, schema `game`)
+## Data model (`V1__init.sql`, `V2__multi_game.sql`, `V3__kill.sql`, schema `game`)
 - `game`: id uuid, name, join_code (uppercase `^[A-Z0-9]{6,16}$`), status (`SETUP|ACTIVE|FINISHED`), signups_open, created_at/started_at/finished_at, version. The partial unique index `game_join_code_live_uq` makes join_code unique among non-FINISHED games (V2 replaced V1's one-live-game index).
 - `player`: id, game_id FK, auth_user_id (JWT `sub`, no FK to auth.users), email, display_name, status (`ALIVE|DEAD|REMOVED`), joined_at. Unique on `(game_id, auth_user_id)` and `(game_id, lower(display_name))`, plus `(id, game_id)` as the target for composite FKs.
 - `assignment_round`: id, game_id, round_no (unique per game), reason (`INITIAL|SHAKEUP`), player_count, created_by, created_at.
 - `assignment`: id identity, game_id, round_id, assassin_id, target_id (composite FKs to player), source (`RING|KILL_INHERIT|SPLICE|MANUAL`; `SPLICE` is an assassin inheriting a removed player's target), status (`ACTIVE|COMPLETED|SUPERSEDED|VOIDED`), created_at, ended_at.
   - Check: `assassin <> target`.
   - Partial unique indexes keep one ACTIVE row per assassin and one ACTIVE row per target (one assassin per target).
+- `kill`: id identity, game_id, assignment_id (the killer→victim assignment the kill completed), killer_id and victim_id (composite FKs to player), registered_by (admin email), created_at. Unique on victim_id, so a player dies once.
 - RLS is enabled on every table. A guarded `DO` block revokes grants from `anon` and `authenticated` only when those roles exist, so the migration also runs on plain Postgres in Testcontainers.
 - Enum-like values are stored as `text` with CHECK constraints. JPA runs with `ddl-auto=validate` and `default_schema=game`.
 - **How future features fit:**
-  - kill log: a `kill` table referencing an assignment
+  - leaderboard and a player-facing kill log read from the `kill` table
   - shakeups are already in the MVP: each one is a new round with reason `SHAKEUP`
   - messaging: keyed by assignment, so the assassin stays anonymous
   - gallery: Storage with signed URLs from Spring
@@ -82,6 +84,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
 | GET/PATCH | `/api/admin/games/{gameId}` | admin | Read, or edit name, code (`JOIN_CODE_TAKEN`), signupsOpen, or FINISHED (`INVALID_STATUS` for any other status) |
 | GET | `/api/admin/games/{gameId}/players` | admin | Includes each player's current target |
 | PATCH | `/api/admin/games/{gameId}/players/{playerId}` | admin | `{status}`: REMOVED or ALIVE. Removing a player in the ring splices them out (see Decisions). Errors: `INVALID_STATUS`, `PLAYER_NOT_FOUND` |
+| POST | `/api/admin/games/{gameId}/kills` | admin | `{victimId}`. 201 `{killId, killer, victim, newTarget, gameFinished}`; `newTarget` is null when the kill ended the game. Errors: `GAME_NOT_STARTED`, `GAME_FINISHED`, `PLAYER_NOT_FOUND`, `PLAYER_NOT_ALIVE`, `NOT_IN_RING` |
 | POST | `/api/admin/games/{gameId}/rings` | admin | `{expectedCurrentRoundNo}` (null before the first round). 201 with the new ring, same shape as `current`. Errors: `NOT_ENOUGH_PLAYERS` (<2), `STALE_ROUND`, `GAME_FINISHED` |
 | GET | `/api/admin/games/{gameId}/rings/current` | admin | `{roundId, roundNo, reason, ring:[{assassin:{id,displayName}, target:{id,displayName}}]}` in cycle order, or 404 `NO_RING` before the first round |
 | GET | `/api/admin/games/{gameId}/rings` | admin | Round history, newest first: `[{roundId, roundNo, reason, playerCount, createdBy, createdAt}]` |
@@ -110,7 +113,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
 - **Admin (desktop):** `admin/layout.tsx` calls `/api/me` and returns `notFound()` unless `isAdmin`.
   - `/admin`: every game, plus a create form
   - `/admin/games/[gameId]`: details, the shareable join link, edit, toggle signups, finish
-  - `/admin/games/[gameId]/players`: table with remove/restore
+  - `/admin/games/[gameId]/players`: table with remove/restore, and a Register kill button (with a confirm step) on ALIVE players in the ring of an ACTIVE game
   - `/admin/games/[gameId]/rings`: generate ring / shake up with a confirm dialog, the current ring, and history
   - A FINISHED game's pages show no controls.
   - Every admin page and server action calls `requireAdmin()` itself.
