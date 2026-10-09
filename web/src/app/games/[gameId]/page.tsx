@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, PlayerShell } from "@/components/ui";
-import { getMe, getMyTarget } from "@/lib/api";
+import { getGamePlayers, getMe, getMyTarget } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { playerStatusView } from "@/lib/player-status";
+import { playerStatusView, rosterStatusView } from "@/lib/player-status";
 
 export const metadata: Metadata = { title: "Game · Assassin 2027" };
 
@@ -20,7 +20,10 @@ export default async function GamePage(props: {
   const status = playerStatusView(player.status, game.status);
   // Finishing a game keeps the last assignments, so don't show a stale target.
   const finished = game.status === "FINISHED";
-  const assignment = finished ? null : await getMyTarget(gameId);
+  const [assignment, roster] = await Promise.all([
+    finished ? null : getMyTarget(gameId),
+    game.status === "SETUP" ? null : getGamePlayers(gameId),
+  ]);
 
   return (
     <PlayerShell title={game.name} isAdmin={me.isAdmin}>
@@ -63,6 +66,31 @@ export default async function GamePage(props: {
           </p>
         )}
       </Card>
+      {roster && (
+        <Card className="space-y-3">
+          <h2 className="text-sm font-medium text-zinc-500">Players</h2>
+          <ul className="divide-y divide-zinc-100">
+            {roster.players.map((p, i) => {
+              const view = rosterStatusView(p.status);
+              return (
+                <li
+                  key={i}
+                  data-testid="roster-row"
+                  className="flex items-center justify-between gap-3 py-2"
+                >
+                  <span className="break-words">{p.displayName}</span>
+                  <span
+                    data-testid="roster-status"
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${view.tone}`}
+                  >
+                    {view.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
       <Link href="/me" className="block text-center text-sm text-zinc-600 underline">
         Back to my games
       </Link>
