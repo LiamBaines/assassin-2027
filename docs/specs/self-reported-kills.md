@@ -41,7 +41,7 @@ All confirm paths run under `GameService.lockForChange`, re-check the claim is o
 
 ## Tasks
 1. [x] V4 migration `game.kill_claim` + entity, status enum, repository.
-2. [ ] Refactor `KillService`: extract the core `applyKill(game, victim, registeredBy)` so admin register and claim confirm share it. Existing `KillIT` must still pass.
+2. [x] Refactor `KillService`: extract the core `applyKill(game, victim, registeredBy)` so admin register and claim confirm share it. Existing `KillIT` must still pass.
 3. [ ] `KillClaimService` + player controller (file, withdraw, accept, contest, mine). Void open claims inside `RingService` when it changes the ring (shakeup, splice, kill).
 4. [ ] Admin controller (list open, confirm, dismiss).
 5. [ ] API ITs: file, double file, no target, accept confirms and splices, contest then admin confirm/dismiss, admin confirm before victim responds, withdraw, wrong participant 403, stale claim voided by shakeup and by another kill, last-two kill finishes the game, SETUP/FINISHED games.

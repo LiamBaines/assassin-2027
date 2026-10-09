@@ -44,6 +44,14 @@ public class KillService {
         }
         Player victim = players.findByIdAndGameId(victimId, game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAYER_NOT_FOUND", "No such player in this game."));
+        return applyKill(game, victim, registeredBy);
+    }
+
+    /**
+     * Core kill logic. The caller must hold the game lock ({@link GameService#lockForChange}), have checked the
+     * game is ACTIVE, and have loaded the victim from this game.
+     */
+    public KillResult applyKill(Game game, Player victim, String registeredBy) {
         if (victim.getStatus() != PlayerStatus.ALIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "PLAYER_NOT_ALIVE", "That player is not alive.");
         }
