@@ -104,3 +104,31 @@ export type UpdateGameRequest = {
   signupsOpen?: boolean;
   status?: "FINISHED";
 };
+
+export type KillClaimStatus =
+  | "PENDING"
+  | "CONTESTED"
+  | "CONFIRMED"
+  | "DISMISSED"
+  | "WITHDRAWN"
+  | "VOIDED";
+
+export type ClaimStatus = { id: number; status: KillClaimStatus };
+
+export type ClaimAcceptResult = {
+  status: KillClaimStatus;
+  gameFinished: boolean;
+};
+
+export type MyClaims = {
+  outgoing: ClaimStatus | null;
+  incoming: { id: number; killerName: string } | null;
+};
+
+export type AdminClaim = {
+  id: number;
+  status: KillClaimStatus;
+  killerName: string;
+  victimName: string;
+  createdAt: string;
+};

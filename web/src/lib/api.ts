@@ -3,13 +3,17 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  AdminClaim,
   AdminGame,
   AdminPlayer,
+  ClaimAcceptResult,
+  ClaimStatus,
   CreateGameRequest,
   JoinPreview,
   JoinRequest,
   KillResult,
   Me,
+  MyClaims,
   MyGame,
   MyTarget,
   PlayerSummary,
@@ -149,6 +153,27 @@ export const getGamePlayers = (gameId: string) =>
     request<Roster>("GET", `/api/me/games/${seg(gameId)}/players`),
   );
 
+const claimsPath = (gameId: string) =>
+  `/api/me/games/${seg(gameId)}/kill-claims`;
+
+/** Files a kill claim against the caller's current target. */
+export const fileKillClaim = (gameId: string) =>
+  request<ClaimStatus>("POST", claimsPath(gameId));
+
+export const withdrawKillClaim = (gameId: string, claimId: number) =>
+  request<ClaimStatus>("POST", `${claimsPath(gameId)}/${claimId}/withdraw`);
+
+/** Victim confirms the kill. */
+export const acceptKillClaim = (gameId: string, claimId: number) =>
+  request<ClaimAcceptResult>("POST", `${claimsPath(gameId)}/${claimId}/accept`);
+
+export const contestKillClaim = (gameId: string, claimId: number) =>
+  request<ClaimStatus>("POST", `${claimsPath(gameId)}/${claimId}/contest`);
+
+/** The caller's outgoing claim and the pending claim against them, if any. */
+export const getMyKillClaims = (gameId: string) =>
+  request<MyClaims>("GET", `${claimsPath(gameId)}/mine`);
+
 // Admin
 
 /** Every game, newest first, including finished ones. */
@@ -206,3 +231,12 @@ export const getCurrentRing = (gameId: string) =>
 /** Rounds of the game, newest first. */
 export const getRingHistory = (gameId: string) =>
   request<RoundSummary[]>("GET", `${gamePath(gameId)}/rings`);
+
+export const listOpenKillClaims = (gameId: string) =>
+  request<AdminClaim[]>("GET", `${gamePath(gameId)}/kill-claims?status=open`);
+
+export const confirmKillClaim = (gameId: string, claimId: number) =>
+  request<KillResult>("POST", `${gamePath(gameId)}/kill-claims/${claimId}/confirm`);
+
+export const dismissKillClaim = (gameId: string, claimId: number) =>
+  request<ClaimStatus>("POST", `${gamePath(gameId)}/kill-claims/${claimId}/dismiss`);

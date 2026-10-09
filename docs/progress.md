@@ -52,3 +52,8 @@ History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom
   - Web: a Register kill button per ring player on the admin players page, with a confirm message naming the inherited target.
   - Checks: `KillIT` (9 cases), `api.test.ts`, and `kills.spec.ts` e2e (3 tests, own game `KILLS01`).
   - Follow-up: `roster.spec.ts` still sets DEAD with `setPlayerStatusInDb`; it could use the real kill flow now.
+- 2026-10-09: **Self-reported kills** on `self-reported-kills` (spec in `docs/specs/self-reported-kills.md`).
+  - V4 adds `game.kill_claim` (one open claim per victim). `KillService.applyKill` is shared by admin register, victim accept and admin confirm of a claim. `RingService` voids open claims touched by a shakeup, splice or kill in the same transaction.
+  - API: player file/withdraw/accept/contest/mine, and admin list/confirm/dismiss. Victims see only the killer's display name.
+  - Web: Register kill button and status on `/games/[gameId]`, an accept/contest banner for the victim, and a Kill claims card on the admin players page. No polling or email, so the victim sees the banner on next load.
+  - Checks: `KillClaimIT`, Vitest helpers, and `claims.spec.ts` e2e.

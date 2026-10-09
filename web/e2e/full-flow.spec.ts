@@ -114,9 +114,9 @@ test("a player's home lists the game", async () => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/me$/);
   await expect(page.getByRole("heading", { level: 1, name: "My games" })).toBeVisible();
-  const card = page.getByTestId("my-game");
+  // Other specs (claims, kills) leave games behind for the same players, so scope to this spec's game.
+  const card = page.getByTestId("my-game").filter({ hasText: GAME_NAME });
   await expect(card).toHaveCount(1);
-  await expect(card).toContainText(GAME_NAME);
   await expect(card).toContainText(`Playing as ${p.displayName}`);
   await card.getByRole("link").click();
   await expect(page).toHaveURL(new RegExp(`/games/${gameId}$`));

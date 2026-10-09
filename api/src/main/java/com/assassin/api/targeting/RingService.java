@@ -41,15 +41,17 @@ public class RingService {
     private final PlayerRepository players;
     private final AssignmentRoundRepository rounds;
     private final AssignmentRepository assignments;
+    private final KillClaimRepository claims;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
 
     public RingService(GameService gameService, PlayerRepository players, AssignmentRoundRepository rounds,
-            AssignmentRepository assignments, JdbcTemplate jdbc, RandomGenerator random) {
+            AssignmentRepository assignments, KillClaimRepository claims, JdbcTemplate jdbc, RandomGenerator random) {
         this.gameService = gameService;
         this.players = players;
         this.rounds = rounds;
         this.assignments = assignments;
+        this.claims = claims;
         this.jdbc = jdbc;
         this.random = random;
     }
@@ -86,6 +88,7 @@ public class RingService {
         // 4. Supersede the active assignments in one UPDATE, executed before any new ACTIVE row is inserted.
         Instant now = Instant.now();
         assignments.supersedeActive(game.getId(), now);
+        claims.voidOpenInGame(game.getId(), now);
 
         // 5. Insert the round, flushed so the assignment FKs can reference it.
         boolean initial = currentRoundNo == null;
@@ -138,6 +141,7 @@ public class RingService {
         Optional<Assignment> incoming = assignments.findByTargetIdAndStatus(playerId, AssignmentStatus.ACTIVE);
         Optional<Assignment> outgoing = assignments.findByAssassinIdAndStatus(playerId, AssignmentStatus.ACTIVE);
         Instant now = Instant.now();
+        claims.voidOpenForPlayer(playerId, now);
         incoming.ifPresent(a -> a.end(incomingEnd, now));
         outgoing.ifPresent(a -> a.end(AssignmentStatus.VOIDED, now));
         if (incoming.isEmpty() || outgoing.isEmpty()) {

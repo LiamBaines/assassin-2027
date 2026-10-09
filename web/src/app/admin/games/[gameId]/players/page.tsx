@@ -4,13 +4,22 @@ import {
   SubmitButton,
 } from "@/components/action-form";
 import { Card, dangerButtonClass, secondaryButtonClass } from "@/components/ui";
-import { getAdminPlayers, type AdminPlayer } from "@/lib/api";
+import {
+  getAdminPlayers,
+  listOpenKillClaims,
+  type AdminPlayer,
+} from "@/lib/api";
 import {
   formatDateTime,
   registerKillMessage,
   removePlayerMessage,
 } from "@/lib/format";
-import { registerKillAction, setPlayerStatusAction } from "../../../actions";
+import {
+  confirmClaimAction,
+  dismissClaimAction,
+  registerKillAction,
+  setPlayerStatusAction,
+} from "../../../actions";
 import { loadAdminGame } from "../load-game";
 
 const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
@@ -23,7 +32,10 @@ export default async function AdminPlayersPage(props: {
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(props.params);
-  const players = await getAdminPlayers(game.id);
+  const [players, claims] = await Promise.all([
+    getAdminPlayers(game.id),
+    listOpenKillClaims(game.id),
+  ]);
   const editable = game.status !== "FINISHED";
   const alive = players.filter((p) => p.status === "ALIVE").length;
   const aliveInRing = players.filter(
@@ -38,6 +50,61 @@ export default async function AdminPlayersPage(props: {
           {players.length} registered, {alive} alive
         </p>
       </div>
+      {claims.length > 0 && (
+        <Card className="space-y-3">
+          <h3 className="font-semibold" data-testid="kill-claims-heading">
+            Kill claims
+          </h3>
+          <ul className="divide-y divide-zinc-100">
+            {claims.map((c) => (
+              <li
+                key={c.id}
+                data-testid="kill-claim"
+                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+              >
+                <div>
+                  <p>
+                    <span className="font-medium">{c.killerName}</span> says
+                    they killed{" "}
+                    <span className="font-medium">{c.victimName}</span>
+                  </p>
+                  <p className="text-zinc-600">
+                    {c.status === "CONTESTED"
+                      ? "Contested by the victim"
+                      : "Waiting for the victim"}{" "}
+                    · filed {formatDateTime(c.createdAt)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ActionForm
+                    action={confirmClaimAction.bind(null, game.id, c.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <ConfirmSubmit
+                      label="Confirm kill"
+                      confirmLabel="Confirm kill"
+                      message={`Confirm that ${c.killerName} killed ${c.victimName}? This removes ${c.victimName} from the ring.`}
+                      className={secondaryButtonClass}
+                      confirmClassName={dangerButtonClass}
+                    />
+                  </ActionForm>
+                  <ActionForm
+                    action={dismissClaimAction.bind(null, game.id, c.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <SubmitButton
+                      className={secondaryButtonClass}
+                      pendingLabel="Dismissing…"
+                    >
+                      Dismiss
+                    </SubmitButton>
+                  </ActionForm>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <Card className="overflow-x-auto p-0">
         {players.length === 0 ? (
           <p className="p-5 text-sm text-zinc-600">No players have joined yet.</p>
