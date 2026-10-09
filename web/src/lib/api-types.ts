@@ -71,6 +71,15 @@ export type AdminPlayer = {
   currentTarget: PlayerRef | null;
 };
 
+export type KillResult = {
+  killId: number;
+  killer: PlayerRef;
+  victim: PlayerRef;
+  /** Null when the kill ended the game. */
+  newTarget: PlayerRef | null;
+  gameFinished: boolean;
+};
+
 export type Ring = {
   roundId: string;
   roundNo: number;

@@ -40,6 +40,7 @@ const {
   listAdminGames,
   previewJoin,
   requireAdmin,
+  registerKill,
   setPlayerStatus,
   shuffleRing,
   toApiError,
@@ -266,6 +267,27 @@ describe("admin contracts", () => {
     expect(url).toBe("http://api.test/api/admin/games/g%201/players/p%201");
     expect(init?.method).toBe("PATCH");
     expect(init?.body).toBe(JSON.stringify({ status: "REMOVED" }));
+  });
+
+  it("POSTs the victim to the game's kills", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        {
+          killId: 1,
+          killer: { id: "a", displayName: "A" },
+          victim: { id: "v", displayName: "V" },
+          newTarget: null,
+          gameFinished: true,
+        },
+        { status: 201 },
+      ),
+    );
+    const result = await registerKill("g 1", "v");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/admin/games/g%201/kills");
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(JSON.stringify({ victimId: "v" }));
+    expect(result.gameFinished).toBe(true);
   });
 });
 

@@ -6,6 +6,7 @@ import type { ActionResult } from "@/components/action-form";
 import {
   createGame,
   isApiError,
+  registerKill,
   requireAdmin,
   setPlayerStatus,
   shuffleRing,
@@ -36,6 +37,9 @@ const MESSAGES: Record<string, string> = {
     "Someone else changed this at the same time. The page has been refreshed; try again.",
   INVALID_STATUS: "That status change isn't allowed.",
   PLAYER_NOT_FOUND: "That player is no longer in the game. The page has been refreshed.",
+  GAME_NOT_STARTED: "The game hasn't started yet. Generate a ring first.",
+  PLAYER_NOT_ALIVE: "That player is already dead or removed. The page has been refreshed.",
+  NOT_IN_RING: "That player isn't in the ring, so they can't be killed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
@@ -124,6 +128,18 @@ export async function setPlayerStatusAction(
     return INVALID_REQUEST;
   }
   return run(() => setPlayerStatus(gameId, playerId, status));
+}
+
+export async function registerKillAction(
+  gameId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
+  const victimId = String(formData.get("victimId") ?? "");
+  if (!isUuid(victimId)) return INVALID_REQUEST;
+  return run(() => registerKill(gameId, victimId));
 }
 
 export async function shuffleRingAction(
