@@ -41,6 +41,13 @@ export type MyTarget = {
   assignedAt: string;
 };
 
+/** PlayerStatus plus WAITING: alive but without a target yet (computed by the API). */
+export type RosterStatus = PlayerStatus | "WAITING";
+
+export type RosterEntry = { displayName: string; status: RosterStatus };
+
+export type Roster = { players: RosterEntry[] };
+
 export type AdminGame = {
   id: string;
   name: string;
