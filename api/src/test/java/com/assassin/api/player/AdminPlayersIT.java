@@ -120,7 +120,7 @@ class AdminPlayersIT extends IntegrationTest {
         UUID x = carol;
         UUID a = activeAssassinOf(x);
         UUID t = activeTargetOf(x);
-        UUID roundId = jdbc.queryForObject("select id from game.assignment_round", UUID.class);
+        UUID roundId = jdbc.queryForObject("select id from game.allocation", UUID.class);
 
         setStatus(x, "REMOVED").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REMOVED"));
 
@@ -128,13 +128,13 @@ class AdminPlayersIT extends IntegrationTest {
         assertThat(count("""
                 select count(*) from game.assignment
                  where (assassin_id = ? or target_id = ?) and status = 'VOIDED' and ended_at is not null
-                   and round_id = ?
+                   and allocation_id = ?
                 """, x, x, roundId)).isEqualTo(2);
         assertThat(count("select count(*) from game.assignment where (assassin_id = ? or target_id = ?) and status = 'ACTIVE'",
                 x, x)).isZero();
         assertThat(count("""
                 select count(*) from game.assignment
-                 where assassin_id = ? and target_id = ? and status = 'ACTIVE' and source = 'SPLICE' and round_id = ?
+                 where assassin_id = ? and target_id = ? and status = 'ACTIVE' and source = 'SPLICE' and allocation_id = ?
                 """, a, t, roundId)).isEqualTo(1);
         assertActiveRingCovers(List.of(alice, bob, dave, erin));
 

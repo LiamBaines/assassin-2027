@@ -1,6 +1,6 @@
 package com.assassin.api.targeting;
 
-public enum RoundReason {
+public enum AllocationReason {
     INITIAL,
     SHAKEUP
 }

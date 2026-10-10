@@ -41,15 +41,15 @@ public class AdminRingController {
         return ringService.history(gameId).stream().map(RoundResponse::from).toList();
     }
 
-    /** @param expectedCurrentRoundNo the current round number the admin saw, or null if there were no rounds */
+    /** @param expectedCurrentRoundNo the current allocation number the admin saw, or null if there were none (wire name kept until the rounds API lands) */
     public record ShuffleRequest(Integer expectedCurrentRoundNo) {
     }
 
-    public record RoundResponse(UUID roundId, int roundNo, RoundReason reason, int playerCount, String createdBy,
+    public record RoundResponse(UUID roundId, int roundNo, AllocationReason reason, int playerCount, String createdBy,
             Instant createdAt) {
 
-        static RoundResponse from(AssignmentRound r) {
-            return new RoundResponse(r.getId(), r.getRoundNo(), r.getReason(), r.getPlayerCount(), r.getCreatedBy(),
+        static RoundResponse from(Allocation r) {
+            return new RoundResponse(r.getId(), r.getAllocationNo(), r.getReason(), r.getPlayerCount(), r.getCreatedBy(),
                     r.getCreatedAt());
         }
     }

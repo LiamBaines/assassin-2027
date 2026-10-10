@@ -33,23 +33,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class RingService {
 
     private static final String INSERT_ASSIGNMENT = """
-            insert into game.assignment (game_id, round_id, assassin_id, target_id, source, status, created_at)
+            insert into game.assignment (game_id, allocation_id, assassin_id, target_id, source, status, created_at)
             values (?, ?, ?, ?, ?, 'ACTIVE', ?)
             """;
 
     private final GameService gameService;
     private final PlayerRepository players;
-    private final AssignmentRoundRepository rounds;
+    private final AllocationRepository allocations;
     private final AssignmentRepository assignments;
     private final KillClaimRepository claims;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
 
-    public RingService(GameService gameService, PlayerRepository players, AssignmentRoundRepository rounds,
+    public RingService(GameService gameService, PlayerRepository players, AllocationRepository allocations,
             AssignmentRepository assignments, KillClaimRepository claims, JdbcTemplate jdbc, RandomGenerator random) {
         this.gameService = gameService;
         this.players = players;
-        this.rounds = rounds;
+        this.allocations = allocations;
         this.assignments = assignments;
         this.claims = claims;
         this.jdbc = jdbc;
@@ -57,11 +57,11 @@ public class RingService {
     }
 
     /**
-     * Shuffles every ALIVE player of the game into one ring. The first ring is the INITIAL round; every later one
+     * Shuffles every ALIVE player of the game into one ring. The first ring is the INITIAL allocation; every later one
      * is a SHAKEUP that supersedes the active assignments (history is kept). A FINISHED game can't be shuffled.
      *
      * @param gameId the game
-     * @param expectedCurrentRoundNo the round number the caller last saw, or null if it saw no rounds
+     * @param expectedCurrentRoundNo the allocation number the caller last saw, or null if it saw no allocations
      * @param createdBy the admin's email
      */
     @Transactional
@@ -70,10 +70,10 @@ public class RingService {
         Game game = gameService.lockForChange(gameId);
 
         // 2. Optimistic check against what the admin saw.
-        Integer currentRoundNo = rounds.findCurrentRoundNo(game.getId()).orElse(null);
-        if (!Objects.equals(expectedCurrentRoundNo, currentRoundNo)) {
+        Integer currentAllocationNo = allocations.findCurrentAllocationNo(game.getId()).orElse(null);
+        if (!Objects.equals(expectedCurrentRoundNo, currentAllocationNo)) {
             throw new ApiException(HttpStatus.CONFLICT, "STALE_ROUND",
-                    "The ring changed since you loaded it (current round: " + currentRoundNo + "). Reload and retry.");
+                    "The ring changed since you loaded it (current allocation: " + currentAllocationNo + "). Reload and retry.");
         }
 
         // 3. Load ALIVE players.
@@ -90,10 +90,10 @@ public class RingService {
         assignments.supersedeActive(game.getId(), now);
         claims.voidOpenInGame(game.getId(), now);
 
-        // 5. Insert the round, flushed so the assignment FKs can reference it.
-        boolean initial = currentRoundNo == null;
-        AssignmentRound round = rounds.saveAndFlush(new AssignmentRound(game.getId(),
-                initial ? 1 : currentRoundNo + 1, initial ? RoundReason.INITIAL : RoundReason.SHAKEUP,
+        // 5. Insert the allocation, flushed so the assignment FKs can reference it.
+        boolean initial = currentAllocationNo == null;
+        Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(),
+                initial ? 1 : currentAllocationNo + 1, initial ? AllocationReason.INITIAL : AllocationReason.SHAKEUP,
                 alive.size(), createdBy, now));
 
         // 6. Batch-insert the ring.
@@ -101,7 +101,7 @@ public class RingService {
         OffsetDateTime createdAt = OffsetDateTime.ofInstant(now, ZoneOffset.UTC);
         jdbc.batchUpdate(INSERT_ASSIGNMENT, ring, ring.size(), (ps, link) -> {
             ps.setObject(1, game.getId());
-            ps.setObject(2, round.getId());
+            ps.setObject(2, allocation.getId());
             ps.setObject(3, link.assassin());
             ps.setObject(4, link.target());
             ps.setString(5, AssignmentSource.RING.name());
@@ -112,12 +112,12 @@ public class RingService {
         if (game.getStatus() == GameStatus.SETUP) {
             game.start(now);
         }
-        return view(game, round);
+        return view(game, allocation);
     }
 
     /**
      * Takes a player out of the ring: their assignments (A -> X and X -> T) are VOIDED and A inherits T as a SPLICE
-     * assignment in the same round. In a two-player ring (A == T) nothing is inserted, so A is left without a target.
+     * assignment in the same allocation. In a two-player ring (A == T) nothing is inserted, so A is left without a target.
      * Does nothing if the player has no active assignments.
      *
      * <p>The caller must already hold the lock on the player's game row ({@link GameService#lockForChange(UUID)}), so
@@ -153,7 +153,7 @@ public class RingService {
         if (!assassin.equals(target)) {
             // The ended rows must reach the database before the new ACTIVE row, or the one-active indexes reject it.
             assignments.flush();
-            jdbc.update(INSERT_ASSIGNMENT, in.getGameId(), in.getRoundId(), assassin, target, source.name(),
+            jdbc.update(INSERT_ASSIGNMENT, in.getGameId(), in.getAllocationId(), assassin, target, source.name(),
                     OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
         }
         return Optional.of(new Splice(in.getId(), assassin, target));
@@ -168,16 +168,16 @@ public class RingService {
         }
     }
 
-    /** The game's current round with its active assignments in cycle order, or 404 NO_RING before the first. */
+    /** The game's current allocation with its active assignments in cycle order, or 404 NO_RING before the first. */
     @Transactional(readOnly = true)
     public RingView currentRing(UUID gameId) {
         Game game = gameService.find(gameId);
-        AssignmentRound round = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId())
+        Allocation allocation = allocations.findFirstByGameIdOrderByAllocationNoDesc(game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_RING", "No ring has been generated yet."));
-        return view(game, round);
+        return view(game, allocation);
     }
 
-    private RingView view(Game game, AssignmentRound round) {
+    private RingView view(Game game, Allocation allocation) {
         List<Assignment> active = assignments.findByGameIdAndStatusOrderById(game.getId(), AssignmentStatus.ACTIVE);
         Map<UUID, Player> byId = players.findByGameIdOrderByJoinedAtAsc(game.getId()).stream()
                 .collect(Collectors.toMap(Player::getId, Function.identity()));
@@ -196,18 +196,18 @@ public class RingService {
                 a = byAssassin.get(a.getTargetId());
             }
         }
-        return new RingView(round.getId(), round.getRoundNo(), round.getReason(), links);
+        return new RingView(allocation.getId(), allocation.getAllocationNo(), allocation.getReason(), links);
     }
 
-    /** All rounds of the game, newest first. */
+    /** All allocations of the game, newest first. */
     @Transactional(readOnly = true)
-    public List<AssignmentRound> history(UUID gameId) {
+    public List<Allocation> history(UUID gameId) {
         Game game = gameService.find(gameId);
-        return rounds.findByGameIdOrderByRoundNoDesc(game.getId());
+        return allocations.findByGameIdOrderByAllocationNoDesc(game.getId());
     }
 
-    /** A round and its active assignments, in cycle order. */
-    public record RingView(UUID roundId, int roundNo, RoundReason reason, List<RingLink> ring) {
+    /** An allocation and its active assignments, in cycle order. */
+    public record RingView(UUID roundId, int roundNo, AllocationReason reason, List<RingLink> ring) {
 
         public record RingLink(PlayerRef assassin, PlayerRef target) {
         }
