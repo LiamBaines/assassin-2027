@@ -1,6 +1,7 @@
 package com.assassin.api.targeting;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -117,6 +119,45 @@ class KillIT extends IntegrationTest {
 
         assertThat(count("select count(*) from game.kill where victim_id = '" + bob + "'")).isEqualTo(2);
         assertThat(count("select count(distinct game_round_id) from game.kill")).isEqualTo(2);
+    }
+
+    @Test
+    void killWritesKillerAndVictimPointEvents() throws Exception {
+        shuffle();
+        UUID killer = assassinOf(bob);
+        kill(bob).andExpect(status().isCreated());
+
+        assertThat(count("select count(*) from game.point_event")).isEqualTo(2);
+        assertThat(count("select points from game.point_event where player_id = ? and type = 'KILL'", killer))
+                .isEqualTo(10);
+        assertThat(count("select points from game.point_event where player_id = ? and type = 'DEATH'", bob))
+                .isEqualTo(-5);
+    }
+
+    @Test
+    void pointEventForSameKillAndPlayerIsRejected() throws Exception {
+        shuffle();
+        kill(bob).andExpect(status().isCreated());
+
+        assertThatThrownBy(() -> jdbc.update(
+                "insert into game.point_event (game_id, game_round_id, player_id, points, type, kill_id) "
+                        + "select game_id, game_round_id, victim_id, -5, 'DEATH', id from game.kill"))
+                .isInstanceOf(DuplicateKeyException.class);
+    }
+
+    @Test
+    void killInRoundTwoIsTaggedWithRoundTwo() throws Exception {
+        shuffle();
+        kill(bob).andExpect(status().isCreated());
+        mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/rounds")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedRoundNo\": 1, \"playerIds\": [\"" + alice + "\", \"" + bob + "\", \"" + carol + "\"]}")))
+                .andExpect(status().isCreated());
+        kill(bob).andExpect(status().isCreated());
+
+        assertThat(count("select count(*) from game.point_event")).isEqualTo(4);
+        assertThat(count("select count(*) from game.point_event p join game.game_round r on r.id = p.game_round_id "
+                + "where r.round_no = 2")).isEqualTo(2);
     }
 
     @Test
