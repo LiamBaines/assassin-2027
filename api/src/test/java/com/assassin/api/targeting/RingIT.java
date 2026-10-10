@@ -65,7 +65,7 @@ class RingIT extends IntegrationTest {
     }
 
     private int countRounds(UUID game) {
-        return jdbc.queryForObject("select count(*) from game.assignment_round where game_id = ?", Integer.class, game);
+        return jdbc.queryForObject("select count(*) from game.allocation where game_id = ?", Integer.class, game);
     }
 
     private int countAssignments(String status) {
@@ -79,7 +79,7 @@ class RingIT extends IntegrationTest {
         addPlayers(2, "DEAD");
         shuffle(null).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOT_ENOUGH_PLAYERS"));
         assertThat(countAssignments("ACTIVE")).isZero();
-        assertThat(jdbc.queryForObject("select count(*) from game.assignment_round", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from game.allocation", Integer.class)).isZero();
     }
 
     @Test
@@ -90,8 +90,17 @@ class RingIT extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roundNo").value(1))
                 .andExpect(jsonPath("$.roundId").isNotEmpty())
+                .andExpect(jsonPath("$.gameRoundNo").value(1))
                 .andExpect(jsonPath("$.reason").value("INITIAL"))
                 .andExpect(jsonPath("$.ring.length()").value(5));
+
+        assertThat(jdbc.queryForObject(
+                "select count(*) from game.game_round where game_id = ? and round_no = 1 and ended_at is null",
+                Integer.class, gameId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from game.allocation a join game.game_round r on r.id = a.game_round_id
+                 where r.game_id = ? and r.round_no = 1
+                """, Integer.class, gameId)).isEqualTo(1);
 
         Map<String, Object> game = jdbc.queryForMap("select status, started_at from game.game where id = ?", gameId);
         assertThat(game.get("status")).isEqualTo("ACTIVE");
@@ -111,16 +120,20 @@ class RingIT extends IntegrationTest {
         shuffle(1)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roundNo").value(2))
+                .andExpect(jsonPath("$.gameRoundNo").value(1))
                 .andExpect(jsonPath("$.reason").value("SHAKEUP"));
 
+        assertThat(jdbc.queryForObject("select count(*) from game.game_round", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(distinct game_round_id) from game.allocation", Integer.class))
+                .isEqualTo(1);
         assertThat(countAssignments("ACTIVE")).isEqualTo(6);
         assertThat(countAssignments("SUPERSEDED")).isEqualTo(6);
         assertThat(jdbc.queryForObject(
                 "select count(*) from game.assignment where status = 'SUPERSEDED' and ended_at is null", Integer.class))
                 .isZero();
         assertThat(jdbc.queryForObject("""
-                select count(*) from game.assignment a join game.assignment_round r on r.id = a.round_id
-                 where a.status = 'ACTIVE' and r.round_no <> 2
+                select count(*) from game.assignment a join game.allocation r on r.id = a.allocation_id
+                 where a.status = 'ACTIVE' and r.allocation_no <> 2
                 """, Integer.class)).isZero();
         assertActiveRingCovers(players);
         assertThat(jdbc.queryForObject("select started_at from game.game", Object.class)).isEqualTo(startedAt);
@@ -129,6 +142,7 @@ class RingIT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].roundNo").value(2))
+                .andExpect(jsonPath("$[0].gameRoundNo").value(1))
                 .andExpect(jsonPath("$[0].reason").value("SHAKEUP"))
                 .andExpect(jsonPath("$[0].roundId").isNotEmpty())
                 .andExpect(jsonPath("$[0].playerCount").value(6))
@@ -155,7 +169,7 @@ class RingIT extends IntegrationTest {
         shuffle(null).andExpect(status().isCreated());
         shuffle(null).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_ROUND"));
         shuffle(2).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_ROUND"));
-        assertThat(jdbc.queryForObject("select count(*) from game.assignment_round", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from game.allocation", Integer.class)).isEqualTo(1);
     }
 
     @Test
@@ -285,7 +299,7 @@ class RingIT extends IntegrationTest {
         } finally {
             pool.shutdownNow();
         }
-        assertThat(jdbc.queryForObject("select count(*) from game.assignment_round", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from game.allocation", Integer.class)).isEqualTo(1);
         assertThat(countAssignments("ACTIVE")).isEqualTo(n);
         assertActiveRingCovers(players);
     }

@@ -147,7 +147,7 @@ class KillClaimIT extends IntegrationTest {
 
         mePost(victim, "/" + id + "/accept").andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.gameFinished").value(false));
+                .andExpect(jsonPath("$.roundEnded").value(false));
 
         assertThat(claimStatus(id)).isEqualTo("CONFIRMED");
         assertThat(string("select status from game.player where id = ?", victim)).isEqualTo("DEAD");
@@ -160,7 +160,7 @@ class KillClaimIT extends IntegrationTest {
     }
 
     @Test
-    void acceptInLastTwoFinishesGame() throws Exception {
+    void acceptInLastTwoEndsRound() throws Exception {
         shuffle();
         adminKill(carol).andExpect(status().isCreated());
         UUID killer = jdbc.queryForObject("select killer_id from game.kill", UUID.class);
@@ -168,9 +168,11 @@ class KillClaimIT extends IntegrationTest {
         long id = fileOk(killer);
 
         mePost(victim, "/" + id + "/accept").andExpect(status().isOk())
-                .andExpect(jsonPath("$.gameFinished").value(true));
+                .andExpect(jsonPath("$.roundEnded").value(true));
 
-        assertThat(string("select status from game.game where id = ?", gameId)).isEqualTo("FINISHED");
+        assertThat(string("select status from game.game where id = ?", gameId)).isEqualTo("ACTIVE");
+        assertThat(count("select count(*) from game.game_round where ended_at is not null and winner_id is not null"))
+                .isEqualTo(1);
         assertThat(count("select count(*) from game.assignment where status = 'ACTIVE'")).isZero();
     }
 
@@ -199,7 +201,7 @@ class KillClaimIT extends IntegrationTest {
         admin("/confirm", id).andExpect(status().isOk())
                 .andExpect(jsonPath("$.killer.id").value(alice.toString()))
                 .andExpect(jsonPath("$.victim.id").value(victim.toString()))
-                .andExpect(jsonPath("$.gameFinished").value(false));
+                .andExpect(jsonPath("$.roundEnded").value(false));
 
         assertThat(claimStatus(id)).isEqualTo("CONFIRMED");
         assertThat(string("select status from game.player where id = ?", victim)).isEqualTo("DEAD");

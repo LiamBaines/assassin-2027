@@ -12,6 +12,7 @@ import {
   requireAdmin,
   setPlayerStatus,
   shuffleRing,
+  startRound,
   updateGame,
   type AdminGame,
   type UpdateGameRequest,
@@ -32,9 +33,11 @@ const MESSAGES: Record<string, string> = {
   GAME_FINISHED: "This game has finished, so it can't be changed.",
   VALIDATION_FAILED:
     "Check the form: the name is required and the join code is 6–16 letters or numbers.",
-  NOT_ENOUGH_PLAYERS: "At least 2 alive players are needed to make a ring.",
+  NOT_ENOUGH_PLAYERS: "At least 2 players are needed to make a ring.",
   STALE_ROUND:
     "Someone else changed the ring since you loaded this page. Review the current ring and try again.",
+  ROUND_ENDED: "The round has ended. Start a new round instead of shaking up.",
+  NO_ROUND: "No round has started yet. Generate the first ring instead.",
   CONCURRENT_UPDATE:
     "Someone else changed this at the same time. The page has been refreshed; try again.",
   INVALID_STATUS: "That status change isn't allowed.",
@@ -161,6 +164,21 @@ export async function shuffleRingAction(
     return INVALID_REQUEST;
   }
   return run(() => shuffleRing(gameId, expected));
+}
+
+export async function startRoundAction(
+  gameId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId)) return INVALID_REQUEST;
+  const expected = Number(formData.get("expectedRoundNo"));
+  const playerIds = formData.getAll("playerIds").map(String);
+  if (!Number.isInteger(expected) || expected < 1 || !playerIds.every(isUuid)) {
+    return INVALID_REQUEST;
+  }
+  return run(() => startRound(gameId, expected, playerIds));
 }
 
 export async function confirmClaimAction(

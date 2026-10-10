@@ -128,7 +128,7 @@ test("admin generates a ring that forms a single cycle", async () => {
   await admin.getByRole("button", { name: "Generate ring" }).click();
   await admin.getByRole("button", { name: "Yes, generate" }).click();
 
-  await expect(admin.getByRole("heading", { name: /round 1 \(Initial\)/ })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: /allocation 1 \(Initial\)/ })).toBeVisible();
   await expect(admin.getByTestId("ring-pair")).toHaveCount(3);
   await expect(admin.getByTestId("game-status")).toHaveText("Active");
 
@@ -151,7 +151,7 @@ test("a shakeup shows round 2 in the history", async () => {
   await admin.getByRole("button", { name: "Shake up" }).click();
   await admin.getByRole("button", { name: "Yes, shake up" }).click();
 
-  await expect(admin.getByRole("heading", { name: /round 2 \(Shakeup\)/ })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: /allocation 2 \(Shakeup\)/ })).toBeVisible();
   const rounds = admin.getByTestId("round-row");
   await expect(rounds).toHaveCount(2);
   await expect(rounds.nth(0)).toContainText("Shakeup");

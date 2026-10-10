@@ -73,12 +73,14 @@ test("registering a kill kills the victim and gives their target to their assass
   await expectTarget(pages.get(killer)!, gameId, inherited);
 });
 
-test("the kill that leaves one player ends the game", async () => {
+test("the kill that leaves one player ends the round, not the game", async () => {
   await registerKill(inherited);
 
   await expect(playerRow(inherited)).toContainText("DEAD");
   await admin.goto(`/admin/games/${gameId}`);
-  await expect(admin.getByTestId("game-status")).toContainText("Finished");
+  await expect(admin.getByTestId("game-status")).toContainText("Active");
   await admin.goto(`/admin/games/${gameId}/players`);
   await expect(admin.getByRole("button", { name: "Register kill" })).toHaveCount(0);
+  await admin.goto(`/admin/games/${gameId}/rings`);
+  await expect(admin.getByRole("heading", { name: "Round 1 has ended" })).toBeVisible();
 });

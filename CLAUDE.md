@@ -20,7 +20,7 @@ Other docs, read only when relevant: `docs/progress.md` (build history and decis
 - **Spring validates Supabase JWTs** as ES256 via JWKS, checking issuer `${SUPABASE_URL}/auth/v1` and audience `authenticated`. `jws-algorithms: ES256` must be set explicitly. Admins are the emails in `APP_ADMIN_EMAILS`.
 - **Terminology:**
   - The player hunting someone is the **assassin**, and the player being hunted is the **target**. Never use "hunter".
-  - The first ring is the `INITIAL` round. Every later re-allocation is a **shakeup** (`SHAKEUP`); a reshuffle and a shakeup are the same thing.
+  - A **round** is a game-level stage (1, 2, 3...). Players are revived and re-picked when the admin starts a new one. Within a round, the first **allocation** is `INITIAL` and every later one is a **shakeup** (`SHAKEUP`); a reshuffle and a shakeup are the same thing. Don't call an allocation a round.
   - A ring is a single cycle of all ALIVE players.
 
 ## Local toolchain
@@ -72,7 +72,7 @@ E2E details (serial specs, DB truncation, auth setup, stale-server gotcha, CI) a
 - All Spring calls go through `src/lib/api.ts` (server-only).
 - Admin pages must call `requireAdmin()` themselves. Layouts render concurrently with pages, so a layout-only gate does not stop the page's admin fetches.
 - Games are scoped by id in every route: `/api/admin/games/{gameId}/…` and `/api/me/games/{gameId}/target` (ADR 0003). There is no "current game".
-- No round yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/games/{gameId}/rings/current` is 404 `NO_RING` (`getCurrentRing(gameId)` returns null).
+- No allocation yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/games/{gameId}/rings/current` is 404 `NO_RING` (`getCurrentRing(gameId)` returns null).
 - Logged-out visitors go to `/login?next=…`. Every return path goes through `safeNextPath` (`lib/safe-next.ts`). It re-checks the path after dot segments resolve, because `/.//evil.com` turns into `//evil.com`.
 - The magic-link template passes `{{ .RedirectTo }}` as `redirect_to`. The prod dashboard template must match `supabase/templates/magic_link.html`.
 - Error `code` to message maps live in `src/app/admin/actions.ts` and `src/app/join/actions.ts`; unknown codes fall back to the API `detail`.

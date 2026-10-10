@@ -6,6 +6,7 @@ import type {
   AdminClaim,
   AdminGame,
   AdminPlayer,
+  AdminRound,
   ClaimAcceptResult,
   ClaimStatus,
   CreateGameRequest,
@@ -15,6 +16,7 @@ import type {
   Me,
   MyClaims,
   MyGame,
+  MyRound,
   MyTarget,
   PlayerSummary,
   Roster,
@@ -153,6 +155,10 @@ export const getGamePlayers = (gameId: string) =>
     request<Roster>("GET", `/api/me/games/${seg(gameId)}/players`),
   );
 
+/** The game's closed rounds with the caller's outcome in each, newest first. */
+export const getMyRounds = (gameId: string) =>
+  request<MyRound[]>("GET", `/api/me/games/${seg(gameId)}/rounds`);
+
 const claimsPath = (gameId: string) =>
   `/api/me/games/${seg(gameId)}/kill-claims`;
 
@@ -224,11 +230,26 @@ export const shuffleRing = (
     expectedCurrentRoundNo,
   });
 
+/** Closes the open round and starts the next with the given players. */
+export const startRound = (
+  gameId: string,
+  expectedRoundNo: number,
+  playerIds: string[],
+) =>
+  request<Ring>("POST", `${gamePath(gameId)}/rounds`, {
+    expectedRoundNo,
+    playerIds,
+  });
+
+/** Game rounds, newest first. */
+export const getAdminRounds = (gameId: string) =>
+  request<AdminRound[]>("GET", `${gamePath(gameId)}/rounds`);
+
 /** The active ring in cycle order, or null before the first round (NO_RING). */
 export const getCurrentRing = (gameId: string) =>
   nullOn("NO_RING", request<Ring>("GET", `${gamePath(gameId)}/rings/current`));
 
-/** Rounds of the game, newest first. */
+/** Allocations (initial ring and shakeups) of the game, newest first. */
 export const getRingHistory = (gameId: string) =>
   request<RoundSummary[]>("GET", `${gamePath(gameId)}/rings`);
 

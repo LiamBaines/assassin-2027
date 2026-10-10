@@ -12,8 +12,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "assignment_round")
-public class AssignmentRound {
+@Table(name = "allocation")
+public class Allocation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -22,12 +22,15 @@ public class AssignmentRound {
     @Column(name = "game_id", nullable = false)
     private UUID gameId;
 
-    @Column(name = "round_no", nullable = false)
-    private int roundNo;
+    @Column(name = "game_round_id", nullable = false)
+    private UUID gameRoundId;
+
+    @Column(name = "allocation_no", nullable = false)
+    private int allocationNo;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RoundReason reason;
+    private AllocationReason reason;
 
     @Column(name = "player_count", nullable = false)
     private int playerCount;
@@ -38,13 +41,14 @@ public class AssignmentRound {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    protected AssignmentRound() {
+    protected Allocation() {
     }
 
-    public AssignmentRound(UUID gameId, int roundNo, RoundReason reason, int playerCount, String createdBy,
+    public Allocation(UUID gameId, UUID gameRoundId, int allocationNo, AllocationReason reason, int playerCount, String createdBy,
             Instant createdAt) {
         this.gameId = gameId;
-        this.roundNo = roundNo;
+        this.gameRoundId = gameRoundId;
+        this.allocationNo = allocationNo;
         this.reason = reason;
         this.playerCount = playerCount;
         this.createdBy = createdBy;
@@ -59,11 +63,15 @@ public class AssignmentRound {
         return gameId;
     }
 
-    public int getRoundNo() {
-        return roundNo;
+    public UUID getGameRoundId() {
+        return gameRoundId;
     }
 
-    public RoundReason getReason() {
+    public int getAllocationNo() {
+        return allocationNo;
+    }
+
+    public AllocationReason getReason() {
         return reason;
     }
 

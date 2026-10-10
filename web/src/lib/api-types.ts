@@ -9,6 +9,8 @@ export type GameSummary = {
   name: string;
   status: GameStatus;
   signupsOpen: boolean;
+  /** Null before round 1 starts. */
+  currentRoundNo: number | null;
 };
 
 export type PlayerSummary = {
@@ -34,6 +36,18 @@ export type JoinPreview = {
   status: GameStatus;
   signupsOpen: boolean;
   alreadyJoined: boolean;
+};
+
+export type PlayerOutcome = "KILLED" | "SURVIVED" | "OUT";
+
+/** A closed round as seen by the caller. */
+export type MyRound = {
+  roundNo: number;
+  startedAt: string;
+  endedAt: string;
+  winner: PlayerRef | null;
+  myOutcome: PlayerOutcome;
+  killedBy: string | null;
 };
 
 export type MyTarget = {
@@ -75,21 +89,33 @@ export type KillResult = {
   killId: number;
   killer: PlayerRef;
   victim: PlayerRef;
-  /** Null when the kill ended the game. */
+  /** Null when the kill ended the round. */
   newTarget: PlayerRef | null;
-  gameFinished: boolean;
+  roundEnded: boolean;
 };
 
 export type Ring = {
   roundId: string;
   roundNo: number;
+  gameRoundNo: number;
   reason: RoundReason;
   ring: { assassin: PlayerRef; target: PlayerRef }[];
+};
+
+/** A game round as seen by the admin. */
+export type AdminRound = {
+  roundNo: number;
+  startedAt: string;
+  /** Null while the round is open. */
+  endedAt: string | null;
+  winner: PlayerRef | null;
+  playerCount: number;
 };
 
 export type RoundSummary = {
   roundId: string;
   roundNo: number;
+  gameRoundNo: number;
   reason: RoundReason;
   playerCount: number;
   createdBy: string;
@@ -117,7 +143,7 @@ export type ClaimStatus = { id: number; status: KillClaimStatus };
 
 export type ClaimAcceptResult = {
   status: KillClaimStatus;
-  gameFinished: boolean;
+  roundEnded: boolean;
 };
 
 export type MyClaims = {

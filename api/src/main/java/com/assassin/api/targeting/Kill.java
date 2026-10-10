@@ -23,6 +23,9 @@ public class Kill {
     @Column(name = "assignment_id", nullable = false)
     private long assignmentId;
 
+    @Column(name = "game_round_id", nullable = false)
+    private UUID gameRoundId;
+
     @Column(name = "killer_id", nullable = false)
     private UUID killerId;
 
@@ -38,8 +41,9 @@ public class Kill {
     protected Kill() {
     }
 
-    public Kill(UUID gameId, long assignmentId, UUID killerId, UUID victimId, String registeredBy, Instant createdAt) {
+    public Kill(UUID gameId, UUID gameRoundId, long assignmentId, UUID killerId, UUID victimId, String registeredBy, Instant createdAt) {
         this.gameId = gameId;
+        this.gameRoundId = gameRoundId;
         this.assignmentId = assignmentId;
         this.killerId = killerId;
         this.victimId = victimId;
@@ -53,6 +57,10 @@ public class Kill {
 
     public UUID getGameId() {
         return gameId;
+    }
+
+    public UUID getGameRoundId() {
+        return gameRoundId;
     }
 
     public long getAssignmentId() {

@@ -23,8 +23,8 @@ public class Assignment {
     @Column(name = "game_id", nullable = false)
     private UUID gameId;
 
-    @Column(name = "round_id", nullable = false)
-    private UUID roundId;
+    @Column(name = "allocation_id", nullable = false)
+    private UUID allocationId;
 
     @Column(name = "assassin_id", nullable = false)
     private UUID assassinId;
@@ -63,8 +63,8 @@ public class Assignment {
         return gameId;
     }
 
-    public UUID getRoundId() {
-        return roundId;
+    public UUID getAllocationId() {
+        return allocationId;
     }
 
     public UUID getAssassinId() {

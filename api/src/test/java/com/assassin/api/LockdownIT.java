@@ -25,7 +25,7 @@ class LockdownIT extends IntegrationTest {
                    and c.relname <> 'flyway_schema_history'
                 """);
         assertThat(tables).extracting(t -> t.get("relname"))
-                .contains("game", "player", "assignment_round", "assignment");
+                .contains("game", "player", "allocation", "game_round", "assignment");
         assertThat(tables).allSatisfy(t -> assertThat(t.get("relrowsecurity")).as("%s", t.get("relname")).isEqualTo(true));
     }
 }
