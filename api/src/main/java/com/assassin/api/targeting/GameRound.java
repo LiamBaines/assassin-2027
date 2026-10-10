@@ -45,6 +45,11 @@ public class GameRound {
         this.startedAt = startedAt;
     }
 
+    /** Closes the round without a winner. */
+    public void end(Instant at) {
+        this.endedAt = at;
+    }
+
     public UUID getId() {
         return id;
     }

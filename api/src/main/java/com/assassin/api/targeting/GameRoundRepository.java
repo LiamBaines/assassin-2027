@@ -9,5 +9,7 @@ public interface GameRoundRepository extends JpaRepository<GameRound, UUID> {
 
     Optional<GameRound> findFirstByGameIdAndEndedAtIsNull(UUID gameId);
 
+    Optional<GameRound> findFirstByGameIdOrderByRoundNoDesc(UUID gameId);
+
     List<GameRound> findByGameId(UUID gameId);
 }

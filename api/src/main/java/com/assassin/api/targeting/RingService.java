@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -104,22 +105,74 @@ public class RingService {
                 alive.size(), createdBy, now));
 
         // 6. Batch-insert the ring.
-        List<Link<UUID>> ring = RingGenerator.generate(alive, random);
-        OffsetDateTime createdAt = OffsetDateTime.ofInstant(now, ZoneOffset.UTC);
-        jdbc.batchUpdate(INSERT_ASSIGNMENT, ring, ring.size(), (ps, link) -> {
-            ps.setObject(1, game.getId());
-            ps.setObject(2, allocation.getId());
-            ps.setObject(3, link.assassin());
-            ps.setObject(4, link.target());
-            ps.setString(5, AssignmentSource.RING.name());
-            ps.setObject(6, createdAt);
-        });
+        insertRing(allocation, alive, now);
 
         // 7. The first ring starts the game.
         if (game.getStatus() == GameStatus.SETUP) {
             game.start(now);
         }
         return view(game, allocation, round);
+    }
+
+    /**
+     * Starts a new round: closes the open round (no winner), voids open claims, supersedes the active assignments,
+     * sets every player ALIVE (ticked) or REMOVED (not ticked) and allocates a fresh INITIAL ring of the ticked players.
+     *
+     * @param expectedRoundNo the round number the caller last saw
+     * @param playerIds the players taking part
+     */
+    @Transactional
+    public RingView startRound(UUID gameId, Integer expectedRoundNo, Collection<UUID> playerIds, String createdBy) {
+        Game game = gameService.lockForChange(gameId);
+
+        GameRound previous = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId()).orElseThrow(() -> new ApiException(
+                HttpStatus.CONFLICT, "NO_ROUND", "No round has started yet. Generate the first ring instead."));
+        if (!Objects.equals(expectedRoundNo, previous.getRoundNo())) {
+            throw new ApiException(HttpStatus.CONFLICT, "STALE_ROUND",
+                    "The round changed since you loaded it (current round: " + previous.getRoundNo() + "). Reload and retry.");
+        }
+
+        Set<UUID> picked = new HashSet<>(playerIds);
+        List<Player> all = players.findByGameIdOrderByJoinedAtAsc(game.getId());
+        Set<UUID> known = all.stream().map(Player::getId).collect(Collectors.toSet());
+        if (!known.containsAll(picked)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "PLAYER_NOT_FOUND", "A selected player isn't in this game.");
+        }
+        if (picked.size() < 2) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS", "At least 2 players are needed to start a round.");
+        }
+
+        Instant now = Instant.now();
+        if (previous.getEndedAt() == null) {
+            previous.end(now);
+        }
+        // The closed round must reach the database before the new open one (one-open-round index).
+        rounds.flush();
+        assignments.supersedeActive(game.getId(), now);
+        claims.voidOpenInGame(game.getId(), now);
+        for (Player p : all) {
+            p.setStatus(picked.contains(p.getId()) ? PlayerStatus.ALIVE : PlayerStatus.REMOVED);
+        }
+
+        GameRound round = rounds.saveAndFlush(new GameRound(game.getId(), previous.getRoundNo() + 1, createdBy, now));
+        int allocationNo = allocations.findCurrentAllocationNo(game.getId()).orElse(0) + 1;
+        Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(), round.getId(), allocationNo,
+                AllocationReason.INITIAL, picked.size(), createdBy, now));
+        insertRing(allocation, new ArrayList<>(picked), now);
+        return view(game, allocation, round);
+    }
+
+    private void insertRing(Allocation allocation, List<UUID> playerIds, Instant now) {
+        List<Link<UUID>> ring = RingGenerator.generate(playerIds, random);
+        OffsetDateTime createdAt = OffsetDateTime.ofInstant(now, ZoneOffset.UTC);
+        jdbc.batchUpdate(INSERT_ASSIGNMENT, ring, ring.size(), (ps, link) -> {
+            ps.setObject(1, allocation.getGameId());
+            ps.setObject(2, allocation.getId());
+            ps.setObject(3, link.assassin());
+            ps.setObject(4, link.target());
+            ps.setString(5, AssignmentSource.RING.name());
+            ps.setObject(6, createdAt);
+        });
     }
 
     /**
