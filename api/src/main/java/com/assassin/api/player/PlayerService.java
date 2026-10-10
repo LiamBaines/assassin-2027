@@ -5,6 +5,8 @@ import com.assassin.api.common.CurrentUser;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameRepository;
 import com.assassin.api.game.GameStatus;
+import com.assassin.api.targeting.GameRound;
+import com.assassin.api.targeting.GameRoundRepository;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,8 +20,11 @@ public class PlayerService {
     private final GameRepository games;
     private final PlayerRepository players;
     private final JoinCodeAttemptLimiter joinCodeLimiter;
+    private final GameRoundRepository rounds;
 
-    public PlayerService(GameRepository games, PlayerRepository players, JoinCodeAttemptLimiter joinCodeLimiter) {
+    public PlayerService(GameRepository games, PlayerRepository players, JoinCodeAttemptLimiter joinCodeLimiter,
+            GameRoundRepository rounds) {
+        this.rounds = rounds;
         this.games = games;
         this.players = players;
         this.joinCodeLimiter = joinCodeLimiter;
@@ -59,8 +64,11 @@ public class PlayerService {
             throw nameTaken();
         }
         try {
+            Integer currentRoundNo = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId())
+                    .map(GameRound::getRoundNo).orElse(null);
             return PlayerGame.from(game,
-                    players.saveAndFlush(new Player(game.getId(), user.authUserId(), user.email(), displayName)));
+                    players.saveAndFlush(new Player(game.getId(), user.authUserId(), user.email(), displayName)),
+                    currentRoundNo);
         } catch (DataIntegrityViolationException e) {
             // Lost a race with a concurrent signup.
             String message = String.valueOf(e.getMostSpecificCause().getMessage());

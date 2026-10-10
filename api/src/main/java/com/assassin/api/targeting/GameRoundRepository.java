@@ -1,5 +1,6 @@
 package com.assassin.api.targeting;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,4 +13,6 @@ public interface GameRoundRepository extends JpaRepository<GameRound, UUID> {
     Optional<GameRound> findFirstByGameIdOrderByRoundNoDesc(UUID gameId);
 
     List<GameRound> findByGameId(UUID gameId);
+
+    List<GameRound> findByGameIdIn(Collection<UUID> gameIds);
 }

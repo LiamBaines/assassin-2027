@@ -40,10 +40,22 @@ class MeIT extends IntegrationTest {
                 .andExpect(jsonPath("$.games[0].game.status").value("SETUP"))
                 .andExpect(jsonPath("$.games[0].game.signupsOpen").value(true))
                 .andExpect(jsonPath("$.games[0].game.joinCode").doesNotExist())
+                .andExpect(jsonPath("$.games[0].game.currentRoundNo").doesNotExist())
                 .andExpect(jsonPath("$.games[0].player.id").value(playerId.toString()))
                 .andExpect(jsonPath("$.games[0].player.displayName").value("Alice"))
                 .andExpect(jsonPath("$.games[0].player.status").value("ALIVE"))
                 .andExpect(jsonPath("$.games[0].player.joinedAt").isNotEmpty());
+    }
+
+    @Test
+    void currentRoundNoIsTheLatestRound() throws Exception {
+        UUID gameId = insertGame("Rounds", "RRR111", "ACTIVE", true);
+        insertPlayer(gameId, "alice@example.com", "Alice", "ALIVE");
+        jdbc.update("insert into game.game_round (game_id, round_no, created_by, ended_at) values (?, 1, 'admin', now())", gameId);
+        jdbc.update("insert into game.game_round (game_id, round_no, created_by) values (?, 2, 'admin')", gameId);
+        mvc.perform(as("alice@example.com", get("/api/me")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.games[0].game.currentRoundNo").value(2));
     }
 
     @Test

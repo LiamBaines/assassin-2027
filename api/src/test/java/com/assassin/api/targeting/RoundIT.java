@@ -1,6 +1,7 @@
 package com.assassin.api.targeting;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -121,5 +122,58 @@ class RoundIT extends IntegrationTest {
 
         jdbc.update("update game.game set status = 'FINISHED' where id = ?", gameId);
         startRound(1, List.of(a, b)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GAME_FINISHED"));
+    }
+
+    private ResultActions kill(UUID victim) throws Exception {
+        return mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/kills")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + victim + "\"}")));
+    }
+
+    @Test
+    void listsRoundsForAdminAndOutcomesForPlayers() throws Exception {
+        UUID a = player("a", "ALIVE");
+        UUID b = player("b", "ALIVE");
+        UUID c = player("c", "ALIVE");
+        UUID bench = player("bench", "ALIVE");
+        ring(null).andExpect(status().isCreated());
+        // Round 2 leaves `bench` out and ends when the last two players fight; round 3 is then open.
+        startRound(1, List.of(a, b, c)).andExpect(status().isCreated());
+        kill(b).andExpect(status().isCreated());
+        UUID last = jdbc.queryForObject("select killer_id from game.kill", UUID.class);
+        kill(jdbc.queryForObject("select target_id from game.assignment where assassin_id = ? and status = 'ACTIVE'",
+                UUID.class, last)).andExpect(status().isCreated());
+        startRound(2, List.of(a, b, c)).andExpect(status().isCreated());
+
+        mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/rounds")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].roundNo").value(3))
+                .andExpect(jsonPath("$[0].endedAt").doesNotExist())
+                .andExpect(jsonPath("$[0].winner").doesNotExist())
+                .andExpect(jsonPath("$[0].playerCount").value(3))
+                .andExpect(jsonPath("$[1].roundNo").value(2))
+                .andExpect(jsonPath("$[1].winner.id").value(last.toString()))
+                .andExpect(jsonPath("$[1].playerCount").value(3))
+                .andExpect(jsonPath("$[2].roundNo").value(1))
+                .andExpect(jsonPath("$[2].endedAt").isNotEmpty())
+                .andExpect(jsonPath("$[2].winner").doesNotExist())
+                .andExpect(jsonPath("$[2].playerCount").value(4));
+
+        mvc.perform(as("b@example.com", get("/api/me/games/" + gameId + "/rounds")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].roundNo").value(2))
+                .andExpect(jsonPath("$[0].myOutcome").value("KILLED"))
+                .andExpect(jsonPath("$[0].killedBy").isNotEmpty())
+                .andExpect(jsonPath("$[1].roundNo").value(1))
+                .andExpect(jsonPath("$[1].myOutcome").value("SURVIVED"))
+                .andExpect(jsonPath("$[1].killedBy").doesNotExist());
+        mvc.perform(as("bench@example.com", get("/api/me/games/" + gameId + "/rounds")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].myOutcome").value("OUT"))
+                .andExpect(jsonPath("$[1].myOutcome").value("SURVIVED"));
+        mvc.perform(as("stranger@example.com", get("/api/me/games/" + gameId + "/rounds")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_IN_GAME"));
     }
 }
