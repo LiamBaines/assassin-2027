@@ -9,6 +9,8 @@ export type GameSummary = {
   name: string;
   status: GameStatus;
   signupsOpen: boolean;
+  /** Null before round 1 starts. */
+  currentRoundNo: number | null;
 };
 
 export type PlayerSummary = {
@@ -34,6 +36,18 @@ export type JoinPreview = {
   status: GameStatus;
   signupsOpen: boolean;
   alreadyJoined: boolean;
+};
+
+export type PlayerOutcome = "KILLED" | "SURVIVED" | "OUT";
+
+/** A closed round as seen by the caller. */
+export type MyRound = {
+  roundNo: number;
+  startedAt: string;
+  endedAt: string;
+  winner: PlayerRef | null;
+  myOutcome: PlayerOutcome;
+  killedBy: string | null;
 };
 
 export type MyTarget = {
@@ -83,6 +97,7 @@ export type KillResult = {
 export type Ring = {
   roundId: string;
   roundNo: number;
+  gameRoundNo: number;
   reason: RoundReason;
   ring: { assassin: PlayerRef; target: PlayerRef }[];
 };
@@ -90,6 +105,7 @@ export type Ring = {
 export type RoundSummary = {
   roundId: string;
   roundNo: number;
+  gameRoundNo: number;
   reason: RoundReason;
   playerCount: number;
   createdBy: string;

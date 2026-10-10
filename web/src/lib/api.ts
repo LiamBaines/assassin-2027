@@ -15,6 +15,7 @@ import type {
   Me,
   MyClaims,
   MyGame,
+  MyRound,
   MyTarget,
   PlayerSummary,
   Roster,
@@ -152,6 +153,10 @@ export const getGamePlayers = (gameId: string) =>
     "GAME_NOT_STARTED",
     request<Roster>("GET", `/api/me/games/${seg(gameId)}/players`),
   );
+
+/** The game's closed rounds with the caller's outcome in each, newest first. */
+export const getMyRounds = (gameId: string) =>
+  request<MyRound[]>("GET", `/api/me/games/${seg(gameId)}/rounds`);
 
 const claimsPath = (gameId: string) =>
   `/api/me/games/${seg(gameId)}/kill-claims`;

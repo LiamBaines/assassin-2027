@@ -16,9 +16,16 @@ import {
   withdrawClaimAction,
 } from "./actions";
 import { ActionForm, ConfirmSubmit, SubmitButton } from "@/components/action-form";
-import { getGamePlayers, getMe, getMyKillClaims, getMyTarget } from "@/lib/api";
+import {
+  getGamePlayers,
+  getMe,
+  getMyKillClaims,
+  getMyRounds,
+  getMyTarget,
+} from "@/lib/api";
 import { isOpenClaim, outgoingClaimLabel } from "@/lib/claim-status";
 import { formatDateTime } from "@/lib/format";
+import { roundOutcomeLabel } from "@/lib/round-outcome";
 import { playerStatusView, rosterStatusView } from "@/lib/player-status";
 
 export const metadata: Metadata = { title: "Game · Assassin 2027" };
@@ -36,10 +43,11 @@ export default async function GamePage(props: {
   // Finishing a game keeps the last assignments, so don't show a stale target.
   const finished = game.status === "FINISHED";
   const active = game.status === "ACTIVE";
-  const [assignment, roster, claims] = await Promise.all([
+  const [assignment, roster, claims, pastRounds] = await Promise.all([
     finished ? null : getMyTarget(gameId),
     game.status === "SETUP" ? null : getGamePlayers(gameId),
     active ? getMyKillClaims(gameId) : null,
+    game.currentRoundNo === null ? [] : getMyRounds(gameId),
   ]);
   const incoming = claims?.incoming ?? null;
   const outgoing = claims?.outgoing ?? null;
@@ -53,6 +61,14 @@ export default async function GamePage(props: {
             {player.displayName}
           </span>
         </p>
+        {game.currentRoundNo !== null && (
+          <p
+            data-testid="round-badge"
+            className="ml-2 inline-block rounded-full bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-800"
+          >
+            Round {game.currentRoundNo}
+          </p>
+        )}
         <p
           data-testid="player-status"
           className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${status.tone}`}
@@ -153,6 +169,23 @@ export default async function GamePage(props: {
                 </li>
               );
             })}
+          </ul>
+        </Card>
+      )}
+      {pastRounds.length > 0 && (
+        <Card className="space-y-3">
+          <h2 className="text-sm font-medium text-zinc-500">Past rounds</h2>
+          <ul className="divide-y divide-zinc-100">
+            {pastRounds.map((r) => (
+              <li key={r.roundNo} data-testid="past-round" className="py-2 text-sm">
+                <p className="font-medium">Round {r.roundNo}</p>
+                <p className="text-zinc-600">
+                  {r.winner ? `Winner: ${r.winner.displayName}` : "No winner"}
+                  {" · "}
+                  <span data-testid="past-round-outcome">{roundOutcomeLabel(r)}</span>
+                </p>
+              </li>
+            ))}
           </ul>
         </Card>
       )}

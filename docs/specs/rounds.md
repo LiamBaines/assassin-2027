@@ -51,6 +51,6 @@ Start-round transaction (holds the game row lock, `GameService.lockForChange`): 
 4. [x] `KillService` ends the round with a winner instead of finishing the game; `ROUND_ENDED` on shakeup; ITs (update existing 2-player tests that expect `FINISHED`).
 5. [x] Read endpoints: admin `GET /rounds`, `/api/me` `currentRoundNo`, player `GET /rounds` with derived outcomes + ITs.
 5b. [x] Flyway V7: `kill.game_round_id`; replace `unique (victim_id)` with `unique (victim_id, game_round_id)` so a revived player can die again. IT.
-6. [ ] Web: `lib/api.ts` types/calls, player game page (badge, past rounds), vitest.
+6. [x] Web: `lib/api.ts` types/calls, player game page (badge, past rounds), vitest.
 7. [ ] Web: admin rings page (Start new round dialog, ended state), error messages.
 8. [ ] e2e: round 2 flow (revive, late joiner, unticked player removed, player sees Round 2). Update `docs/architecture.md`, append to `docs/progress.md`, update CLAUDE.md terminology (round vs allocation); full `./mvnw verify`, `pnpm test`, `./scripts/e2e.sh`.

@@ -34,6 +34,7 @@ const {
   getCurrentRing,
   getGamePlayers,
   getMe,
+  getMyRounds,
   getMyTarget,
   getRingHistory,
   joinGame,
@@ -171,6 +172,12 @@ describe("player contracts", () => {
     fetchMock.mockResolvedValue(Response.json({ target: { displayName: "B" }, assignedAt: "t" }));
     await getMyTarget("g/1");
     expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/target");
+  });
+
+  it("scopes past rounds to a game and encodes the id", async () => {
+    fetchMock.mockResolvedValue(Response.json([]));
+    await expect(getMyRounds("g/1")).resolves.toEqual([]);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/rounds");
   });
 
   it("scopes the roster to a game, encodes the id and returns null before the game starts", async () => {
