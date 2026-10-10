@@ -158,3 +158,19 @@ export type AdminClaim = {
   victimName: string;
   createdAt: string;
 };
+
+export type LeaderboardEntry = {
+  rank: number;
+  player: PlayerRef;
+  points: number;
+  kills: number;
+  deaths: number;
+  status: PlayerStatus;
+};
+
+/** Null `roundNo` is the game total. */
+export type Leaderboard = {
+  roundNo: number | null;
+  rounds: number[];
+  entries: LeaderboardEntry[];
+};

@@ -32,7 +32,9 @@ const {
   getAdminGame,
   getAdminPlayers,
   getCurrentRing,
+  getAdminLeaderboard,
   getGamePlayers,
+  getMyLeaderboard,
   getMe,
   getMyRounds,
   getMyTarget,
@@ -178,6 +180,19 @@ describe("player contracts", () => {
     fetchMock.mockResolvedValue(Response.json([]));
     await expect(getMyRounds("g/1")).resolves.toEqual([]);
     expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/rounds");
+  });
+
+  it("scopes leaderboards to a game and passes the round only when given", async () => {
+    const board = { roundNo: null, rounds: [], entries: [] };
+    fetchMock.mockImplementation(async () => Response.json(board));
+    await expect(getMyLeaderboard("g/1")).resolves.toEqual(board);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/leaderboard");
+    await getMyLeaderboard("g1", 2);
+    expect(fetchMock.mock.calls[1][0]).toBe("http://api.test/api/me/games/g1/leaderboard?roundNo=2");
+    await getAdminLeaderboard("g1");
+    expect(fetchMock.mock.calls[2][0]).toBe("http://api.test/api/admin/games/g1/leaderboard");
+    await getAdminLeaderboard("g1", 1);
+    expect(fetchMock.mock.calls[3][0]).toBe("http://api.test/api/admin/games/g1/leaderboard?roundNo=1");
   });
 
   it("scopes the roster to a game, encodes the id and returns null before the game starts", async () => {

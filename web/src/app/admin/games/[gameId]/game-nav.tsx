@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-/** Details / Players / Rings tabs for one game. */
+/** Details / Players / Rings / Leaderboard tabs for one game. */
 export function GameNav({ gameId }: { gameId: string }) {
   const pathname = usePathname();
   const base = `/admin/games/${encodeURIComponent(gameId)}`;
@@ -11,6 +11,7 @@ export function GameNav({ gameId }: { gameId: string }) {
     { href: base, label: "Details" },
     { href: `${base}/players`, label: "Players" },
     { href: `${base}/rings`, label: "Rings" },
+    { href: `${base}/leaderboard`, label: "Leaderboard" },
   ];
 
   return (
