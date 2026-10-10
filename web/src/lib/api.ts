@@ -12,6 +12,7 @@ import type {
   CreateGameRequest,
   JoinPreview,
   JoinRequest,
+  Leaderboard,
   KillResult,
   Me,
   MyClaims,
@@ -115,6 +116,9 @@ async function nullOn<T>(code: string, p: Promise<T>): Promise<T | null> {
 const seg = encodeURIComponent;
 const gamePath = (gameId: string) => `/api/admin/games/${seg(gameId)}`;
 
+const leaderboardQuery = (roundNo?: number) =>
+  roundNo === undefined ? "" : `?roundNo=${roundNo}`;
+
 // Player
 
 /** The signed-in user. Deduplicated per request, so layouts and pages can both call it. */
@@ -158,6 +162,13 @@ export const getGamePlayers = (gameId: string) =>
 /** The game's closed rounds with the caller's outcome in each, newest first. */
 export const getMyRounds = (gameId: string) =>
   request<MyRound[]>("GET", `/api/me/games/${seg(gameId)}/rounds`);
+
+/** The game leaderboard as a player sees it; no roundNo means the game total. */
+export const getMyLeaderboard = (gameId: string, roundNo?: number) =>
+  request<Leaderboard>(
+    "GET",
+    `/api/me/games/${seg(gameId)}/leaderboard${leaderboardQuery(roundNo)}`,
+  );
 
 const claimsPath = (gameId: string) =>
   `/api/me/games/${seg(gameId)}/kill-claims`;
@@ -252,6 +263,12 @@ export const getCurrentRing = (gameId: string) =>
 /** Allocations (initial ring and shakeups) of the game, newest first. */
 export const getRingHistory = (gameId: string) =>
   request<RoundSummary[]>("GET", `${gamePath(gameId)}/rings`);
+
+export const getAdminLeaderboard = (gameId: string, roundNo?: number) =>
+  request<Leaderboard>(
+    "GET",
+    `${gamePath(gameId)}/leaderboard${leaderboardQuery(roundNo)}`,
+  );
 
 export const listOpenKillClaims = (gameId: string) =>
   request<AdminClaim[]>("GET", `${gamePath(gameId)}/kill-claims?status=open`);

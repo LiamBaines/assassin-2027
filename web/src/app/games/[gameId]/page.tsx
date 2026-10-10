@@ -189,6 +189,14 @@ export default async function GamePage(props: {
           </ul>
         </Card>
       )}
+      {game.status !== "SETUP" && (
+        <Link
+          href={`/games/${encodeURIComponent(gameId)}/leaderboard`}
+          className="block text-center text-sm font-medium text-zinc-700 underline"
+        >
+          Leaderboard
+        </Link>
+      )}
       <Link href="/me" className="block text-center text-sm text-zinc-600 underline">
         Back to my games
       </Link>

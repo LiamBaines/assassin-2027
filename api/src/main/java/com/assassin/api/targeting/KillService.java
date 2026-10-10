@@ -22,14 +22,16 @@ public class KillService {
     private final RingService ringService;
     private final KillRepository kills;
     private final GameRoundRepository rounds;
+    private final PointService pointService;
 
     public KillService(GameService gameService, PlayerRepository players, RingService ringService,
-            KillRepository kills, GameRoundRepository rounds) {
+            KillRepository kills, GameRoundRepository rounds, PointService pointService) {
         this.gameService = gameService;
         this.players = players;
         this.ringService = ringService;
         this.kills = kills;
         this.rounds = rounds;
+        this.pointService = pointService;
     }
 
     /**
@@ -68,6 +70,7 @@ public class KillService {
         victim.setStatus(PlayerStatus.DEAD);
         Kill kill = kills.save(new Kill(game.getId(), openRound.getId(), splice.incomingAssignmentId(), splice.assassinId(),
                 victim.getId(), registeredBy, now));
+        pointService.recordKill(kill);
 
         Player killer = players.getReferenceById(splice.assassinId());
         boolean roundEnded = splice.ringCollapsed();
