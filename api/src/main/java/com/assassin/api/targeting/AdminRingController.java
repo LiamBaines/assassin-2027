@@ -45,12 +45,13 @@ public class AdminRingController {
     public record ShuffleRequest(Integer expectedCurrentRoundNo) {
     }
 
-    public record RoundResponse(UUID roundId, int roundNo, AllocationReason reason, int playerCount, String createdBy,
-            Instant createdAt) {
+    public record RoundResponse(UUID roundId, int roundNo, int gameRoundNo, AllocationReason reason, int playerCount,
+            String createdBy, Instant createdAt) {
 
-        static RoundResponse from(Allocation r) {
-            return new RoundResponse(r.getId(), r.getAllocationNo(), r.getReason(), r.getPlayerCount(), r.getCreatedBy(),
-                    r.getCreatedAt());
+        static RoundResponse from(RingService.AllocationEntry e) {
+            Allocation r = e.allocation();
+            return new RoundResponse(r.getId(), r.getAllocationNo(), e.gameRoundNo(), r.getReason(), r.getPlayerCount(),
+                    r.getCreatedBy(), r.getCreatedAt());
         }
     }
 }

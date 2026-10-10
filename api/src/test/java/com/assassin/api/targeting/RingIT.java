@@ -90,8 +90,17 @@ class RingIT extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roundNo").value(1))
                 .andExpect(jsonPath("$.roundId").isNotEmpty())
+                .andExpect(jsonPath("$.gameRoundNo").value(1))
                 .andExpect(jsonPath("$.reason").value("INITIAL"))
                 .andExpect(jsonPath("$.ring.length()").value(5));
+
+        assertThat(jdbc.queryForObject(
+                "select count(*) from game.game_round where game_id = ? and round_no = 1 and ended_at is null",
+                Integer.class, gameId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from game.allocation a join game.game_round r on r.id = a.game_round_id
+                 where r.game_id = ? and r.round_no = 1
+                """, Integer.class, gameId)).isEqualTo(1);
 
         Map<String, Object> game = jdbc.queryForMap("select status, started_at from game.game where id = ?", gameId);
         assertThat(game.get("status")).isEqualTo("ACTIVE");
@@ -111,8 +120,12 @@ class RingIT extends IntegrationTest {
         shuffle(1)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roundNo").value(2))
+                .andExpect(jsonPath("$.gameRoundNo").value(1))
                 .andExpect(jsonPath("$.reason").value("SHAKEUP"));
 
+        assertThat(jdbc.queryForObject("select count(*) from game.game_round", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(distinct game_round_id) from game.allocation", Integer.class))
+                .isEqualTo(1);
         assertThat(countAssignments("ACTIVE")).isEqualTo(6);
         assertThat(countAssignments("SUPERSEDED")).isEqualTo(6);
         assertThat(jdbc.queryForObject(
@@ -129,6 +142,7 @@ class RingIT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].roundNo").value(2))
+                .andExpect(jsonPath("$[0].gameRoundNo").value(1))
                 .andExpect(jsonPath("$[0].reason").value("SHAKEUP"))
                 .andExpect(jsonPath("$[0].roundId").isNotEmpty())
                 .andExpect(jsonPath("$[0].playerCount").value(6))

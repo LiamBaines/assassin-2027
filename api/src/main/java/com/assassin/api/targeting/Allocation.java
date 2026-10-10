@@ -22,6 +22,9 @@ public class Allocation {
     @Column(name = "game_id", nullable = false)
     private UUID gameId;
 
+    @Column(name = "game_round_id", nullable = false)
+    private UUID gameRoundId;
+
     @Column(name = "allocation_no", nullable = false)
     private int allocationNo;
 
@@ -41,9 +44,10 @@ public class Allocation {
     protected Allocation() {
     }
 
-    public Allocation(UUID gameId, int allocationNo, AllocationReason reason, int playerCount, String createdBy,
+    public Allocation(UUID gameId, UUID gameRoundId, int allocationNo, AllocationReason reason, int playerCount, String createdBy,
             Instant createdAt) {
         this.gameId = gameId;
+        this.gameRoundId = gameRoundId;
         this.allocationNo = allocationNo;
         this.reason = reason;
         this.playerCount = playerCount;
@@ -57,6 +61,10 @@ public class Allocation {
 
     public UUID getGameId() {
         return gameId;
+    }
+
+    public UUID getGameRoundId() {
+        return gameRoundId;
     }
 
     public int getAllocationNo() {

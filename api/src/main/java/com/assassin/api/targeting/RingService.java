@@ -39,16 +39,18 @@ public class RingService {
 
     private final GameService gameService;
     private final PlayerRepository players;
+    private final GameRoundRepository rounds;
     private final AllocationRepository allocations;
     private final AssignmentRepository assignments;
     private final KillClaimRepository claims;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
 
-    public RingService(GameService gameService, PlayerRepository players, AllocationRepository allocations,
-            AssignmentRepository assignments, KillClaimRepository claims, JdbcTemplate jdbc, RandomGenerator random) {
+    public RingService(GameService gameService, PlayerRepository players, GameRoundRepository rounds,
+            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, JdbcTemplate jdbc, RandomGenerator random) {
         this.gameService = gameService;
         this.players = players;
+        this.rounds = rounds;
         this.allocations = allocations;
         this.assignments = assignments;
         this.claims = claims;
@@ -90,9 +92,14 @@ public class RingService {
         assignments.supersedeActive(game.getId(), now);
         claims.voidOpenInGame(game.getId(), now);
 
-        // 5. Insert the allocation, flushed so the assignment FKs can reference it.
+        // 5. The first ring creates round 1; later ones belong to the open round. Insert the allocation, flushed so
+        // the assignment FKs can reference it.
         boolean initial = currentAllocationNo == null;
-        Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(),
+        GameRound round = initial
+                ? rounds.saveAndFlush(new GameRound(game.getId(), 1, createdBy, now))
+                : rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow(() -> new ApiException(
+                        HttpStatus.CONFLICT, "ROUND_ENDED", "The round has ended. Start a new round."));
+        Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(), round.getId(),
                 initial ? 1 : currentAllocationNo + 1, initial ? AllocationReason.INITIAL : AllocationReason.SHAKEUP,
                 alive.size(), createdBy, now));
 
@@ -112,7 +119,7 @@ public class RingService {
         if (game.getStatus() == GameStatus.SETUP) {
             game.start(now);
         }
-        return view(game, allocation);
+        return view(game, allocation, round);
     }
 
     /**
@@ -174,10 +181,10 @@ public class RingService {
         Game game = gameService.find(gameId);
         Allocation allocation = allocations.findFirstByGameIdOrderByAllocationNoDesc(game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_RING", "No ring has been generated yet."));
-        return view(game, allocation);
+        return view(game, allocation, rounds.findById(allocation.getGameRoundId()).orElseThrow());
     }
 
-    private RingView view(Game game, Allocation allocation) {
+    private RingView view(Game game, Allocation allocation, GameRound round) {
         List<Assignment> active = assignments.findByGameIdAndStatusOrderById(game.getId(), AssignmentStatus.ACTIVE);
         Map<UUID, Player> byId = players.findByGameIdOrderByJoinedAtAsc(game.getId()).stream()
                 .collect(Collectors.toMap(Player::getId, Function.identity()));
@@ -196,18 +203,26 @@ public class RingService {
                 a = byAssassin.get(a.getTargetId());
             }
         }
-        return new RingView(allocation.getId(), allocation.getAllocationNo(), allocation.getReason(), links);
+        return new RingView(allocation.getId(), allocation.getAllocationNo(), round.getRoundNo(), allocation.getReason(),
+                links);
     }
 
-    /** All allocations of the game, newest first. */
+    /** All allocations of the game, newest first, each with the number of the round it belongs to. */
     @Transactional(readOnly = true)
-    public List<Allocation> history(UUID gameId) {
+    public List<AllocationEntry> history(UUID gameId) {
         Game game = gameService.find(gameId);
-        return allocations.findByGameIdOrderByAllocationNoDesc(game.getId());
+        Map<UUID, Integer> roundNos = rounds.findByGameId(game.getId()).stream()
+                .collect(Collectors.toMap(GameRound::getId, GameRound::getRoundNo));
+        return allocations.findByGameIdOrderByAllocationNoDesc(game.getId()).stream()
+                .map(a -> new AllocationEntry(a, roundNos.get(a.getGameRoundId())))
+                .toList();
     }
 
-    /** An allocation and its active assignments, in cycle order. */
-    public record RingView(UUID roundId, int roundNo, AllocationReason reason, List<RingLink> ring) {
+    public record AllocationEntry(Allocation allocation, int gameRoundNo) {
+    }
+
+    /** An allocation (roundNo is its allocation number) and its active assignments, in cycle order. */
+    public record RingView(UUID roundId, int roundNo, int gameRoundNo, AllocationReason reason, List<RingLink> ring) {
 
         public record RingLink(PlayerRef assassin, PlayerRef target) {
         }

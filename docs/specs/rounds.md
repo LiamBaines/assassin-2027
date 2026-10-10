@@ -46,7 +46,7 @@ Start-round transaction (holds the game row lock, `GameService.lockForChange`): 
 
 ## Tasks
 1. [x] Branch `rounds`. Flyway V5 (rename, `game_round`, backfill round 1). Rename the entity, repo and service code (`AssignmentRound` -> `Allocation`) and fix existing tests; all ITs green.
-2. [ ] `GameRound` entity/repo. `RingService` creates round 1 on the first ring, links allocations, returns `gameRoundNo`. ITs.
+2. [x] `GameRound` entity/repo. `RingService` creates round 1 on the first ring, links allocations, returns `gameRoundNo`. ITs.
 3. [ ] `POST /rounds` start-new-round (pick list, revive/remove, void claims, supersede) + ITs, including mid-round start and a late joiner.
 4. [ ] `KillService` ends the round with a winner instead of finishing the game; `ROUND_ENDED` on shakeup; ITs (update existing 2-player tests that expect `FINISHED`).
 5. [ ] Read endpoints: admin `GET /rounds`, `/api/me` `currentRoundNo`, player `GET /rounds` with derived outcomes + ITs.
