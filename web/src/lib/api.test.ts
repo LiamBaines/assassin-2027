@@ -277,7 +277,7 @@ describe("admin contracts", () => {
           killer: { id: "a", displayName: "A" },
           victim: { id: "v", displayName: "V" },
           newTarget: null,
-          gameFinished: true,
+          roundEnded: true,
         },
         { status: 201 },
       ),
@@ -287,7 +287,7 @@ describe("admin contracts", () => {
     expect(url).toBe("http://api.test/api/admin/games/g%201/kills");
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(JSON.stringify({ victimId: "v" }));
-    expect(result.gameFinished).toBe(true);
+    expect(result.roundEnded).toBe(true);
   });
 });
 

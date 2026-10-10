@@ -69,7 +69,7 @@ class KillIT extends IntegrationTest {
                 .andExpect(jsonPath("$.killer.id").value(killer.toString()))
                 .andExpect(jsonPath("$.victim.id").value(bob.toString()))
                 .andExpect(jsonPath("$.newTarget.id").value(inherited.toString()))
-                .andExpect(jsonPath("$.gameFinished").value(false));
+                .andExpect(jsonPath("$.roundEnded").value(false));
 
         assertThat(string("select status from game.player where id = ?", bob)).isEqualTo("DEAD");
         assertThat(string("select status from game.game where id = ?", gameId)).isEqualTo("ACTIVE");
@@ -86,7 +86,7 @@ class KillIT extends IntegrationTest {
     }
 
     @Test
-    void killInTwoPlayerRingFinishesGame() throws Exception {
+    void killInTwoPlayerRingEndsRound() throws Exception {
         shuffle();
         kill(bob).andExpect(status().isCreated());
         UUID winner = jdbc.queryForObject("select killer_id from game.kill", UUID.class);
@@ -95,11 +95,25 @@ class KillIT extends IntegrationTest {
         kill(victim).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.killer.id").value(winner.toString()))
                 .andExpect(jsonPath("$.newTarget").value(nullValue()))
-                .andExpect(jsonPath("$.gameFinished").value(true));
+                .andExpect(jsonPath("$.roundEnded").value(true));
 
-        assertThat(string("select status from game.game where id = ?", gameId)).isEqualTo("FINISHED");
+        assertThat(string("select status from game.game where id = ?", gameId)).isEqualTo("ACTIVE");
+        assertThat(count("select count(*) from game.game_round where ended_at is not null and winner_id = '"
+                + winner + "'")).isEqualTo(1);
         assertThat(count("select count(*) from game.assignment where status = 'ACTIVE'")).isZero();
         assertThat(string("select status from game.player where id = ?", winner)).isEqualTo("ALIVE");
+    }
+
+    @Test
+    void shakeupAfterRoundEndedIsRejected() throws Exception {
+        shuffle();
+        kill(bob).andExpect(status().isCreated());
+        UUID winner = jdbc.queryForObject("select killer_id from game.kill", UUID.class);
+        kill(winner.equals(alice) ? carol : alice).andExpect(status().isCreated());
+
+        mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/rings")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedCurrentRoundNo\": 1}")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ROUND_ENDED"));
     }
 
     @Test

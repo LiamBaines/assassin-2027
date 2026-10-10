@@ -75,9 +75,9 @@ export type KillResult = {
   killId: number;
   killer: PlayerRef;
   victim: PlayerRef;
-  /** Null when the kill ended the game. */
+  /** Null when the kill ended the round. */
   newTarget: PlayerRef | null;
-  gameFinished: boolean;
+  roundEnded: boolean;
 };
 
 export type Ring = {
@@ -117,7 +117,7 @@ export type ClaimStatus = { id: number; status: KillClaimStatus };
 
 export type ClaimAcceptResult = {
   status: KillClaimStatus;
-  gameFinished: boolean;
+  roundEnded: boolean;
 };
 
 export type MyClaims = {

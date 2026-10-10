@@ -79,7 +79,12 @@ public class RingService {
                     "The ring changed since you loaded it (current allocation: " + currentAllocationNo + "). Reload and retry.");
         }
 
-        // 3. Load ALIVE players.
+        // 3. Later rings belong to the open round; once a final kill has closed it only a new round can follow.
+        boolean initial = currentAllocationNo == null;
+        GameRound openRound = initial ? null : rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow(
+                () -> new ApiException(HttpStatus.CONFLICT, "ROUND_ENDED", "The round has ended. Start a new round."));
+
+        // 4. Load ALIVE players.
         List<UUID> alive = players.findByGameIdAndStatusOrderById(game.getId(), PlayerStatus.ALIVE).stream()
                 .map(Player::getId)
                 .toList();
@@ -88,26 +93,22 @@ public class RingService {
                     "At least 2 alive players are needed to make a ring.");
         }
 
-        // 4. Supersede the active assignments in one UPDATE, executed before any new ACTIVE row is inserted.
+        // 5. Supersede the active assignments in one UPDATE, executed before any new ACTIVE row is inserted.
         Instant now = Instant.now();
         assignments.supersedeActive(game.getId(), now);
         claims.voidOpenInGame(game.getId(), now);
 
-        // 5. The first ring creates round 1; later ones belong to the open round. Insert the allocation, flushed so
+        // 6. The first ring creates round 1; later ones belong to the open round. Insert the allocation, flushed so
         // the assignment FKs can reference it.
-        boolean initial = currentAllocationNo == null;
-        GameRound round = initial
-                ? rounds.saveAndFlush(new GameRound(game.getId(), 1, createdBy, now))
-                : rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow(() -> new ApiException(
-                        HttpStatus.CONFLICT, "ROUND_ENDED", "The round has ended. Start a new round."));
+        GameRound round = initial ? rounds.saveAndFlush(new GameRound(game.getId(), 1, createdBy, now)) : openRound;
         Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(), round.getId(),
                 initial ? 1 : currentAllocationNo + 1, initial ? AllocationReason.INITIAL : AllocationReason.SHAKEUP,
                 alive.size(), createdBy, now));
 
-        // 6. Batch-insert the ring.
+        // 7. Batch-insert the ring.
         insertRing(allocation, alive, now);
 
-        // 7. The first ring starts the game.
+        // 8. The first ring starts the game.
         if (game.getStatus() == GameStatus.SETUP) {
             game.start(now);
         }

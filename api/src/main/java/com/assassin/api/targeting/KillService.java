@@ -21,19 +21,21 @@ public class KillService {
     private final PlayerRepository players;
     private final RingService ringService;
     private final KillRepository kills;
+    private final GameRoundRepository rounds;
 
     public KillService(GameService gameService, PlayerRepository players, RingService ringService,
-            KillRepository kills) {
+            KillRepository kills, GameRoundRepository rounds) {
         this.gameService = gameService;
         this.players = players;
         this.ringService = ringService;
         this.kills = kills;
+        this.rounds = rounds;
     }
 
     /**
      * Registers the victim's death. Their assassin's assignment is COMPLETED and the assassin inherits the victim's
      * target (KILL_INHERIT). If only two players were left, the
-     * assassin is the last one standing: the game is finished and they win.
+     * assassin is the last one standing: the open round ends with them as its winner. The game stays ACTIVE.
      */
     @Transactional
     public KillResult register(UUID gameId, UUID victimId, String registeredBy) {
@@ -66,16 +68,16 @@ public class KillService {
                 victim.getId(), registeredBy, now));
 
         Player killer = players.getReferenceById(splice.assassinId());
-        boolean gameFinished = splice.ringCollapsed();
-        if (gameFinished) {
-            game.finish(now);
+        boolean roundEnded = splice.ringCollapsed();
+        if (roundEnded) {
+            rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).ifPresent(r -> r.end(now, killer.getId()));
         }
-        Player newTarget = gameFinished ? null : players.getReferenceById(splice.targetId());
+        Player newTarget = roundEnded ? null : players.getReferenceById(splice.targetId());
         return new KillResult(kill.getId(), PlayerRef.from(killer), PlayerRef.from(victim),
-                newTarget == null ? null : PlayerRef.from(newTarget), gameFinished);
+                newTarget == null ? null : PlayerRef.from(newTarget), roundEnded);
     }
 
     public record KillResult(long killId, PlayerRef killer, PlayerRef victim, PlayerRef newTarget,
-            boolean gameFinished) {
+            boolean roundEnded) {
     }
 }

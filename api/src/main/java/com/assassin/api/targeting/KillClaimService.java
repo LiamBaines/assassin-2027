@@ -71,7 +71,7 @@ public class KillClaimService {
         requireRole(claim.getVictimId().equals(caller.getId()));
         requirePending(claim);
         KillService.KillResult result = confirm(game, claim, caller.getEmail());
-        return new AcceptResult(KillClaimStatus.CONFIRMED, result.gameFinished());
+        return new AcceptResult(KillClaimStatus.CONFIRMED, result.roundEnded());
     }
 
     /** Victim only, PENDING only. The claim stays open for the admin. */
@@ -192,7 +192,7 @@ public class KillClaimService {
     public record ClaimStatus(long id, KillClaimStatus status) {
     }
 
-    public record AcceptResult(KillClaimStatus status, boolean gameFinished) {
+    public record AcceptResult(KillClaimStatus status, boolean roundEnded) {
     }
 
     public record Incoming(long id, String killerName) {

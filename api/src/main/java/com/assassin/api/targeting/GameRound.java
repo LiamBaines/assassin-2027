@@ -50,6 +50,12 @@ public class GameRound {
         this.endedAt = at;
     }
 
+    /** Closes the round with a winner. */
+    public void end(Instant at, UUID winnerId) {
+        this.endedAt = at;
+        this.winnerId = winnerId;
+    }
+
     public UUID getId() {
         return id;
     }

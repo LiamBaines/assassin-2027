@@ -86,14 +86,14 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
 | GET/PATCH | `/api/admin/games/{gameId}` | admin | Read, or edit name, code (`JOIN_CODE_TAKEN`), signupsOpen, or FINISHED (`INVALID_STATUS` for any other status) |
 | GET | `/api/admin/games/{gameId}/players` | admin | Includes each player's current target |
 | PATCH | `/api/admin/games/{gameId}/players/{playerId}` | admin | `{status}`: REMOVED or ALIVE. Removing a player in the ring splices them out (see Decisions). Errors: `INVALID_STATUS`, `PLAYER_NOT_FOUND` |
-| POST | `/api/admin/games/{gameId}/kills` | admin | `{victimId}`. 201 `{killId, killer, victim, newTarget, gameFinished}`; `newTarget` is null when the kill ended the game. Errors: `GAME_NOT_STARTED`, `GAME_FINISHED`, `PLAYER_NOT_FOUND`, `PLAYER_NOT_ALIVE`, `NOT_IN_RING` |
+| POST | `/api/admin/games/{gameId}/kills` | admin | `{victimId}`. 201 `{killId, killer, victim, newTarget, roundEnded}`; `newTarget` is null when the kill ended the round (the game stays ACTIVE). Errors: `GAME_NOT_STARTED`, `GAME_FINISHED`, `PLAYER_NOT_FOUND`, `PLAYER_NOT_ALIVE`, `NOT_IN_RING` |
 | POST | `/api/me/games/{gameId}/kill-claims` | user | No body. Files a claim on the caller's ACTIVE target: 201 `{id, status}`. Errors: `NOT_IN_GAME`, `GAME_NOT_STARTED`, `GAME_FINISHED`, `NO_TARGET`, `CLAIM_ALREADY_OPEN` |
-| POST | `/api/me/games/{gameId}/kill-claims/{id}/{action}` | user | `withdraw` (killer, open claims), `accept` (victim, `PENDING`; returns `{status, gameFinished}`), `contest` (victim, `PENDING`). Errors: `NOT_CLAIM_PARTICIPANT` 403, `CLAIM_NOT_OPEN`, `CLAIM_STALE` |
+| POST | `/api/me/games/{gameId}/kill-claims/{id}/{action}` | user | `withdraw` (killer, open claims), `accept` (victim, `PENDING`; returns `{status, roundEnded}`), `contest` (victim, `PENDING`). Errors: `NOT_CLAIM_PARTICIPANT` 403, `CLAIM_NOT_OPEN`, `CLAIM_STALE` |
 | GET | `/api/me/games/{gameId}/kill-claims/mine` | user | `{outgoing:{id,status}\|null, incoming:{id,killerName}\|null}` |
 | GET | `/api/admin/games/{gameId}/kill-claims?status=open` | admin | Open claims with killer and victim names, status, `createdAt` |
 | POST | `/api/admin/games/{gameId}/kill-claims/{id}/confirm` | admin | Same result as the admin kill. Errors: `CLAIM_NOT_OPEN`, `CLAIM_STALE` |
 | POST | `/api/admin/games/{gameId}/kill-claims/{id}/dismiss` | admin | Status `DISMISSED` |
-| POST | `/api/admin/games/{gameId}/rings` | admin | `{expectedCurrentRoundNo}` (null before the first round). 201 with the new ring, same shape as `current`. Errors: `NOT_ENOUGH_PLAYERS` (<2), `STALE_ROUND`, `GAME_FINISHED` |
+| POST | `/api/admin/games/{gameId}/rings` | admin | `{expectedCurrentRoundNo}` (null before the first round). 201 with the new ring, same shape as `current`. Errors: `NOT_ENOUGH_PLAYERS` (<2), `STALE_ROUND`, `ROUND_ENDED`, `GAME_FINISHED` |
 | GET | `/api/admin/games/{gameId}/rings/current` | admin | `{roundId, roundNo, reason, ring:[{assassin:{id,displayName}, target:{id,displayName}}]}` in cycle order, or 404 `NO_RING` before the first round |
 | GET | `/api/admin/games/{gameId}/rings` | admin | Round history, newest first: `[{roundId, roundNo, reason, playerCount, createdBy, createdAt}]` |
 
