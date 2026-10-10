@@ -105,6 +105,21 @@ class KillIT extends IntegrationTest {
     }
 
     @Test
+    void revivedPlayerCanDieAgainInALaterRound() throws Exception {
+        shuffle();
+        kill(bob).andExpect(status().isCreated());
+        mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/rounds")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedRoundNo\": 1, \"playerIds\": [\"" + alice + "\", \"" + bob + "\", \"" + carol + "\"]}")))
+                .andExpect(status().isCreated());
+
+        kill(bob).andExpect(status().isCreated());
+
+        assertThat(count("select count(*) from game.kill where victim_id = '" + bob + "'")).isEqualTo(2);
+        assertThat(count("select count(distinct game_round_id) from game.kill")).isEqualTo(2);
+    }
+
+    @Test
     void shakeupAfterRoundEndedIsRejected() throws Exception {
         shuffle();
         kill(bob).andExpect(status().isCreated());

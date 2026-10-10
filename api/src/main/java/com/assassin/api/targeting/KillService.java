@@ -62,15 +62,17 @@ public class KillService {
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "NOT_IN_RING",
                         "That player is not in the ring, so nobody can have killed them."));
 
+        // The splice found the victim in the ring, so a round is open.
+        GameRound openRound = rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow();
         Instant now = Instant.now();
         victim.setStatus(PlayerStatus.DEAD);
-        Kill kill = kills.save(new Kill(game.getId(), splice.incomingAssignmentId(), splice.assassinId(),
+        Kill kill = kills.save(new Kill(game.getId(), openRound.getId(), splice.incomingAssignmentId(), splice.assassinId(),
                 victim.getId(), registeredBy, now));
 
         Player killer = players.getReferenceById(splice.assassinId());
         boolean roundEnded = splice.ringCollapsed();
         if (roundEnded) {
-            rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).ifPresent(r -> r.end(now, killer.getId()));
+            openRound.end(now, killer.getId());
         }
         Player newTarget = roundEnded ? null : players.getReferenceById(splice.targetId());
         return new KillResult(kill.getId(), PlayerRef.from(killer), PlayerRef.from(victim),
