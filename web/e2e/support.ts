@@ -118,7 +118,7 @@ export async function generateRing(admin: Page, gameId: string): Promise<void> {
   await admin.goto(`/admin/games/${gameId}/rings`);
   await admin.getByRole("button", { name: "Generate ring" }).click();
   await admin.getByRole("button", { name: "Yes, generate" }).click();
-  await expect(admin.getByRole("heading", { name: /round 1 \(Initial\)/ })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: /allocation 1 \(Initial\)/ })).toBeVisible();
 }
 
 /** Asserts the target a player sees on their page for one game. */

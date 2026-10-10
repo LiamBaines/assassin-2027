@@ -1,8 +1,15 @@
 import { ActionForm, ConfirmSubmit } from "@/components/action-form";
 import { Alert, Card, primaryButtonClass } from "@/components/ui";
-import { getCurrentRing, getRingHistory, type RoundReason } from "@/lib/api";
+import { StartRoundForm } from "@/components/start-round-form";
+import {
+  getAdminPlayers,
+  getAdminRounds,
+  getCurrentRing,
+  getRingHistory,
+  type RoundReason,
+} from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { shuffleRingAction } from "../../../actions";
+import { shuffleRingAction, startRoundAction } from "../../../actions";
 import { loadAdminGame } from "../load-game";
 
 const REASON_LABEL: Record<RoundReason, string> = {
@@ -14,12 +21,20 @@ export default async function AdminRingsPage(props: {
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(props.params);
-  const [ring, history] = await Promise.all([
+  const [currentRing, history, rounds, players] = await Promise.all([
     getCurrentRing(game.id),
     getRingHistory(game.id),
+    getAdminRounds(game.id),
+    getAdminPlayers(game.id),
   ]);
 
-  const canShuffle = game.status !== "FINISHED";
+  const latestRound = rounds[0] ?? null;
+  const roundEnded = latestRound?.endedAt != null;
+  // An ended round has no live ring, whatever the API still returns.
+  const ring = roundEnded ? null : currentRing;
+  const active = game.status !== "FINISHED";
+  const canShuffle = active && !roundEnded;
+  const canStartRound = active && latestRound !== null;
   const isShakeup = ring !== null;
 
   return (
@@ -31,8 +46,10 @@ export default async function AdminRingsPage(props: {
           <div>
             <h3 className="text-lg font-semibold">
               {ring
-                ? `Current ring — round ${ring.roundNo} (${REASON_LABEL[ring.reason]})`
-                : "No ring yet"}
+                ? `Round ${ring.gameRoundNo} — allocation ${ring.roundNo} (${REASON_LABEL[ring.reason]})`
+                : roundEnded
+                  ? `Round ${latestRound.roundNo} has ended`
+                  : "No ring yet"}
             </h3>
             {canShuffle && (
               <p className="text-sm text-zinc-600">
@@ -42,6 +59,7 @@ export default async function AdminRingsPage(props: {
               </p>
             )}
           </div>
+          <div className="flex flex-wrap items-start justify-end gap-3">
           {canShuffle && (
             <ActionForm
               action={shuffleRingAction.bind(null, game.id)}
@@ -64,9 +82,25 @@ export default async function AdminRingsPage(props: {
               />
             </ActionForm>
           )}
+          {canStartRound && (
+            <StartRoundForm
+              key={latestRound.roundNo}
+              action={startRoundAction.bind(null, game.id)}
+              expectedRoundNo={latestRound.roundNo}
+              players={players}
+            />
+          )}
+          </div>
         </div>
 
-        {!canShuffle && <Alert tone="info">The game has finished.</Alert>}
+        {!active && <Alert tone="info">The game has finished.</Alert>}
+        {active && roundEnded && (
+          <Alert tone="info">
+            {latestRound.winner
+              ? `${latestRound.winner.displayName} won round ${latestRound.roundNo}. Start a new round to play on.`
+              : `Round ${latestRound.roundNo} has ended. Start a new round to play on.`}
+          </Alert>
+        )}
 
         {ring && (
           <ol data-testid="current-ring" className="divide-y divide-zinc-100 text-sm">
@@ -91,14 +125,54 @@ export default async function AdminRingsPage(props: {
       </Card>
 
       <Card className="overflow-x-auto p-0">
-        <h3 className="px-5 pt-5 text-lg font-semibold">Round history</h3>
+        <h3 className="px-5 pt-5 text-lg font-semibold">Rounds</h3>
+        <table className="mt-3 w-full text-left text-sm">
+          <thead className="border-y border-zinc-200 bg-zinc-50 text-zinc-500">
+            <tr>
+              <th className="px-5 py-3 font-medium">Round</th>
+              <th className="px-5 py-3 font-medium">Players</th>
+              <th className="px-5 py-3 font-medium">Started</th>
+              <th className="px-5 py-3 font-medium">Result</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {rounds.map((r) => (
+              <tr key={r.roundNo} data-testid="game-round-row">
+                <td className="px-5 py-3 tabular-nums">{r.roundNo}</td>
+                <td className="px-5 py-3 tabular-nums">{r.playerCount}</td>
+                <td className="px-5 py-3 text-zinc-600">
+                  {formatDateTime(r.startedAt)}
+                </td>
+                <td className="px-5 py-3 text-zinc-600">
+                  {r.endedAt === null
+                    ? "In progress"
+                    : r.winner
+                      ? `Won by ${r.winner.displayName}`
+                      : "Closed, no winner"}
+                </td>
+              </tr>
+            ))}
+            {rounds.length === 0 && (
+              <tr>
+                <td className="px-5 py-3 text-zinc-600" colSpan={4}>
+                  No rounds yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Card>
+
+      <Card className="overflow-x-auto p-0">
+        <h3 className="px-5 pt-5 text-lg font-semibold">Allocation history</h3>
         {history.length === 0 ? (
-          <p className="p-5 text-sm text-zinc-600">No rounds yet.</p>
+          <p className="p-5 text-sm text-zinc-600">No allocations yet.</p>
         ) : (
           <table className="mt-3 w-full text-left text-sm">
             <thead className="border-y border-zinc-200 bg-zinc-50 text-zinc-500">
               <tr>
                 <th className="px-5 py-3 font-medium">Round</th>
+                <th className="px-5 py-3 font-medium">Allocation</th>
                 <th className="px-5 py-3 font-medium">Type</th>
                 <th className="px-5 py-3 font-medium">Players</th>
                 <th className="px-5 py-3 font-medium">Run by</th>
@@ -108,6 +182,7 @@ export default async function AdminRingsPage(props: {
             <tbody className="divide-y divide-zinc-100">
               {history.map((r) => (
                 <tr key={r.roundId} data-testid="round-row">
+                  <td className="px-5 py-3 tabular-nums">{r.gameRoundNo}</td>
                   <td className="px-5 py-3 tabular-nums">{r.roundNo}</td>
                   <td className="px-5 py-3">{REASON_LABEL[r.reason]}</td>
                   <td className="px-5 py-3 tabular-nums">{r.playerCount}</td>

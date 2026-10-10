@@ -102,6 +102,16 @@ export type Ring = {
   ring: { assassin: PlayerRef; target: PlayerRef }[];
 };
 
+/** A game round as seen by the admin. */
+export type AdminRound = {
+  roundNo: number;
+  startedAt: string;
+  /** Null while the round is open. */
+  endedAt: string | null;
+  winner: PlayerRef | null;
+  playerCount: number;
+};
+
 export type RoundSummary = {
   roundId: string;
   roundNo: number;
