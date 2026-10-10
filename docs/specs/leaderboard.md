@@ -29,7 +29,7 @@ New `game.point_event`: `id` (bigserial), `game_id`, `game_round_id` (nullable, 
 
 ## Tasks
 - [x] 1. Flyway V8 `point_event`, `PointEvent` entity/repository, `PointService.recordKill(kill)` with the +10/-5 constants; call it from `KillService.applyKill`. IT: a kill writes two rows, a second identical write is rejected, and a kill in round 2 is tagged with round 2.
-- [ ] 2. `LeaderboardService` (aggregate, ranking with ties, round filter) plus unit tests for ranking and ties. IT: totals across two rounds, negative totals, zero-point players.
-- [ ] 3. Admin and player leaderboard endpoints, with ITs for auth (`NOT_IN_GAME`, non-admin 403) and `ROUND_NOT_FOUND`.
-- [ ] 4. Web: `lib/api.ts` fetchers, shared `Leaderboard` component with round selector, player and admin pages, links from the existing game pages. Vitest for the component/fetchers.
-- [ ] 5. E2E: extend the full-flow spec (or add one) to check the leaderboard after kills across two rounds. Update `docs/progress.md` and `docs/architecture.md` if it lists the schema.
+- [x] 2. `LeaderboardService` (aggregate, ranking with ties, round filter) plus unit tests for ranking and ties. IT: totals across two rounds, negative totals, zero-point players.
+- [x] 3. Admin and player leaderboard endpoints, with ITs for auth (`NOT_IN_GAME`, non-admin 403) and `ROUND_NOT_FOUND`.
+- [x] 4. Web: `lib/api.ts` fetchers, shared `Leaderboard` component with round selector, player and admin pages, links from the existing game pages. Vitest for the component/fetchers.
+- [x] 5. E2E: extend the full-flow spec (or add one) to check the leaderboard after kills across two rounds. Update `docs/progress.md` and `docs/architecture.md` if it lists the schema.

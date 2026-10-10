@@ -64,10 +64,11 @@ The schema and architecture must not block the later features.
   - Partial unique indexes keep one ACTIVE row per assassin and one ACTIVE row per target (one assassin per target).
 - `kill`: id identity, game_id, assignment_id (the killer→victim assignment the kill completed), killer_id and victim_id (composite FKs to player), registered_by (admin email), created_at. Unique on victim_id, so a player dies once.
 - `kill_claim`: id identity, game_id, assignment_id (killer→victim, ACTIVE when filed), killer_id and victim_id (composite FKs), status (`PENDING|CONTESTED|CONFIRMED|DISMISSED|WITHDRAWN|VOIDED`), created_at, resolved_at, resolved_by (email or null), kill_id (set only when confirmed). Partial unique index on victim_id where status is `PENDING` or `CONTESTED`.
+- `point_event` (V8): append-only points ledger. id, game_id, game_round_id (nullable), player_id, points (can be negative), type (`KILL|DEATH`), kill_id (nullable; unique with player_id), created_at, created_by. `KillService.applyKill` writes +10 for the killer and -5 for the victim in the kill's transaction. The leaderboard sums it on read.
 - RLS is enabled on every table. A guarded `DO` block revokes grants from `anon` and `authenticated` only when those roles exist, so the migration also runs on plain Postgres in Testcontainers.
 - Enum-like values are stored as `text` with CHECK constraints. JPA runs with `ddl-auto=validate` and `default_schema=game`.
 - **How future features fit:**
-  - leaderboard and a player-facing kill log read from the `kill` table
+  - the leaderboard reads from `point_event`; a player-facing kill log reads from the `kill` table
   - shakeups are already in the MVP: each one is a new round with reason `SHAKEUP`
   - messaging: keyed by assignment, so the assassin stays anonymous
   - gallery: Storage with signed URLs from Spring
