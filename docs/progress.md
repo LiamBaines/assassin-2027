@@ -57,3 +57,5 @@ History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom
   - API: player file/withdraw/accept/contest/mine, and admin list/confirm/dismiss. Victims see only the killer's display name.
   - Web: Register kill button and status on `/games/[gameId]`, an accept/contest banner for the victim, and a Kill claims card on the admin players page. No polling or email, so the victim sees the banner on next load.
   - Checks: `KillClaimIT`, Vitest helpers, and `claims.spec.ts` e2e.
+- 2026-10-10: **Rounds** on `rounds` (spec in `docs/specs/rounds.md`). V5 renamed `assignment_round` to `allocation` and added `game_round`; V7 added `kill.game_round_id`. A final kill now closes the round with a winner and the game stays `ACTIVE`. Admins start round 2+ from a pick list (`POST /rounds`), and players see the round badge and past rounds.
+  - E2E: `rounds.spec.ts` (round 1 ends, late joiner, revive, unticked player removed, player sees Round 2). `kills.spec.ts` now expects the round to end rather than the game.

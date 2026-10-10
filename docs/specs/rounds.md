@@ -53,4 +53,4 @@ Start-round transaction (holds the game row lock, `GameService.lockForChange`): 
 5b. [x] Flyway V7: `kill.game_round_id`; replace `unique (victim_id)` with `unique (victim_id, game_round_id)` so a revived player can die again. IT.
 6. [x] Web: `lib/api.ts` types/calls, player game page (badge, past rounds), vitest.
 7. [x] Web: admin rings page (Start new round dialog, ended state), error messages.
-8. [ ] e2e: round 2 flow (revive, late joiner, unticked player removed, player sees Round 2). Update `docs/architecture.md`, append to `docs/progress.md`, update CLAUDE.md terminology (round vs allocation); full `./mvnw verify`, `pnpm test`, `./scripts/e2e.sh`.
+8. [x] e2e: round 2 flow (revive, late joiner, unticked player removed, player sees Round 2). Update `docs/architecture.md`, append to `docs/progress.md`, update CLAUDE.md terminology (round vs allocation); full `./mvnw verify`, `pnpm test`, `./scripts/e2e.sh`.
