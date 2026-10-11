@@ -1,5 +1,5 @@
 import path from "node:path";
-import { expect, type Browser, type Page } from "@playwright/test";
+import { expect, type Browser, type Locator, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
@@ -122,6 +122,11 @@ export async function generateRing(admin: Page, gameId: string): Promise<void> {
 }
 
 /** Asserts the target a player sees on their page for one game. */
+/** Picks a kill method in the "Kill method" select inside `scope`. */
+export async function selectMethod(scope: Page | Locator, name = "Clamp", points = 10): Promise<void> {
+  await scope.getByLabel("Kill method").selectOption({ label: `${name} (${points} pts)` });
+}
+
 export async function expectTarget(page: Page, gameId: string, name: string): Promise<void> {
   await page.goto(`/games/${gameId}`);
   await expect(page.getByTestId("target-name")).toHaveText(name);

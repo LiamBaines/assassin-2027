@@ -9,6 +9,7 @@ import {
   PLAYERS,
   readJoinLinkPath,
   readRing,
+  selectMethod,
 } from "./support";
 
 // Players claim kills from their game page; the victim accepts or contests, and the admin resolves contested claims.
@@ -52,6 +53,7 @@ async function startGame(code: string): Promise<Setup> {
 /** The killer files a claim on their game page: the button, then its confirm step. */
 async function fileClaim(killer: Page, gameId: string): Promise<void> {
   await killer.goto(`/games/${gameId}`);
+  await selectMethod(killer, "Clamp");
   await killer.getByRole("button", { name: "Register kill" }).click();
   await killer.getByRole("button", { name: "Yes, I killed them" }).click();
   await expect(killer.getByTestId("claim-status")).toContainText("Waiting for your target");

@@ -9,6 +9,7 @@ import {
   PLAYERS,
   readJoinLinkPath,
   readRing,
+  selectMethod,
 } from "./support";
 
 // The admin registers kills from the players page. Each step builds on the previous one's game state.
@@ -41,9 +42,10 @@ function playerRow(name: string) {
 }
 
 /** Registers a kill from the players page: the button, then its confirm step. */
-async function registerKill(name: string): Promise<void> {
+async function registerKill(name: string, method = "Clamp", points = 10): Promise<void> {
   await admin.goto(`/admin/games/${gameId}/players`);
   const row = playerRow(name);
+  await selectMethod(row, method, points);
   await row.getByRole("button", { name: "Register kill" }).click();
   await row.getByRole("button", { name: "Register kill" }).last().click();
 }
@@ -65,7 +67,7 @@ test("registering a kill kills the victim and gives their target to their assass
   killer = ring.find((pair) => pair.target === VICTIM)!.assassin;
   inherited = ring.find((pair) => pair.assassin === VICTIM)!.target;
 
-  await registerKill(VICTIM);
+  await registerKill(VICTIM, "Duel", 15);
 
   await expect(playerRow(VICTIM)).toContainText("DEAD");
   await expect(playerRow(VICTIM).getByRole("button", { name: "Register kill" })).toHaveCount(0);
@@ -83,4 +85,14 @@ test("the kill that leaves one player ends the round, not the game", async () =>
   await expect(admin.getByRole("button", { name: "Register kill" })).toHaveCount(0);
   await admin.goto(`/admin/games/${gameId}/rings`);
   await expect(admin.getByRole("heading", { name: "Round 1 has ended" })).toBeVisible();
+});
+
+test("the kill list shows the method and the admin can correct it", async () => {
+  await admin.goto(`/admin/games/${gameId}/players`);
+  const row = admin.getByTestId("kill-row").filter({ hasText: VICTIM });
+  await expect(row.getByTestId("kill-method")).toHaveText("Duel");
+
+  await selectMethod(row, "Poison");
+  await row.getByRole("button", { name: "Change method" }).click();
+  await expect(row.getByTestId("kill-method")).toHaveText("Poison");
 });
