@@ -1,6 +1,7 @@
 package com.assassin.api.targeting;
 
 import com.assassin.api.common.CurrentUser;
+import com.assassin.api.game.KillMethodService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +29,7 @@ public class AdminRingController {
     @ResponseStatus(HttpStatus.CREATED)
     public RingService.RingView shuffle(@PathVariable UUID gameId, CurrentUser admin,
             @RequestBody ShuffleRequest request) {
-        return ringService.shuffle(gameId, request.expectedCurrentRoundNo(), admin.email());
+        return ringService.shuffle(gameId, request.expectedCurrentRoundNo(), request.killMethods(), admin.email());
     }
 
     @GetMapping("/current")
@@ -42,7 +43,7 @@ public class AdminRingController {
     }
 
     /** @param expectedCurrentRoundNo the current allocation number the admin saw, or null if there were none (wire name kept until the rounds API lands) */
-    public record ShuffleRequest(Integer expectedCurrentRoundNo) {
+    public record ShuffleRequest(Integer expectedCurrentRoundNo, List<KillMethodService.KillMethodInput> killMethods) {
     }
 
     public record RoundResponse(UUID roundId, int roundNo, int gameRoundNo, AllocationReason reason, int playerCount,

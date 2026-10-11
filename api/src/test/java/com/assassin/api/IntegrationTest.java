@@ -42,9 +42,11 @@ public abstract class IntegrationTest {
     }
 
     protected UUID insertGame(String name, String joinCode, String status, boolean signupsOpen) {
-        return jdbc.queryForObject(
+        UUID id = jdbc.queryForObject(
                 "insert into game.game (name, join_code, status, signups_open) values (?, ?, ?, ?) returning id",
                 UUID.class, name, joinCode, status, signupsOpen);
+        jdbc.update("insert into game.kill_method (game_id, name, points) values (?, 'Clamp', 10), (?, 'Duel', 15)", id, id);
+        return id;
     }
 
     /** Inserts a player directly, with the {@code sub} test tokens use for {@code email}; returns its id. */

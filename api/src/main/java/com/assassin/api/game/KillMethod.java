@@ -36,10 +36,14 @@ public class KillMethod {
     }
 
     public KillMethod(UUID gameId, String name, int points, Instant createdAt) {
+        this(gameId, name, points, true, createdAt);
+    }
+
+    public KillMethod(UUID gameId, String name, int points, boolean enabled, Instant createdAt) {
         this.gameId = gameId;
         this.name = name;
         this.points = points;
-        this.enabled = true;
+        this.enabled = enabled;
         this.createdAt = createdAt;
     }
 
@@ -61,5 +65,11 @@ public class KillMethod {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public void update(String name, int points, boolean enabled) {
+        this.name = name;
+        this.points = points;
+        this.enabled = enabled;
     }
 }
