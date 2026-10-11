@@ -265,4 +265,79 @@ class KillIT extends IntegrationTest {
                 .content("{}"))).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
+
+    private ResultActions changeMethod(UUID game, long killId, String methodJson) throws Exception {
+        return mvc.perform(asAdmin(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .patch("/api/admin/games/" + game + "/kills/" + killId)
+                .contentType(MediaType.APPLICATION_JSON).content("{" + methodJson + "}")));
+    }
+
+    private long onlyKillId() {
+        return jdbc.queryForObject("select id from game.kill", Long.class);
+    }
+
+    private int killerTotal(UUID killer) {
+        return count("select coalesce(sum(points), 0) from game.point_event where player_id = ?", killer);
+    }
+
+    @Test
+    void changingMethodWritesAnAdjustRowForTheKiller() throws Exception {
+        shuffle();
+        UUID killer = assassinOf(bob);
+        kill(bob).andExpect(status().isCreated());
+        changeMethod(gameId, onlyKillId(), "\"killMethodId\": " + methodId(gameId, "Duel")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.killMethod.name").value("Duel"));
+        assertThat(count("select kill_method_id from game.kill")).isEqualTo((int) methodId(gameId, "Duel"));
+        assertThat(count("select points from game.point_event where type = 'ADJUST' and player_id = ?", killer))
+                .isEqualTo(5);
+        assertThat(killerTotal(killer)).isEqualTo(15);
+        // Back again: the second adjustment offsets the first.
+        changeMethod(gameId, onlyKillId(), "\"killMethodId\": " + methodId(gameId, "Clamp")).andExpect(status().isOk());
+        assertThat(killerTotal(killer)).isEqualTo(10);
+        assertThat(count("select count(*) from game.point_event where type = 'DEATH' and player_id = ?", bob)).isEqualTo(1);
+    }
+
+    @Test
+    void killResultAndListCarryTheMethod() throws Exception {
+        shuffle();
+        UUID killer = assassinOf(bob);
+        kill(gameId, bob, ", \"killMethodId\": " + methodId(gameId, "Duel")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.killMethod.name").value("Duel"));
+        mvc.perform(asAdmin(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .get("/api/admin/games/" + gameId + "/kills")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].killId").value(onlyKillId()))
+                .andExpect(jsonPath("$[0].killer.id").value(killer.toString()))
+                .andExpect(jsonPath("$[0].victim.id").value(bob.toString()))
+                .andExpect(jsonPath("$[0].killMethod.name").value("Duel"));
+    }
+
+    @Test
+    void changingToTheSameMethodWritesNothing() throws Exception {
+        shuffle();
+        kill(bob).andExpect(status().isCreated());
+        changeMethod(gameId, onlyKillId(), "\"killMethodId\": " + methodId(gameId, "Clamp")).andExpect(status().isOk());
+        assertThat(count("select count(*) from game.point_event where type = 'ADJUST'")).isZero();
+    }
+
+    @Test
+    void changeRejectsMissingDisabledForeignMethodAndUnknownKill() throws Exception {
+        shuffle();
+        kill(bob).andExpect(status().isCreated());
+        long killId = onlyKillId();
+        changeMethod(gameId, killId, "").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        changeMethod(gameId, killId, "\"killMethodId\": " + methodId(other, "Clamp")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_NOT_FOUND"));
+        jdbc.update("update game.kill_method set enabled = false where id = ?", methodId(gameId, "Duel"));
+        changeMethod(gameId, killId, "\"killMethodId\": " + methodId(gameId, "Duel")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_DISABLED"));
+        changeMethod(gameId, killId + 999, "\"killMethodId\": " + methodId(gameId, "Clamp")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("KILL_NOT_FOUND"));
+        changeMethod(other, killId, "\"killMethodId\": " + methodId(other, "Clamp")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("KILL_NOT_FOUND"));
+        assertThat(count("select count(*) from game.point_event where type = 'ADJUST'")).isZero();
+    }
 }

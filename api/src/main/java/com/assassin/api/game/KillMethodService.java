@@ -45,6 +45,12 @@ public class KillMethodService {
                 .toList();
     }
 
+    /** Every method of the game, enabled or not. */
+    @Transactional(readOnly = true)
+    public List<KillMethod> all(UUID gameId) {
+        return methods.findByGameIdOrderById(gameId);
+    }
+
     /** The method a new kill or claim is filed with: it must be given, belong to the game and be enabled. */
     @Transactional(readOnly = true)
     public KillMethod requireEnabled(UUID gameId, Long methodId) {

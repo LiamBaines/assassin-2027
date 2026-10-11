@@ -84,6 +84,10 @@ public class Kill {
         return killMethodId;
     }
 
+    public void setKillMethodId(long killMethodId) {
+        this.killMethodId = killMethodId;
+    }
+
     public String getRegisteredBy() {
         return registeredBy;
     }

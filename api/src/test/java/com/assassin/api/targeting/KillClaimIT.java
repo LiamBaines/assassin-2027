@@ -106,6 +106,7 @@ class KillClaimIT extends IntegrationTest {
                 .andExpect(jsonPath("$.incoming").value(nullValue()));
         meGet(victim, "/mine").andExpect(jsonPath("$.incoming.id").value(id))
                 .andExpect(jsonPath("$.incoming.killerName").value("Alice"))
+                .andExpect(jsonPath("$.incoming.killMethod.name").value("Clamp"))
                 .andExpect(jsonPath("$.outgoing").value(nullValue()));
     }
 
@@ -287,6 +288,7 @@ class KillClaimIT extends IntegrationTest {
                 .andExpect(jsonPath("$[0].id").value(open))
                 .andExpect(jsonPath("$[0].status").value("PENDING"))
                 .andExpect(jsonPath("$[0].killerName").value("Alice"))
+                .andExpect(jsonPath("$[0].killMethod.name").value("Clamp"))
                 .andExpect(jsonPath("$[0].victimName").value(string(
                         "select display_name from game.player where id = ?", victim)));
     }

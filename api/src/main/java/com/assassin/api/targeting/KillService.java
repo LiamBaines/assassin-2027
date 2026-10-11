@@ -11,7 +11,11 @@ import com.assassin.api.player.PlayerRef;
 import com.assassin.api.player.PlayerRepository;
 import com.assassin.api.player.PlayerStatus;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +60,28 @@ public class KillService {
         return applyKill(game, victim, killMethods.requireEnabled(game.getId(), killMethodId), registeredBy);
     }
 
+    /** Admin correction of the method a kill was made with; the killer's points are adjusted to the new method's. */
+    @Transactional
+    public KillMethodChange changeMethod(UUID gameId, long killId, Long killMethodId, String adjustedBy) {
+        Game game = gameService.lockForChange(gameId);
+        Kill kill = kills.findById(killId).filter(k -> k.getGameId().equals(game.getId()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "KILL_NOT_FOUND", "No such kill in this game."));
+        KillMethod method = killMethods.requireEnabled(game.getId(), killMethodId);
+        kill.setKillMethodId(method.getId());
+        pointService.adjustKill(kill, method.getPoints(), adjustedBy);
+        return new KillMethodChange(kill.getId(), KillMethodRef.from(method));
+    }
+
+    public record KillMethodRef(long id, String name) {
+
+        public static KillMethodRef from(KillMethod m) {
+            return new KillMethodRef(m.getId(), m.getName());
+        }
+    }
+
+    public record KillMethodChange(long killId, KillMethodRef killMethod) {
+    }
+
     /**
      * Core kill logic. The caller must hold the game lock ({@link GameService#lockForChange}), have checked the
      * game is ACTIVE, and have loaded the victim and the method from this game.
@@ -84,10 +110,27 @@ public class KillService {
         }
         Player newTarget = roundEnded ? null : players.getReferenceById(splice.targetId());
         return new KillResult(kill.getId(), PlayerRef.from(killer), PlayerRef.from(victim),
-                newTarget == null ? null : PlayerRef.from(newTarget), roundEnded);
+                newTarget == null ? null : PlayerRef.from(newTarget), roundEnded, KillMethodRef.from(method));
+    }
+
+    /** Admin: the game's kills, newest first. */
+    @Transactional(readOnly = true)
+    public List<KillView> list(UUID gameId) {
+        gameService.find(gameId);
+        Map<Long, KillMethod> methods = killMethods.all(gameId).stream()
+                .collect(Collectors.toMap(KillMethod::getId, Function.identity()));
+        return kills.findByGameIdOrderByIdDesc(gameId).stream()
+                .map(k -> new KillView(k.getId(), PlayerRef.from(players.getReferenceById(k.getKillerId())),
+                        PlayerRef.from(players.getReferenceById(k.getVictimId())),
+                        KillMethodRef.from(methods.get(k.getKillMethodId())), k.getCreatedAt()))
+                .toList();
     }
 
     public record KillResult(long killId, PlayerRef killer, PlayerRef victim, PlayerRef newTarget,
-            boolean roundEnded) {
+            boolean roundEnded, KillMethodRef killMethod) {
+    }
+
+    public record KillView(long killId, PlayerRef killer, PlayerRef victim, KillMethodRef killMethod,
+            Instant createdAt) {
     }
 }
