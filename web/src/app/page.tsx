@@ -1,6 +1,7 @@
+import { ArrowRight, Crosshair, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Card, PlayerShell } from "@/components/ui";
+import { PlayerShell, Panel, primaryButtonClass, secondaryButtonClass } from "@/components/ui";
 import { getMe } from "@/lib/api";
 
 export default async function Home() {
@@ -13,21 +14,20 @@ export default async function Home() {
   // Admins may also play, so give them a choice instead of redirecting.
   return (
     <PlayerShell title="Assassin 2027">
-      <Card className="space-y-3">
-        <p className="text-sm text-zinc-600">Signed in as {me.email}</p>
-        <Link
-          href="/admin"
-          className="block rounded-lg bg-zinc-900 px-4 py-2.5 text-center font-medium text-white"
-        >
-          Admin console
-        </Link>
-        <Link
-          href={playerHref}
-          className="block rounded-lg border border-zinc-300 px-4 py-2.5 text-center font-medium"
-        >
-          {playing ? "My games" : "Join a game"}
-        </Link>
-      </Card>
+      <Panel className="space-y-4">
+        <p className="text-sm text-muted">Signed in as {me.email}</p>
+        <div className="flex flex-col gap-2">
+          <Link href="/admin" className={primaryButtonClass}>
+            <ShieldCheck aria-hidden className="size-4" />
+            Admin console
+          </Link>
+          <Link href={playerHref} className={secondaryButtonClass}>
+            <Crosshair aria-hidden className="size-4" />
+            {playing ? "My games" : "Join a game"}
+            <ArrowRight aria-hidden className="size-4" />
+          </Link>
+        </div>
+      </Panel>
     </PlayerShell>
   );
 }

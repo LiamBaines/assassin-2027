@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { secondaryButtonClass } from "@/components/ui";
 
@@ -17,8 +18,10 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
     }
   }
 
+  const Icon = copied ? Check : Copy;
   return (
     <button type="button" onClick={copy} className={secondaryButtonClass}>
+      <Icon aria-hidden className="size-4" />
       <span aria-live="polite">{copied ? "Copied" : label}</span>
     </button>
   );

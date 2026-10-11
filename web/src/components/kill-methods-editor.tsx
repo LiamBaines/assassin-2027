@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { inputClass } from "@/components/ui";
 import type { KillMethod } from "@/lib/api-types";
@@ -22,7 +23,7 @@ export function KillMethodsEditor({ methods }: { methods: KillMethod[] }) {
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-medium text-zinc-700">Kill methods</legend>
+      <legend className="text-sm font-medium">Kill methods</legend>
       <ul data-testid="kill-methods" className="space-y-2">
         {rows.map((r, i) => (
           <li
@@ -73,8 +74,9 @@ export function KillMethodsEditor({ methods }: { methods: KillMethod[] }) {
           ]);
           setNextKey(nextKey + 1);
         }}
-        className="text-sm text-zinc-600 underline"
+        className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-bone"
       >
+        <Plus aria-hidden className="size-4" />
         Add method
       </button>
     </fieldset>

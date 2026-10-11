@@ -1,14 +1,15 @@
+import { Clock, Flag, Play, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { inputClass } from "@/components/ui";
+import { StatusChip, inputClass, type StatusTone } from "@/components/ui";
 import type { AdminGame, GameStatus } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 
 /** Name and join code inputs, shared by the create and edit forms. */
 export function GameFields({ game }: { game?: AdminGame }) {
   return (
-    <div className="grid max-w-xl gap-4 sm:grid-cols-2">
+    <div className="grid max-w-xl gap-4">
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Name</span>
+        <span className="block text-sm font-medium">Name</span>
         <input
           name="name"
           defaultValue={game?.name}
@@ -18,7 +19,7 @@ export function GameFields({ game }: { game?: AdminGame }) {
         />
       </label>
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Join code</span>
+        <span className="block text-sm font-medium">Join code</span>
         <input
           name="joinCode"
           defaultValue={game?.joinCode}
@@ -29,45 +30,37 @@ export function GameFields({ game }: { game?: AdminGame }) {
           title="6–16 letters or numbers"
           autoComplete="off"
           spellCheck={false}
-          className={`${inputClass} font-mono uppercase`}
+          className={`${inputClass} font-display text-lg tracking-widest uppercase`}
         />
       </label>
     </div>
   );
 }
 
-const STATUS_STYLE: Record<GameStatus, string> = {
-  SETUP: "bg-amber-100 text-amber-900",
-  ACTIVE: "bg-emerald-100 text-emerald-800",
-  FINISHED: "bg-zinc-200 text-zinc-700",
+const STATUS_VIEW: Record<GameStatus, { label: string; tone: StatusTone; icon: LucideIcon }> = {
+  SETUP: { label: "Setup", tone: "warn", icon: Clock },
+  ACTIVE: { label: "Active", tone: "alive", icon: Play },
+  FINISHED: { label: "Finished", tone: "neutral", icon: Flag },
 };
 
-const STATUS_LABEL: Record<GameStatus, string> = {
-  SETUP: "Setup",
-  ACTIVE: "Active",
-  FINISHED: "Finished",
-};
-
-/** Game status pill; a finished game shows when it finished. */
+/** Game status chip; a finished game shows when it finished. */
 export function GameStatusBadge({ game }: { game: AdminGame }) {
+  const view = STATUS_VIEW[game.status];
   const label =
     game.status === "FINISHED" && game.finishedAt
       ? `Finished ${formatDateTime(game.finishedAt)}`
-      : STATUS_LABEL[game.status];
+      : view.label;
   return (
-    <span
-      data-testid="game-status"
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${STATUS_STYLE[game.status]}`}
-    >
+    <StatusChip data-testid="game-status" tone={view.tone} icon={view.icon}>
       {label}
-    </span>
+    </StatusChip>
   );
 }
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="text-zinc-500">{label}</dt>
+      <dt className="text-muted">{label}</dt>
       <dd className="mt-0.5 font-medium">{children}</dd>
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Alert } from "@/components/ui";
+import { Alert, iconButtonClass } from "@/components/ui";
 
 export type ActionResult = { error?: string };
 
@@ -31,20 +32,56 @@ export function ActionForm({
   );
 }
 
-/** Submit button that shows a pending label while its form is submitting. */
+/** Button body: an icon, a label, or just the icon when `iconOnly` (label becomes the accessible name). */
+function ButtonFace({
+  icon,
+  iconOnly,
+  pending,
+  children,
+}: {
+  icon?: ReactNode;
+  iconOnly?: boolean;
+  pending: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {pending ? <Loader2 aria-hidden className="size-4 animate-spin" /> : icon}
+      {!iconOnly && children}
+    </>
+  );
+}
+
+const labelOf = (children: ReactNode) => (typeof children === "string" ? children : undefined);
+
+/** Submit button that shows a pending state while its form is submitting. */
 export function SubmitButton({
   children,
   pendingLabel,
   className,
+  icon,
+  iconOnly,
 }: {
   children: ReactNode;
   pendingLabel?: string;
   className?: string;
+  /** An element, not a component: Server Components can pass elements across the boundary. */
+  icon?: ReactNode;
+  iconOnly?: boolean;
 }) {
   const { pending } = useFormStatus();
+  const label = pending ? (pendingLabel ?? "Saving…") : children;
   return (
-    <button type="submit" disabled={pending} className={className}>
-      {pending ? (pendingLabel ?? "Saving…") : children}
+    <button
+      type="submit"
+      disabled={pending}
+      aria-label={iconOnly ? labelOf(children) : undefined}
+      title={iconOnly ? labelOf(children) : undefined}
+      className={iconOnly ? `${iconButtonClass} ${className ?? ""}` : className}
+    >
+      <ButtonFace icon={icon} iconOnly={iconOnly} pending={pending}>
+        {label}
+      </ButtonFace>
     </button>
   );
 }
@@ -59,7 +96,12 @@ export function ConfirmSubmit({
   message,
   className,
   confirmClassName,
+  icon,
+  iconOnly,
 }: {
+  /** An element, not a component: Server Components can pass elements across the boundary. */
+  icon?: ReactNode;
+  iconOnly?: boolean;
   label: string;
   confirmLabel: string;
   message: string;
@@ -75,16 +117,20 @@ export function ConfirmSubmit({
         type="button"
         onClick={() => setConfirming(true)}
         disabled={pending}
-        className={className}
+        aria-label={iconOnly ? label : undefined}
+        title={iconOnly ? label : undefined}
+        className={iconOnly ? `${iconButtonClass} ${className ?? ""}` : className}
       >
-        {pending ? "Working…" : label}
+        <ButtonFace icon={icon} iconOnly={iconOnly} pending={pending}>
+          {pending ? "Working…" : label}
+        </ButtonFace>
       </button>
     );
   }
 
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
-      <span className="text-sm text-zinc-700">{message}</span>
+      <span className="text-sm text-bone">{message}</span>
       <button
         type="submit"
         disabled={pending}
@@ -99,7 +145,7 @@ export function ConfirmSubmit({
         type="button"
         disabled={pending}
         onClick={() => setConfirming(false)}
-        className="text-sm text-zinc-600 underline"
+        className="text-sm text-muted underline hover:text-bone"
       >
         Cancel
       </button>

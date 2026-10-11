@@ -16,7 +16,7 @@ export function JoinForm({
   return (
     <form action={formAction} className="space-y-4">
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Display name</span>
+        <span className="block text-sm font-medium">Display name</span>
         <input
           name="displayName"
           defaultValue={state.displayName}
@@ -26,7 +26,7 @@ export function JoinForm({
           autoComplete="nickname"
           className={inputClass}
         />
-        <span className="block text-xs text-zinc-500">
+        <span className="block text-xs text-muted">
           Other players see this name. 2–32 characters.
         </span>
       </label>

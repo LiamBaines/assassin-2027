@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { GameStatusBadge } from "../../game-fields";
 import { GameNav } from "./game-nav";
@@ -16,11 +15,8 @@ export default async function AdminGameLayout({
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Link href="/admin" className="text-sm text-zinc-600 hover:text-zinc-900">
-          ← All games
-        </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">{game.name}</h1>
+          <h1 className="font-display text-3xl font-semibold">{game.name}</h1>
           <GameStatusBadge game={game} />
         </div>
         <GameNav gameId={game.id} />

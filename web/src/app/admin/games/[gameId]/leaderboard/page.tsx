@@ -21,7 +21,7 @@ export default async function AdminLeaderboardPage(props: {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Leaderboard</h2>
+      <h2 className="font-display text-2xl font-semibold">Leaderboard</h2>
       <Leaderboard
         data={data}
         basePath={`/admin/games/${encodeURIComponent(game.id)}/leaderboard`}

@@ -1,14 +1,12 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState } from "react";
+import { Alert, inputClass, primaryButtonClass } from "@/components/ui";
 import { loginAction, type LoginState } from "./actions";
 
 const initialState: LoginState = { step: "email" };
 
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10";
-const buttonClass =
-  "w-full rounded-lg bg-zinc-900 px-4 py-2.5 font-medium text-white disabled:opacity-60";
+const buttonClass = `${primaryButtonClass} w-full`;
 
 export function LoginForm({
   initialError,
@@ -27,15 +25,15 @@ export function LoginForm({
   if (state.step === "code") {
     return (
       <form action={formAction} className="space-y-4">
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-muted">
           Check your email. We sent a login link and a 6-digit code to{" "}
-          <span className="font-medium text-zinc-900">{state.email}</span>.
+          <span className="font-medium text-bone">{state.email}</span>.
           Open the link, or enter the code here.
         </p>
         <input type="hidden" name="email" value={state.email} />
         <input type="hidden" name="next" value={next} />
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">6-digit code</span>
+          <span className="block text-sm font-medium">6-digit code</span>
           <input
             name="token"
             inputMode="numeric"
@@ -47,7 +45,7 @@ export function LoginForm({
             className={`${inputClass} tracking-[0.4em]`}
           />
         </label>
-        {error && <ErrorText>{error}</ErrorText>}
+        {error && <Alert>{error}</Alert>}
         <button
           type="submit"
           name="intent"
@@ -63,7 +61,7 @@ export function LoginForm({
           value="restart"
           formNoValidate
           disabled={pending}
-          className="w-full text-sm text-zinc-600 underline"
+          className="w-full py-2 text-sm text-muted underline hover:text-bone"
         >
           Use a different email
         </button>
@@ -75,7 +73,7 @@ export function LoginForm({
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Email</span>
+        <span className="block text-sm font-medium">Email</span>
         <input
           type="email"
           name="email"
@@ -86,7 +84,7 @@ export function LoginForm({
           className={inputClass}
         />
       </label>
-      {error && <ErrorText>{error}</ErrorText>}
+      {error && <Alert>{error}</Alert>}
       <button
         type="submit"
         name="intent"
@@ -97,13 +95,5 @@ export function LoginForm({
         {pending ? "Sending…" : "Email me a login link"}
       </button>
     </form>
-  );
-}
-
-function ErrorText({ children }: { children: ReactNode }) {
-  return (
-    <p role="alert" className="text-sm text-red-700">
-      {children}
-    </p>
   );
 }

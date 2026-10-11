@@ -1,10 +1,17 @@
+import { Users, Check, Crosshair, Save, UserMinus, UserPlus, X } from "lucide-react";
 import {
   ActionForm,
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
 import { KillMethodSelect } from "@/components/kill-method-select";
-import { Card, dangerButtonClass, secondaryButtonClass } from "@/components/ui";
+import {
+  EmptyState,
+  Panel,
+  StatusChip,
+  dangerButtonClass,
+} from "@/components/ui";
+import { rosterStatusView } from "@/lib/player-status";
 import {
   getAdminKillMethods,
   getAdminPlayers,
@@ -27,11 +34,7 @@ import {
 } from "../../../actions";
 import { loadAdminGame } from "../load-game";
 
-const STATUS_STYLE: Record<AdminPlayer["status"], string> = {
-  ALIVE: "bg-emerald-100 text-emerald-800",
-  DEAD: "bg-red-100 text-red-800",
-  REMOVED: "bg-zinc-200 text-zinc-700",
-};
+const ICON = { "aria-hidden": true, className: "size-4" } as const;
 
 export default async function AdminPlayersPage(props: {
   params: Promise<{ gameId: string }>;
@@ -53,17 +56,17 @@ export default async function AdminPlayersPage(props: {
   return (
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold">Players</h2>
-        <p className="text-sm text-zinc-600">
+        <h2 className="font-display text-2xl font-semibold">Players</h2>
+        <p className="text-sm text-muted">
           {players.length} registered, {alive} alive
         </p>
       </div>
       {claims.length > 0 && (
-        <Card className="space-y-3">
+        <Panel className="space-y-3">
           <h3 className="font-semibold" data-testid="kill-claims-heading">
             Kill claims
           </h3>
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-line">
             {claims.map((c) => (
               <li
                 key={c.id}
@@ -77,7 +80,7 @@ export default async function AdminPlayersPage(props: {
                     <span className="font-medium">{c.victimName}</span> with{" "}
                     <span data-testid="claim-method">{c.killMethod.name}</span>
                   </p>
-                  <p className="text-zinc-600">
+                  <p className="text-muted">
                     {c.status === "CONTESTED"
                       ? "Contested by the victim"
                       : "Waiting for the victim"}{" "}
@@ -92,8 +95,10 @@ export default async function AdminPlayersPage(props: {
                     <ConfirmSubmit
                       label="Confirm kill"
                       confirmLabel="Confirm kill"
+                      icon={<Check {...ICON} />}
+                      iconOnly
                       message={`Confirm that ${c.killerName} killed ${c.victimName}? This removes ${c.victimName} from the ring.`}
-                      className={secondaryButtonClass}
+                      className="!text-alive"
                       confirmClassName={dangerButtonClass}
                     />
                   </ActionForm>
@@ -101,10 +106,7 @@ export default async function AdminPlayersPage(props: {
                     action={dismissClaimAction.bind(null, game.id, c.id)}
                     className="flex items-center gap-2"
                   >
-                    <SubmitButton
-                      className={secondaryButtonClass}
-                      pendingLabel="Dismissing…"
-                    >
+                    <SubmitButton icon={<X {...ICON} />} iconOnly pendingLabel="Dismissing…">
                       Dismiss
                     </SubmitButton>
                   </ActionForm>
@@ -112,12 +114,12 @@ export default async function AdminPlayersPage(props: {
               </li>
             ))}
           </ul>
-        </Card>
+        </Panel>
       )}
       {kills.length > 0 && (
-        <Card className="space-y-3">
+        <Panel className="space-y-3">
           <h3 className="font-semibold">Kills</h3>
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-line">
             {kills.map((k) => (
               <li
                 key={k.killId}
@@ -129,7 +131,7 @@ export default async function AdminPlayersPage(props: {
                   killed{" "}
                   <span className="font-medium">{k.victim.displayName}</span>{" "}
                   with <span data-testid="kill-method">{k.killMethod.name}</span>{" "}
-                  <span className="text-zinc-600">
+                  <span className="text-muted">
                     · {formatDateTime(k.createdAt)}
                   </span>
                 </p>
@@ -142,10 +144,7 @@ export default async function AdminPlayersPage(props: {
                       methods={enabledMethods}
                       defaultValue={k.killMethod.id}
                     />
-                    <SubmitButton
-                      className={secondaryButtonClass}
-                      pendingLabel="Saving…"
-                    >
+                    <SubmitButton icon={<Save {...ICON} />} iconOnly pendingLabel="Saving…">
                       Change method
                     </SubmitButton>
                   </ActionForm>
@@ -153,14 +152,18 @@ export default async function AdminPlayersPage(props: {
               </li>
             ))}
           </ul>
-        </Card>
+        </Panel>
       )}
-      <Card className="overflow-x-auto p-0">
+      <Panel flush className="overflow-x-auto">
         {players.length === 0 ? (
-          <p className="p-5 text-sm text-zinc-600">No players have joined yet.</p>
+          <div className="px-5">
+            <EmptyState icon={Users} title="No players yet">
+              Share the join link from the Details tab so players can sign up.
+            </EmptyState>
+          </div>
         ) : (
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
+            <thead className="border-b border-line text-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
@@ -174,24 +177,20 @@ export default async function AdminPlayersPage(props: {
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-line">
               {players.map((p) => (
-                <tr key={p.id} data-testid="player-row" className="align-top">
+                <tr key={p.id} data-testid="player-row" className="align-top whitespace-nowrap">
                   <td className="px-4 py-3 font-medium">{p.displayName}</td>
-                  <td className="px-4 py-3 text-zinc-600">{p.email}</td>
+                  <td className="px-4 py-3 text-muted">{p.email}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[p.status]}`}
-                    >
-                      {p.status}
-                    </span>
+                    <PlayerStatus status={p.status} />
                   </td>
                   <td className="px-4 py-3">
                     {p.currentTarget?.displayName ?? (
-                      <span className="text-zinc-400">—</span>
+                      <span className="text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-zinc-600">
+                  <td className="px-4 py-3 whitespace-nowrap text-muted">
                     {formatDateTime(p.joinedAt)}
                   </td>
                   {editable && (
@@ -210,8 +209,17 @@ export default async function AdminPlayersPage(props: {
             </tbody>
           </table>
         )}
-      </Card>
+      </Panel>
     </div>
+  );
+}
+
+function PlayerStatus({ status }: { status: AdminPlayer["status"] }) {
+  const view = rosterStatusView(status);
+  return (
+    <StatusChip tone={view.tone} icon={view.icon}>
+      {view.label}
+    </StatusChip>
   );
 }
 
@@ -233,7 +241,7 @@ function PlayerAction({
   const killable =
     active && player.status === "ALIVE" && player.currentTarget !== null;
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-2">
       {killable && (
         <ActionForm
           action={registerKillAction.bind(null, gameId)}
@@ -244,8 +252,9 @@ function PlayerAction({
           <ConfirmSubmit
             label="Register kill"
             confirmLabel="Register kill"
+            icon={<Crosshair {...ICON} />}
+            iconOnly
             message={registerKillMessage(player, aliveInRing)}
-            className={secondaryButtonClass}
             confirmClassName={dangerButtonClass}
           />
         </ActionForm>
@@ -261,15 +270,16 @@ function PlayerAction({
           value={restoring ? "ALIVE" : "REMOVED"}
         />
         {restoring ? (
-          <SubmitButton className={secondaryButtonClass} pendingLabel="Restoring…">
+          <SubmitButton icon={<UserPlus {...ICON} />} iconOnly pendingLabel="Restoring…">
             Restore
           </SubmitButton>
         ) : (
           <ConfirmSubmit
             label="Remove"
             confirmLabel="Remove"
+            icon={<UserMinus {...ICON} />}
+            iconOnly
             message={removePlayerMessage(player)}
-            className={secondaryButtonClass}
             confirmClassName={dangerButtonClass}
           />
         )}

@@ -1,5 +1,6 @@
+import { ArrowRight, Shuffle } from "lucide-react";
 import { ActionForm, ConfirmSubmit } from "@/components/action-form";
-import { Alert, Card, primaryButtonClass } from "@/components/ui";
+import { Alert, Panel, primaryButtonClass } from "@/components/ui";
 import { KillMethodsEditor } from "@/components/kill-methods-editor";
 import { StartRoundForm } from "@/components/start-round-form";
 import {
@@ -18,6 +19,8 @@ const REASON_LABEL: Record<RoundReason, string> = {
   INITIAL: "Initial",
   SHAKEUP: "Shakeup",
 };
+
+const ICON = { "aria-hidden": true, className: "size-4" } as const;
 
 export default async function AdminRingsPage(props: {
   params: Promise<{ gameId: string }>;
@@ -42,20 +45,20 @@ export default async function AdminRingsPage(props: {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Rings</h2>
+      <h2 className="font-display text-2xl font-semibold">Rings</h2>
 
-      <Card className="space-y-4">
+      <Panel className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold">
+            <h3 className="font-display text-xl font-semibold">
               {ring
-                ? `Round ${ring.gameRoundNo} — allocation ${ring.roundNo} (${REASON_LABEL[ring.reason]})`
+                ? `Round ${ring.gameRoundNo}, allocation ${ring.roundNo} (${REASON_LABEL[ring.reason]})`
                 : roundEnded
                   ? `Round ${latestRound.roundNo} has ended`
                   : "No ring yet"}
             </h3>
             {canShuffle && (
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-muted">
                 {isShakeup
                   ? "A shakeup puts every alive player into a new ring. Current assignments are replaced and kept in history."
                   : "Generating the ring gives every alive player a target and starts the game."}
@@ -83,6 +86,7 @@ export default async function AdminRingsPage(props: {
                     : "Assign targets to all alive players?"
                 }
                 className={primaryButtonClass}
+                icon={<Shuffle {...ICON} />}
               />
             </ActionForm>
           )}
@@ -108,31 +112,29 @@ export default async function AdminRingsPage(props: {
         )}
 
         {ring && (
-          <ol data-testid="current-ring" className="divide-y divide-zinc-100 text-sm">
+          <ol data-testid="current-ring" className="divide-y divide-line border-y border-line text-sm">
             {ring.ring.map(({ assassin, target }, i) => (
               <li
                 key={assassin.id}
                 data-testid="ring-pair"
                 className="grid grid-cols-[2.5rem_1fr_auto_1fr] items-center gap-3 py-2"
               >
-                <span className="text-zinc-400 tabular-nums">{i + 1}</span>
+                <span className="tabular text-muted">{i + 1}</span>
                 <span className="font-medium" data-role="assassin">
                   {assassin.displayName}
                 </span>
-                <span aria-label="targets" className="text-zinc-400">
-                  →
-                </span>
+                <ArrowRight aria-label="targets" role="img" className="size-4 text-muted" />
                 <span data-role="target">{target.displayName}</span>
               </li>
             ))}
           </ol>
         )}
-      </Card>
+      </Panel>
 
-      <Card className="overflow-x-auto p-0">
-        <h3 className="px-5 pt-5 text-lg font-semibold">Rounds</h3>
+      <Panel flush className="overflow-x-auto">
+        <h3 className="px-5 pt-5 font-display text-xl font-semibold">Rounds</h3>
         <table className="mt-3 w-full text-left text-sm">
-          <thead className="border-y border-zinc-200 bg-zinc-50 text-zinc-500">
+          <thead className="border-y border-line text-muted">
             <tr>
               <th className="px-5 py-3 font-medium">Round</th>
               <th className="px-5 py-3 font-medium">Players</th>
@@ -140,15 +142,15 @@ export default async function AdminRingsPage(props: {
               <th className="px-5 py-3 font-medium">Result</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-line">
             {rounds.map((r) => (
               <tr key={r.roundNo} data-testid="game-round-row">
-                <td className="px-5 py-3 tabular-nums">{r.roundNo}</td>
-                <td className="px-5 py-3 tabular-nums">{r.playerCount}</td>
-                <td className="px-5 py-3 text-zinc-600">
+                <td className="tabular px-5 py-3">{r.roundNo}</td>
+                <td className="tabular px-5 py-3">{r.playerCount}</td>
+                <td className="px-5 py-3 text-muted">
                   {formatDateTime(r.startedAt)}
                 </td>
-                <td className="px-5 py-3 text-zinc-600">
+                <td className="px-5 py-3 text-muted">
                   {r.endedAt === null
                     ? "In progress"
                     : r.winner
@@ -159,22 +161,22 @@ export default async function AdminRingsPage(props: {
             ))}
             {rounds.length === 0 && (
               <tr>
-                <td className="px-5 py-3 text-zinc-600" colSpan={4}>
-                  No rounds yet.
+                <td className="px-5 py-4 text-muted" colSpan={4}>
+                  No rounds yet. Generate the ring to start round 1.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </Card>
+      </Panel>
 
-      <Card className="overflow-x-auto p-0">
-        <h3 className="px-5 pt-5 text-lg font-semibold">Allocation history</h3>
+      <Panel flush className="overflow-x-auto">
+        <h3 className="px-5 pt-5 font-display text-xl font-semibold">Allocation history</h3>
         {history.length === 0 ? (
-          <p className="p-5 text-sm text-zinc-600">No allocations yet.</p>
+          <p className="p-5 text-sm text-muted">No allocations yet. They appear after the first ring is generated.</p>
         ) : (
           <table className="mt-3 w-full text-left text-sm">
-            <thead className="border-y border-zinc-200 bg-zinc-50 text-zinc-500">
+            <thead className="border-y border-line text-muted">
               <tr>
                 <th className="px-5 py-3 font-medium">Round</th>
                 <th className="px-5 py-3 font-medium">Allocation</th>
@@ -184,15 +186,15 @@ export default async function AdminRingsPage(props: {
                 <th className="px-5 py-3 font-medium">When</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-line">
               {history.map((r) => (
                 <tr key={r.roundId} data-testid="round-row">
-                  <td className="px-5 py-3 tabular-nums">{r.gameRoundNo}</td>
-                  <td className="px-5 py-3 tabular-nums">{r.roundNo}</td>
+                  <td className="tabular px-5 py-3">{r.gameRoundNo}</td>
+                  <td className="tabular px-5 py-3">{r.roundNo}</td>
                   <td className="px-5 py-3">{REASON_LABEL[r.reason]}</td>
-                  <td className="px-5 py-3 tabular-nums">{r.playerCount}</td>
-                  <td className="px-5 py-3 text-zinc-600">{r.createdBy}</td>
-                  <td className="px-5 py-3 text-zinc-600">
+                  <td className="tabular px-5 py-3">{r.playerCount}</td>
+                  <td className="px-5 py-3 text-muted">{r.createdBy}</td>
+                  <td className="px-5 py-3 text-muted">
                     {formatDateTime(r.createdAt)}
                   </td>
                 </tr>
@@ -200,7 +202,7 @@ export default async function AdminRingsPage(props: {
             </tbody>
           </table>
         )}
-      </Card>
+      </Panel>
     </div>
   );
 }

@@ -1,5 +1,6 @@
+import { AlertTriangle, Info, ShieldCheck, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 /** Mobile-first single-column page used by the player views. */
 export function PlayerShell({
@@ -12,15 +13,17 @@ export function PlayerShell({
   isAdmin?: boolean;
 }) {
   return (
-    <main className="mx-auto w-full max-w-md flex-1 px-4 py-8">
+    <main className="mx-auto w-full max-w-md flex-1 px-4 py-6">
       <header className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold">{title}</h1>
         {isAdmin && (
           <Link
             href="/admin"
-            className="text-sm font-medium text-zinc-600 underline"
+            aria-label="Admin console"
+            title="Admin console"
+            className="inline-flex size-10 items-center justify-center rounded-control text-muted hover:bg-raised hover:text-bone"
           >
-            Admin
+            <ShieldCheck aria-hidden className="size-5" />
           </Link>
         )}
       </header>
@@ -29,16 +32,20 @@ export function PlayerShell({
   );
 }
 
-export function Card({
+/** Flat bordered region. Don't nest one Panel inside another; use dividers. */
+export function Panel({
   children,
   className = "",
+  flush = false,
 }: {
   children: ReactNode;
   className?: string;
+  /** No padding, for tables and lists that run edge to edge. */
+  flush?: boolean;
 }) {
   return (
     <section
-      className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm ${className}`}
+      className={`rounded-panel border border-line bg-surface ${flush ? "" : "p-4"} ${className}`}
     >
       {children}
     </section>
@@ -52,25 +59,119 @@ export function Alert({
   children: ReactNode;
   tone?: "error" | "info";
 }) {
+  const Icon = tone === "error" ? AlertTriangle : Info;
   const styles =
     tone === "error"
-      ? "border-red-200 bg-red-50 text-red-800"
-      : "border-sky-200 bg-sky-50 text-sky-900";
+      ? "border-blood/60 bg-blood/10 text-bone"
+      : "border-line bg-raised text-bone";
   return (
-    <p role="alert" className={`rounded-lg border px-3 py-2 text-sm ${styles}`}>
-      {children}
+    <p
+      role="alert"
+      className={`flex items-start gap-2 rounded-panel border px-3 py-2 text-sm ${styles}`}
+    >
+      <Icon aria-hidden className="mt-0.5 size-4 shrink-0" />
+      <span>{children}</span>
     </p>
   );
 }
 
+export type StatusTone = "alive" | "dead" | "warn" | "neutral";
+
+const toneStyles: Record<StatusTone, string> = {
+  alive: "text-alive border-alive/40",
+  dead: "text-muted border-line line-through",
+  warn: "text-warn border-warn/40",
+  neutral: "text-bone border-line",
+};
+
+/** Status is always icon + label, never colour alone. */
+export function StatusChip({
+  tone = "neutral",
+  icon: Icon,
+  children,
+  ...rest
+}: {
+  tone?: StatusTone;
+  icon?: LucideIcon;
+  children: ReactNode;
+  "data-testid"?: string;
+}) {
+  return (
+    <span
+      {...rest}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-control border px-2 py-0.5 text-sm font-medium ${toneStyles[tone]}`}
+    >
+      {Icon && <Icon aria-hidden className="size-3.5" />}
+      {children}
+    </span>
+  );
+}
+
+/** Say what's missing and what to do next. */
+export function EmptyState({
+  icon: Icon,
+  title,
+  children,
+  action,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-2 py-8">
+      {Icon && <Icon aria-hidden className="size-6 text-muted" />}
+      <p className="font-display text-xl font-semibold">{title}</p>
+      {children && <p className="max-w-prose text-sm text-muted">{children}</p>}
+      {action}
+    </div>
+  );
+}
+
+export function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div
+      aria-hidden
+      className={`animate-pulse rounded-panel bg-raised ${className}`}
+    />
+  );
+}
+
+/** Icon-only button. The label is the accessible name and the hover tooltip. */
+export function IconButton({
+  icon: Icon,
+  label,
+  className = "",
+  ...rest
+}: {
+  icon: LucideIcon;
+  label: string;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={`inline-flex size-10 items-center justify-center rounded-control text-muted hover:bg-raised hover:text-bone disabled:opacity-50 ${className}`}
+      {...rest}
+    >
+      <Icon aria-hidden className="size-5" />
+    </button>
+  );
+}
+
+export const iconButtonClass =
+  "inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted hover:bg-raised hover:text-bone disabled:opacity-50";
+
 export const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10";
+  "w-full rounded-control border border-line bg-ink px-3 py-2.5 text-base text-bone placeholder:text-muted";
 
 export const primaryButtonClass =
-  "rounded-lg bg-zinc-900 px-4 py-2.5 font-medium text-white hover:bg-zinc-800 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-control bg-blood px-4 py-2.5 font-medium text-bone hover:bg-blood-hover disabled:opacity-60";
 
 export const secondaryButtonClass =
-  "rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-100 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-control border border-line bg-raised px-4 py-2 text-sm font-medium text-bone hover:border-muted disabled:opacity-60";
 
 export const dangerButtonClass =
-  "rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-control border border-blood px-4 py-2 text-sm font-medium text-bone hover:bg-blood/20 disabled:opacity-60";

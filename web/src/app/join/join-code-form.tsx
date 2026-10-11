@@ -13,7 +13,7 @@ export function JoinCodeForm() {
   return (
     <form action={formAction} className="space-y-4">
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">Join code</span>
+        <span className="block text-sm font-medium">Join code</span>
         <input
           name="joinCode"
           defaultValue={state.joinCode}
@@ -23,7 +23,7 @@ export function JoinCodeForm() {
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
-          className={`${inputClass} uppercase`}
+          className={`${inputClass} font-display text-2xl tracking-widest uppercase`}
         />
       </label>
       {state.error && <Alert>{state.error}</Alert>}

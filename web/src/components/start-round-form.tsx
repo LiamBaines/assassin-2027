@@ -1,5 +1,6 @@
 "use client";
 
+import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import {
@@ -35,6 +36,7 @@ export function StartRoundForm({
         onClick={() => setOpen(true)}
         className={secondaryButtonClass}
       >
+        <RotateCcw aria-hidden className="size-4" />
         Start new round
       </button>
     );
@@ -43,10 +45,10 @@ export function StartRoundForm({
   return (
     <ActionForm
       action={action}
-      className="w-full max-w-md space-y-3 rounded-md border border-zinc-200 p-4"
+      className="w-full max-w-md space-y-3 rounded-panel border border-line bg-raised p-4"
     >
       <input type="hidden" name="expectedRoundNo" value={expectedRoundNo} />
-      <p className="text-sm text-zinc-700">
+      <p className="text-sm">
         Tick the players for the new round. Ticked players come back alive;
         unticked players are removed. Current assignments and open claims are
         closed.
@@ -62,7 +64,7 @@ export function StartRoundForm({
                 defaultChecked={p.status !== "REMOVED"}
               />
               <span>{p.displayName}</span>
-              <span className="text-zinc-500">({p.status.toLowerCase()})</span>
+              <span className="text-muted">({p.status.toLowerCase()})</span>
             </label>
           </li>
         ))}
@@ -75,7 +77,7 @@ export function StartRoundForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-sm text-zinc-600 underline"
+          className="text-sm text-muted underline hover:text-bone"
         >
           Cancel
         </button>

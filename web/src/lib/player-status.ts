@@ -1,6 +1,13 @@
+import { Clock, Heart, Skull, UserX, type LucideIcon } from "lucide-react";
+import type { StatusTone } from "@/components/ui";
 import type { GameStatus, PlayerStatus, RosterStatus } from "@/lib/api-types";
 
-export type StatusView = { label: string; tone: string; hint?: string };
+export type StatusView = {
+  label: string;
+  tone: StatusTone;
+  icon: LucideIcon;
+  hint?: string;
+};
 
 /** How a player's own status reads to them, given the state of their game. */
 export function playerStatusView(
@@ -11,21 +18,24 @@ export function playerStatusView(
     case "REMOVED":
       return {
         label: "Removed",
-        tone: "bg-zinc-200 text-zinc-800",
+        tone: "dead",
+        icon: UserX,
         hint: "The organiser has removed you from the game.",
       };
     case "DEAD":
-      return { label: "Dead", tone: "bg-red-100 text-red-800" };
+      return { label: "Dead", tone: "dead", icon: Skull };
     case "ALIVE":
       if (game === "SETUP") {
         return {
-          label: "Registered — waiting for the game to start",
-          tone: "bg-amber-100 text-amber-900",
+          label: "Registered, waiting for the game to start",
+          tone: "warn",
+          icon: Clock,
         };
       }
       return {
         label: "Alive",
-        tone: "bg-emerald-100 text-emerald-800",
+        tone: "alive",
+        icon: Heart,
         hint: game === "FINISHED" ? "The game has finished." : undefined,
       };
   }
@@ -35,13 +45,13 @@ export function playerStatusView(
 export function rosterStatusView(status: RosterStatus): StatusView {
   switch (status) {
     case "ALIVE":
-      return { label: "Alive", tone: "bg-emerald-100 text-emerald-800" };
+      return { label: "Alive", tone: "alive", icon: Heart };
     case "DEAD":
-      return { label: "Dead", tone: "bg-red-100 text-red-800" };
+      return { label: "Dead", tone: "dead", icon: Skull };
     case "REMOVED":
-      return { label: "Removed", tone: "bg-zinc-200 text-zinc-800" };
+      return { label: "Removed", tone: "dead", icon: UserX };
     case "WAITING":
-      return { label: "Waiting", tone: "bg-amber-100 text-amber-900" };
+      return { label: "Waiting", tone: "warn", icon: Clock };
   }
 }
 

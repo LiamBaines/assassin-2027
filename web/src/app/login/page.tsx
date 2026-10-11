@@ -21,8 +21,8 @@ export default async function LoginPage(props: {
 
   return (
     <main className="mx-auto w-full max-w-sm flex-1 px-4 py-16">
-      <h1 className="text-2xl font-semibold">Assassin 2027</h1>
-      <p className="mt-1 mb-8 text-zinc-600">Log in with your email.</p>
+      <h1 className="font-display text-4xl font-semibold">Assassin 2027</h1>
+      <p className="mt-1 mb-8 text-muted">Log in with your email.</p>
       <LoginForm initialError={initialError} next={nextPath} />
     </main>
   );

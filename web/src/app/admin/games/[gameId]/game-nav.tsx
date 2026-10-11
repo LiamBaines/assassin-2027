@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-/** Details / Players / Rings / Leaderboard tabs for one game. */
+/** Section tabs for one game. Desktop uses the sidebar, so this only shows on mobile. */
 export function GameNav({ gameId }: { gameId: string }) {
   const pathname = usePathname();
   const base = `/admin/games/${encodeURIComponent(gameId)}`;
@@ -15,7 +15,10 @@ export function GameNav({ gameId }: { gameId: string }) {
   ];
 
   return (
-    <nav aria-label="Game sections" className="flex gap-1 border-b border-zinc-200 text-sm">
+    <nav
+      aria-label="Game sections"
+      className="-mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 text-sm md:hidden"
+    >
       {items.map((item) => {
         const current = pathname === item.href;
         return (
@@ -23,10 +26,8 @@ export function GameNav({ gameId }: { gameId: string }) {
             key={item.href}
             href={item.href}
             aria-current={current ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 ${
-              current
-                ? "border-zinc-900 font-medium text-zinc-900"
-                : "border-transparent text-zinc-600 hover:text-zinc-900"
+            className={`-mb-px border-b-2 px-3 py-2 whitespace-nowrap ${
+              current ? "border-blood font-medium text-bone" : "border-transparent text-muted"
             }`}
           >
             {item.label}

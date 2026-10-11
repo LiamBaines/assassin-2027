@@ -1,42 +1,35 @@
+import { Gamepad2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
 import { requireAdmin } from "@/lib/api";
+import { AdminChrome } from "./admin-nav";
 
 export const metadata: Metadata = { title: "Admin · Assassin 2027" };
-
-const NAV = [{ href: "/admin", label: "Games" }] as const;
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const me = await requireAdmin();
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-8 px-6 py-3">
-          <span className="font-semibold">Assassin 2027 admin</span>
-          <nav className="flex gap-5 text-sm">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-zinc-600 hover:text-zinc-900"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-4 text-sm text-zinc-600">
-            <Link href={me.games.length > 0 ? "/me" : "/join"} className="hover:text-zinc-900">
-              Player view
-            </Link>
-            <span>{me.email}</span>
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
-    </div>
+    <AdminChrome
+      footer={
+        <>
+          <Link
+            href={me.games.length > 0 ? "/me" : "/join"}
+            className="flex items-center gap-3 rounded-control px-3 py-2 text-sm text-muted hover:bg-raised hover:text-bone"
+          >
+            <Gamepad2 aria-hidden className="size-4" />
+            Player view
+          </Link>
+          <p className="truncate px-3 text-xs text-muted" title={me.email}>
+            {me.email}
+          </p>
+          <SignOutButton />
+        </>
+      }
+    >
+      {children}
+    </AdminChrome>
   );
 }

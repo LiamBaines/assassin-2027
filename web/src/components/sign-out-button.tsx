@@ -1,3 +1,4 @@
+import { LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 
 export function SignOutButton({ className }: { className?: string }) {
@@ -7,9 +8,10 @@ export function SignOutButton({ className }: { className?: string }) {
         type="submit"
         className={
           className ??
-          "rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100"
+          "inline-flex items-center gap-2 rounded-control px-2 py-2 text-sm text-muted hover:bg-raised hover:text-bone"
         }
       >
+        <LogOut aria-hidden className="size-4" />
         Sign out
       </button>
     </form>

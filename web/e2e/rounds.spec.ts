@@ -56,7 +56,7 @@ test("round 1 ends with a winner after the kills", async () => {
     await selectMethod(row);
     await row.getByRole("button", { name: "Register kill" }).click();
     await row.getByRole("button", { name: "Register kill" }).last().click();
-    await expect(playerRow(name)).toContainText("DEAD");
+    await expect(playerRow(name)).toContainText("Dead");
   }
 
   await admin.goto(`/admin/games/${gameId}/rings`);
@@ -77,14 +77,14 @@ test("starting round 2 revives, removes the unticked and includes the late joine
   await list.getByLabel(new RegExp(`^${dropped}`)).uncheck();
   await admin.getByRole("button", { name: "Start round 2" }).click();
 
-  await expect(admin.getByRole("heading", { name: /Round 2 — allocation \d+ \(Initial\)/ })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: /Round 2, allocation \d+ \(Initial\)/ })).toBeVisible();
   const ring = await readRing(admin, gameId);
   expect(ring.map((p) => p.assassin).sort()).toEqual([victim, survivor, LATE].sort());
 
   await admin.goto(`/admin/games/${gameId}/players`);
-  await expect(playerRow(victim)).toContainText("ALIVE");
-  await expect(playerRow(LATE)).toContainText("ALIVE");
-  await expect(playerRow(dropped)).toContainText("REMOVED");
+  await expect(playerRow(victim)).toContainText("Alive");
+  await expect(playerRow(LATE)).toContainText("Alive");
+  await expect(playerRow(dropped)).toContainText("Removed");
 });
 
 test("players see Round 2, and past round 1", async () => {
@@ -92,6 +92,8 @@ test("players see Round 2, and past round 1", async () => {
   await page.goto(`/games/${gameId}`);
   await expect(page.getByTestId("round-badge")).toHaveText("Round 2");
   await expect(page.getByTestId("target-name")).not.toHaveText("No target yet");
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Past rounds" }).click();
   await expect(page.getByTestId("past-round")).toHaveCount(1);
   await expect(page.getByTestId("past-round")).toContainText("Round 1");
 
@@ -131,7 +133,7 @@ test("the leaderboard totals points across both rounds", async () => {
   await selectMethod(row);
   await row.getByRole("button", { name: "Register kill" }).click();
   await row.getByRole("button", { name: "Register kill" }).last().click();
-  await expect(playerRow(LATE)).toContainText("DEAD");
+  await expect(playerRow(LATE)).toContainText("Dead");
 
   const adminPath = `/admin/games/${gameId}/leaderboard`;
   const playerPath = `/games/${gameId}/leaderboard`;

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/sign-out-button";
-import { Alert, Card, PlayerShell } from "@/components/ui";
+import { Alert, Panel, PlayerShell, secondaryButtonClass } from "@/components/ui";
 import { getMe, isApiError, previewJoin, type JoinPreview } from "@/lib/api";
 import { normalizeJoinCode } from "@/lib/join-code";
 import { joinAction } from "../actions";
@@ -38,7 +39,7 @@ export default async function JoinCodePage(props: {
   }
 
   const footer = (
-    <div className="flex items-center justify-between text-sm text-zinc-600">
+    <div className="flex items-center justify-between text-sm text-muted">
       <span>Signed in as {me.email}</span>
       <SignOutButton />
     </div>
@@ -47,16 +48,17 @@ export default async function JoinCodePage(props: {
   if (result.kind !== "ok") {
     return (
       <PlayerShell title="Join a game" isAdmin={me.isAdmin}>
-        <Card className="space-y-4">
+        <Panel className="space-y-4">
           <Alert>
             {result.kind === "rateLimited"
               ? "Too many wrong join codes. Wait a few minutes and try again."
               : "This join link isn't valid."}
           </Alert>
-          <Link href="/join" className="block text-sm font-medium underline">
+          <Link href="/join" className={secondaryButtonClass}>
+            <LinkIcon aria-hidden className="size-4" />
             Enter a join code
           </Link>
-        </Card>
+        </Panel>
         {footer}
       </PlayerShell>
     );
@@ -65,13 +67,13 @@ export default async function JoinCodePage(props: {
   const { preview } = result;
   return (
     <PlayerShell title={`Join ${preview.name}`} isAdmin={me.isAdmin}>
-      <Card className="space-y-4">
+      <Panel className="space-y-4">
         {preview.signupsOpen && code ? (
           <JoinForm action={joinAction.bind(null, code)} />
         ) : (
-          <Alert tone="info">Signups are closed.</Alert>
+          <Alert tone="info">Signups are closed. Ask the organiser to reopen them.</Alert>
         )}
-      </Card>
+      </Panel>
       {footer}
     </PlayerShell>
   );

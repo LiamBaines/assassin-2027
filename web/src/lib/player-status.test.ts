@@ -21,9 +21,9 @@ describe("playerStatusView", () => {
 
 describe("rosterStatusView", () => {
   it("maps each roster status to a label and tone", () => {
-    expect(rosterStatusView("ALIVE")).toEqual({ label: "Alive", tone: "bg-emerald-100 text-emerald-800" });
-    expect(rosterStatusView("DEAD")).toEqual({ label: "Dead", tone: "bg-red-100 text-red-800" });
-    expect(rosterStatusView("REMOVED")).toEqual({ label: "Removed", tone: "bg-zinc-200 text-zinc-800" });
-    expect(rosterStatusView("WAITING")).toEqual({ label: "Waiting", tone: "bg-amber-100 text-amber-900" });
+    expect(rosterStatusView("ALIVE")).toMatchObject({ label: "Alive", tone: "alive" });
+    expect(rosterStatusView("DEAD")).toMatchObject({ label: "Dead", tone: "dead" });
+    expect(rosterStatusView("REMOVED")).toMatchObject({ label: "Removed", tone: "dead" });
+    expect(rosterStatusView("WAITING")).toMatchObject({ label: "Waiting", tone: "warn" });
   });
 });

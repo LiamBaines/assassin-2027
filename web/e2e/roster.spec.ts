@@ -35,6 +35,7 @@ test.afterAll(async () => {
 /** The roster as `[name, status]` rows, in display order. */
 async function readRoster(page: Page): Promise<string[][]> {
   await page.goto(`/games/${gameId}`);
+  await page.getByRole("navigation", { name: "Game views" }).getByRole("button", { name: "Players" }).click();
   const rows = page.getByTestId("roster-row");
   await expect(rows.first()).toBeVisible();
   return rows.evaluateAll((els) =>
@@ -100,5 +101,6 @@ test("a player who joins after the start shows as waiting", async () => {
 
   // The late joiner sees the same roster, including themself.
   expect(await readRoster(admin)).toHaveLength(4);
+  await admin.getByRole("navigation", { name: "Game views" }).getByRole("button", { name: "Target" }).click();
   await expect(admin.getByTestId("target-name")).toHaveText("No target yet");
 });

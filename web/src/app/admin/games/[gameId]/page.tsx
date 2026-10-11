@@ -1,3 +1,4 @@
+import { Flag, Lock, LockOpen, Save } from "lucide-react";
 import {
   ActionForm,
   ConfirmSubmit,
@@ -5,7 +6,7 @@ import {
 } from "@/components/action-form";
 import { CopyButton } from "@/components/copy-button";
 import {
-  Card,
+  Panel,
   dangerButtonClass,
   inputClass,
   primaryButtonClass,
@@ -26,6 +27,8 @@ function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
+const ICON = { "aria-hidden": true, className: "size-4" } as const;
+
 export default async function AdminGameDetailsPage(props: {
   params: Promise<{ gameId: string }>;
 }) {
@@ -34,10 +37,10 @@ export default async function AdminGameDetailsPage(props: {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <dl className="grid gap-4 text-sm sm:grid-cols-5">
+      <Panel>
+        <dl className="grid gap-4 text-sm sm:grid-cols-3 lg:grid-cols-5">
           <Field label="Join code">
-            <span data-testid="join-code" className="font-mono">
+            <span data-testid="join-code" className="font-display text-lg tracking-widest">
               {game.joinCode}
             </span>
           </Field>
@@ -46,19 +49,19 @@ export default async function AdminGameDetailsPage(props: {
           <Field label="Started">{formatDateTime(game.startedAt)}</Field>
           <Field label="Finished">{formatDateTime(game.finishedAt)}</Field>
         </dl>
-      </Card>
+      </Panel>
 
       {finished ? (
-        <Card className="space-y-2">
-          <h2 className="text-lg font-semibold">Read-only</h2>
-          <p className="text-sm text-zinc-600">
+        <Panel className="space-y-2">
+          <h2 className="font-display text-xl font-semibold">Read-only</h2>
+          <p className="text-sm text-muted">
             This game has finished, so it can&apos;t be changed. Signups were{" "}
             <strong data-testid="signups-state">
               {game.signupsOpen ? "open" : "closed"}
             </strong>{" "}
             when it ended.
           </p>
-        </Card>
+        </Panel>
       ) : (
         <LiveGameControls game={game} />
       )}
@@ -69,10 +72,10 @@ export default async function AdminGameDetailsPage(props: {
 function LiveGameControls({ game }: { game: AdminGame }) {
   const link = joinLink(siteUrl(), game.joinCode);
   return (
-    <>
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold">Join link</h2>
-        <p className="text-sm text-zinc-600">
+    <div className="grid items-start gap-6 lg:grid-cols-2">
+      <Panel className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">Join link</h2>
+        <p className="text-sm text-muted">
           Share this link. Players who open it only need to pick a display name.
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -81,23 +84,25 @@ function LiveGameControls({ game }: { game: AdminGame }) {
             value={link}
             aria-label="Join link"
             data-testid="join-link"
-            className={`${inputClass} max-w-xl flex-1 font-mono text-sm`}
+            className={`${inputClass} max-w-xl flex-1 text-sm`}
           />
           <CopyButton text={link} label="Copy link" />
         </div>
-      </Card>
+      </Panel>
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold">Details</h2>
+      <Panel className="space-y-4">
+        <h2 className="font-display text-xl font-semibold">Details</h2>
         <ActionForm action={updateGameAction.bind(null, game.id)} className="space-y-4">
           <GameFields game={game} />
-          <SubmitButton className={primaryButtonClass}>Save changes</SubmitButton>
+          <SubmitButton className={primaryButtonClass} icon={<Save {...ICON} />}>
+            Save changes
+          </SubmitButton>
         </ActionForm>
-      </Card>
+      </Panel>
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold">Signups</h2>
-        <p className="text-sm text-zinc-600">
+      <Panel className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">Signups</h2>
+        <p className="text-sm text-muted">
           Signups are{" "}
           <strong data-testid="signups-state">
             {game.signupsOpen ? "open" : "closed"}
@@ -113,15 +118,18 @@ function LiveGameControls({ game }: { game: AdminGame }) {
             name="signupsOpen"
             value={game.signupsOpen ? "false" : "true"}
           />
-          <SubmitButton className={secondaryButtonClass}>
+          <SubmitButton
+            className={secondaryButtonClass}
+            icon={game.signupsOpen ? <Lock {...ICON} /> : <LockOpen {...ICON} />}
+          >
             {game.signupsOpen ? "Close signups" : "Open signups"}
           </SubmitButton>
         </ActionForm>
-      </Card>
+      </Panel>
 
-      <Card className="space-y-3 border-red-200">
-        <h2 className="text-lg font-semibold">Finish the game</h2>
-        <p className="text-sm text-zinc-600">
+      <Panel className="space-y-3 border-blood/50">
+        <h2 className="font-display text-xl font-semibold">Finish the game</h2>
+        <p className="text-sm text-muted">
           Ends the game for everyone. This can&apos;t be undone.
         </p>
         <ActionForm
@@ -133,9 +141,10 @@ function LiveGameControls({ game }: { game: AdminGame }) {
             confirmLabel="Yes, finish it"
             message="Finish this game for everyone?"
             className={dangerButtonClass}
+            icon={<Flag {...ICON} />}
           />
         </ActionForm>
-      </Card>
-    </>
+      </Panel>
+    </div>
   );
 }

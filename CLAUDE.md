@@ -76,3 +76,15 @@ E2E details (serial specs, DB truncation, auth setup, stale-server gotcha, CI) a
 - Logged-out visitors go to `/login?next=…`. Every return path goes through `safeNextPath` (`lib/safe-next.ts`). It re-checks the path after dot segments resolve, because `/.//evil.com` turns into `//evil.com`.
 - The magic-link template passes `{{ .RedirectTo }}` as `redirect_to`. The prod dashboard template must match `supabase/templates/magic_link.html`.
 - Error `code` to message maps live in `src/app/admin/actions.ts` and `src/app/join/actions.ts`; unknown codes fall back to the API `detail`.
+
+## UI design language
+Dark, sleek, utilitarian, high information clarity. Tokens live in `web/src/app/globals.css` (`@theme`); primitives in `web/src/components/ui.tsx` (server-safe) and `overlay.tsx` (client: `Sheet`, `Dialog`). Use them; don't hand-roll zinc/white styles.
+- **Palette:** `ink` base, `surface`/`raised` panels, `line` borders, `bone` text, `muted` secondary, `blood` crimson accent (primary actions, the target, destructive only), `alive` green, `warn` amber. Status is always icon + label, never colour alone.
+- **Type:** `font-display` (Barlow Condensed) for the target name, status and headings; `font-sans` (Inter) for UI; `tabular` for numbers. Sentence case; no all-caps eyebrow labels, no mono labels.
+- **Surfaces:** flat 1px `line` borders, small radii, no shadows, gradients, glow or glass. No card-in-card (use dividers), no one-sided coloured borders. Vary radius/density by role; don't make everything a centred card.
+- **Icons:** `lucide-react` only. Prefer icons where the meaning is clear (share, delete, home, copy); icon-only controls use `IconButton` (aria-label + tooltip).
+- **Layout:** player views are mobile-first (target and alive/dead status most salient; leaderboard, rounds, etc. behind bottom bar/hamburger); admin views are desktop-first (sidebar, dense tables). Both must work on either size.
+- **Navigation:** switch views client-side within a page (keep `?view=` in the URL) instead of full page loads between lightly used sections.
+- **Motion:** none on load or scroll; only feedback for user actions (sheet/dialog, pending buttons). Respect `prefers-reduced-motion`.
+- **Every screen needs** empty, loading (skeleton) and error states that say what happened and the next step. Use real copy; no placeholder names or lorem ipsum. No emoji as decoration.
+- **Tests:** keep every `data-testid`; the e2e specs depend on them.

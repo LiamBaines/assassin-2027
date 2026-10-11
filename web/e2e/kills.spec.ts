@@ -69,7 +69,7 @@ test("registering a kill kills the victim and gives their target to their assass
 
   await registerKill(VICTIM, "Duel", 15);
 
-  await expect(playerRow(VICTIM)).toContainText("DEAD");
+  await expect(playerRow(VICTIM)).toContainText("Dead");
   await expect(playerRow(VICTIM).getByRole("button", { name: "Register kill" })).toHaveCount(0);
   await expect(playerRow(killer)).toContainText(inherited);
   await expectTarget(pages.get(killer)!, gameId, inherited);
@@ -78,7 +78,7 @@ test("registering a kill kills the victim and gives their target to their assass
 test("the kill that leaves one player ends the round, not the game", async () => {
   await registerKill(inherited);
 
-  await expect(playerRow(inherited)).toContainText("DEAD");
+  await expect(playerRow(inherited)).toContainText("Dead");
   await admin.goto(`/admin/games/${gameId}`);
   await expect(admin.getByTestId("game-status")).toContainText("Active");
   await admin.goto(`/admin/games/${gameId}/players`);

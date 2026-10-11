@@ -176,7 +176,7 @@ test("removing a player splices them out of the ring", async () => {
   await row.getByRole("button", { name: "Remove" }).click();
   await expect(row).toContainText(`Their assassin will inherit their target, ${victimsTarget}.`);
   await row.getByRole("button", { name: "Remove" }).click();
-  await expect(row).toContainText("REMOVED");
+  await expect(row).toContainText("Removed");
   await expect(row.getByRole("button", { name: "Restore" })).toBeVisible();
 
   const ring = await readRing(admin, gameId);
