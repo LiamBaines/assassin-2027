@@ -59,6 +59,19 @@ class AdminGameIT extends IntegrationTest {
     }
 
     @Test
+    void newGameIsSeededWithStandardKillMethods() throws Exception {
+        UUID gameId = createGame("Seeded", "SEED01");
+        UUID otherId = createGame("Other", "SEED02");
+        List<String> names = jdbc.queryForList(
+                "select name from game.kill_method where game_id = ? and enabled order by id", String.class, gameId);
+        assertThat(names).hasSize(10).startsWith("Clamp", "Ticker Bomb").endsWith("Remote Shutdown", "Hand Grenade");
+        assertThat(jdbc.queryForObject("select points from game.kill_method where game_id = ? and name = 'Duel'",
+                Integer.class, gameId)).isEqualTo(15);
+        assertThat(jdbc.queryForObject("select count(*) from game.kill_method where game_id = ?", Integer.class, otherId))
+                .isEqualTo(10);
+    }
+
+    @Test
     void listIsEmptyWithoutGames() throws Exception {
         mvc.perform(asAdmin(get("/api/admin/games")))
                 .andExpect(status().isOk())
