@@ -4,6 +4,8 @@ import com.assassin.api.common.ApiException;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
+import com.assassin.api.game.KillMethod;
+import com.assassin.api.game.KillMethodService;
 import com.assassin.api.player.Player;
 import com.assassin.api.player.PlayerRef;
 import com.assassin.api.player.PlayerRepository;
@@ -23,15 +25,18 @@ public class KillService {
     private final KillRepository kills;
     private final GameRoundRepository rounds;
     private final PointService pointService;
+    private final KillMethodService killMethods;
 
     public KillService(GameService gameService, PlayerRepository players, RingService ringService,
-            KillRepository kills, GameRoundRepository rounds, PointService pointService) {
+            KillRepository kills, GameRoundRepository rounds, PointService pointService,
+            KillMethodService killMethods) {
         this.gameService = gameService;
         this.players = players;
         this.ringService = ringService;
         this.kills = kills;
         this.rounds = rounds;
         this.pointService = pointService;
+        this.killMethods = killMethods;
     }
 
     /**
@@ -40,7 +45,7 @@ public class KillService {
      * assassin is the last one standing: the open round ends with them as its winner. The game stays ACTIVE.
      */
     @Transactional
-    public KillResult register(UUID gameId, UUID victimId, String registeredBy) {
+    public KillResult register(UUID gameId, UUID victimId, Long killMethodId, String registeredBy) {
         // Lock the game so this cannot interleave with a shuffle or another kill.
         Game game = gameService.lockForChange(gameId);
         if (game.getStatus() != GameStatus.ACTIVE) {
@@ -48,14 +53,14 @@ public class KillService {
         }
         Player victim = players.findByIdAndGameId(victimId, game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAYER_NOT_FOUND", "No such player in this game."));
-        return applyKill(game, victim, registeredBy);
+        return applyKill(game, victim, killMethods.requireEnabled(game.getId(), killMethodId), registeredBy);
     }
 
     /**
      * Core kill logic. The caller must hold the game lock ({@link GameService#lockForChange}), have checked the
-     * game is ACTIVE, and have loaded the victim from this game.
+     * game is ACTIVE, and have loaded the victim and the method from this game.
      */
-    public KillResult applyKill(Game game, Player victim, String registeredBy) {
+    public KillResult applyKill(Game game, Player victim, KillMethod method, String registeredBy) {
         if (victim.getStatus() != PlayerStatus.ALIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "PLAYER_NOT_ALIVE", "That player is not alive.");
         }
@@ -69,8 +74,8 @@ public class KillService {
         Instant now = Instant.now();
         victim.setStatus(PlayerStatus.DEAD);
         Kill kill = kills.save(new Kill(game.getId(), openRound.getId(), splice.incomingAssignmentId(), splice.assassinId(),
-                victim.getId(), registeredBy, now));
-        pointService.recordKill(kill);
+                victim.getId(), method.getId(), registeredBy, now));
+        pointService.recordKill(kill, method.getPoints());
 
         Player killer = players.getReferenceById(splice.assassinId());
         boolean roundEnded = splice.ringCollapsed();

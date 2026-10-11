@@ -38,9 +38,14 @@ class KillIT extends IntegrationTest {
                 .content("{\"expectedCurrentRoundNo\": null}"))).andExpect(status().isCreated());
     }
 
-    private ResultActions kill(UUID game, UUID victim) throws Exception {
+    private ResultActions kill(UUID game, UUID victim, String methodJson) throws Exception {
         return mvc.perform(asAdmin(post("/api/admin/games/" + game + "/kills")
-                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + victim + "\"}")));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"victimId\": \"" + victim + "\"" + methodJson + "}")));
+    }
+
+    private ResultActions kill(UUID game, UUID victim) throws Exception {
+        return kill(game, victim, ", \"killMethodId\": " + methodId(game, "Clamp"));
     }
 
     private ResultActions kill(UUID victim) throws Exception {
@@ -204,7 +209,7 @@ class KillIT extends IntegrationTest {
     void nonAdminIsForbidden() throws Exception {
         shuffle();
         mvc.perform(as("alice@example.com", post("/api/admin/games/" + gameId + "/kills")
-                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + bob + "\"}")))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + bob + "\", \"killMethodId\": 1}")))
                 .andExpect(status().isForbidden());
         assertThat(count("select count(*) from game.kill")).isZero();
     }
@@ -215,6 +220,42 @@ class KillIT extends IntegrationTest {
         UUID other = insertGame("XYZ789", "SETUP", true);
         UUID stranger = insertPlayer(other, "eve@example.com", "Eve", "ALIVE");
         kill(stranger).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("PLAYER_NOT_FOUND"));
+    }
+
+    @Test
+    void killerPointsFollowTheMethod() throws Exception {
+        shuffle();
+        UUID killer = assassinOf(bob);
+        kill(gameId, bob, ", \"killMethodId\": " + methodId(gameId, "Duel")).andExpect(status().isCreated());
+        assertThat(count("select points from game.point_event where player_id = ? and type = 'KILL'", killer))
+                .isEqualTo(15);
+        assertThat(count("select points from game.point_event where player_id = ? and type = 'DEATH'", bob))
+                .isEqualTo(-5);
+        assertThat(count("select kill_method_id from game.kill")).isEqualTo((int) methodId(gameId, "Duel"));
+    }
+
+    @Test
+    void missingMethodIsRejected() throws Exception {
+        shuffle();
+        kill(gameId, bob, "").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
+        assertThat(count("select count(*) from game.kill")).isZero();
+    }
+
+    @Test
+    void disabledMethodIsRejected() throws Exception {
+        shuffle();
+        jdbc.update("update game.kill_method set enabled = false where id = ?", methodId(gameId, "Clamp"));
+        kill(bob).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("KILL_METHOD_DISABLED"));
+        assertThat(count("select count(*) from game.kill")).isZero();
+    }
+
+    @Test
+    void methodFromAnotherGameIsNotFound() throws Exception {
+        shuffle();
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        kill(gameId, bob, ", \"killMethodId\": " + methodId(other, "Clamp")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_NOT_FOUND"));
     }
 
     @Test

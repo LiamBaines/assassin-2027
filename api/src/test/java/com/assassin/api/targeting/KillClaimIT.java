@@ -58,8 +58,12 @@ class KillClaimIT extends IntegrationTest {
         return mvc.perform(as(emailOf(player), post(claimUrl(suffix))));
     }
 
+    private ResultActions file(UUID killer, String body) throws Exception {
+        return mvc.perform(as(emailOf(killer), post(claimUrl("")).contentType(MediaType.APPLICATION_JSON).content(body)));
+    }
+
     private ResultActions file(UUID killer) throws Exception {
-        return mePost(killer, "");
+        return file(killer, "{\"killMethodId\": " + methodId(gameId, "Clamp") + "}");
     }
 
     private long fileOk(UUID killer) throws Exception {
@@ -73,7 +77,8 @@ class KillClaimIT extends IntegrationTest {
 
     private ResultActions adminKill(UUID victim) throws Exception {
         return mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/kills")
-                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + victim + "\"}")));
+                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + victim + "\", \"killMethodId\": "
+                        + methodId(gameId, "Clamp") + "}")));
     }
 
     private String claimStatus(long id) {
@@ -157,6 +162,38 @@ class KillClaimIT extends IntegrationTest {
                 alice, victim, emailOf(victim))).isEqualTo(1);
         assertThat(count("select count(*) from game.kill_claim c join game.kill k on k.id = c.kill_id "
                 + "where c.id = ? and c.resolved_by = ?", id, emailOf(victim))).isEqualTo(1);
+    }
+
+    @Test
+    void acceptCarriesTheClaimsMethodAndPoints() throws Exception {
+        shuffle();
+        UUID victim = targetOf(alice);
+        long duel = methodId(gameId, "Duel");
+        file(alice, "{\"killMethodId\": " + duel + "}").andExpect(status().isCreated());
+        long id = jdbc.queryForObject("select max(id) from game.kill_claim", Long.class);
+        // Disabling the method after filing doesn't block the accept.
+        jdbc.update("update game.kill_method set enabled = false where id = ?", duel);
+
+        mePost(victim, "/" + id + "/accept").andExpect(status().isOk());
+
+        assertThat(jdbc.queryForObject("select kill_method_id from game.kill", Long.class)).isEqualTo(duel);
+        assertThat(count("select points from game.point_event where player_id = ? and type = 'KILL'", alice))
+                .isEqualTo(15);
+    }
+
+    @Test
+    void filingNeedsAnEnabledMethodOfThisGame() throws Exception {
+        shuffle();
+        file(alice, "{}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
+        mePost(alice, "").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
+        UUID other = insertGame("XYZ789", "SETUP", true);
+        file(alice, "{\"killMethodId\": " + methodId(other, "Clamp") + "}").andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("KILL_METHOD_NOT_FOUND"));
+        jdbc.update("update game.kill_method set enabled = false where id = ?", methodId(gameId, "Clamp"));
+        file(alice).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("KILL_METHOD_DISABLED"));
+        assertThat(count("select count(*) from game.kill_claim")).isZero();
     }
 
     @Test

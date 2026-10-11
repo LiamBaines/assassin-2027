@@ -45,6 +45,27 @@ public class KillMethodService {
                 .toList();
     }
 
+    /** The method a new kill or claim is filed with: it must be given, belong to the game and be enabled. */
+    @Transactional(readOnly = true)
+    public KillMethod requireEnabled(UUID gameId, Long methodId) {
+        if (methodId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_METHOD_REQUIRED", "Pick the kill method used.");
+        }
+        KillMethod method = require(gameId, methodId);
+        if (!method.isEnabled()) {
+            throw new ApiException(HttpStatus.CONFLICT, "KILL_METHOD_DISABLED", "That kill method is disabled.");
+        }
+        return method;
+    }
+
+    /** A method of this game, enabled or not. */
+    @Transactional(readOnly = true)
+    public KillMethod require(UUID gameId, long methodId) {
+        return methods.findById(methodId).filter(m -> m.getGameId().equals(gameId))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "KILL_METHOD_NOT_FOUND",
+                        "There is no such kill method."));
+    }
+
     /**
      * Applies the edits (null = none; methods not mentioned stay as they are) and checks that at least one method is
      * enabled. The caller must hold the game's lock ({@link GameService#lockForChange(UUID)}).

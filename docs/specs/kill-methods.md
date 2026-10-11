@@ -32,7 +32,7 @@ Every kill records the method used. Methods are per game, have a points value, a
 ## Tasks
 - [x] 1. Flyway V9, `KillMethod` entity/repo, default-set constant, seed on game creation. IT: new game has the 10 methods. (Backfill SQL not covered by an IT: the migration runs on an empty DB.)
 - [x] 2. Methods apply on start-round and Generate ring (`killMethods` payload, validation, `NO_ENABLED_METHODS`) plus the GET endpoints. ITs for each.
-- [ ] 3. Required `killMethodId` on admin kill and claim filing; `KillService.applyKill` takes the method and `PointService.recordKill` uses its points; V10 makes `kill_method_id` NOT NULL. ITs: points follow method, disabled/missing/foreign-game method rejected, claim accept carries the method.
+- [x] 3. Required `killMethodId` on admin kill and claim filing; `KillService.applyKill` takes the method and `PointService.recordKill` uses its points; V10 makes `kill_method_id` NOT NULL. ITs: points follow method, disabled/missing/foreign-game method rejected, claim accept carries the method.
 - [ ] 4. Admin kill-method correction (`PATCH`) with `ADJUST` ledger row. ITs.
 - [ ] 5. Web: `lib/api.ts` + error maps; method select on the admin kill form and player claim form; method editor in the generate-ring and start-round forms; method shown on kill/claim lists; admin correction control. Vitest.
 - [ ] 6. E2E: extend kills/full-flow spec. Update existing ITs/e2e that register kills. Add `docs/progress.md` entry and `docs/architecture.md` schema if listed.

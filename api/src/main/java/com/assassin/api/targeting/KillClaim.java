@@ -31,6 +31,9 @@ public class KillClaim {
     @Column(name = "victim_id", nullable = false)
     private UUID victimId;
 
+    @Column(name = "kill_method_id", nullable = false)
+    private long killMethodId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private KillClaimStatus status;
@@ -50,11 +53,13 @@ public class KillClaim {
     protected KillClaim() {
     }
 
-    public KillClaim(UUID gameId, long assignmentId, UUID killerId, UUID victimId, Instant createdAt) {
+    public KillClaim(UUID gameId, long assignmentId, UUID killerId, UUID victimId, long killMethodId,
+            Instant createdAt) {
         this.gameId = gameId;
         this.assignmentId = assignmentId;
         this.killerId = killerId;
         this.victimId = victimId;
+        this.killMethodId = killMethodId;
         this.status = KillClaimStatus.PENDING;
         this.createdAt = createdAt;
     }
@@ -98,6 +103,10 @@ public class KillClaim {
 
     public UUID getVictimId() {
         return victimId;
+    }
+
+    public long getKillMethodId() {
+        return killMethodId;
     }
 
     public KillClaimStatus getStatus() {

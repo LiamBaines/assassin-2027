@@ -49,6 +49,12 @@ public abstract class IntegrationTest {
         return id;
     }
 
+    /** Id of the seeded method called {@code name} in the game. */
+    protected long methodId(UUID gameId, String name) {
+        return jdbc.queryForObject("select id from game.kill_method where game_id = ? and name = ?", Long.class,
+                gameId, name);
+    }
+
     /** Inserts a player directly, with the {@code sub} test tokens use for {@code email}; returns its id. */
     protected UUID insertPlayer(UUID gameId, String email, String displayName, String status) {
         return jdbc.queryForObject("""

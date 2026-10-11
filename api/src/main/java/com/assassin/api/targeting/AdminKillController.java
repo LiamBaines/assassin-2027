@@ -26,9 +26,9 @@ public class AdminKillController {
     @ResponseStatus(HttpStatus.CREATED)
     public KillService.KillResult register(@PathVariable UUID gameId, CurrentUser admin,
             @Valid @RequestBody RegisterKillRequest request) {
-        return killService.register(gameId, request.victimId(), admin.email());
+        return killService.register(gameId, request.victimId(), request.killMethodId(), admin.email());
     }
 
-    public record RegisterKillRequest(@NotNull UUID victimId) {
+    public record RegisterKillRequest(@NotNull UUID victimId, Long killMethodId) {
     }
 }
