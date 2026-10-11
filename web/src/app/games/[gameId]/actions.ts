@@ -9,6 +9,7 @@ import {
   isApiError,
   withdrawKillClaim,
 } from "@/lib/api";
+import { readMethodId } from "@/lib/kill-methods";
 
 // The game id and claim id are bound by the page, so the client can change them. The API checks the caller is the
 // claim's killer or victim, so they need no check here.
@@ -21,6 +22,9 @@ const MESSAGES: Record<string, string> = {
   CLAIM_ALREADY_OPEN: "There's already an open kill claim against your target.",
   CLAIM_NOT_OPEN: "That claim has already been resolved. The page has been refreshed.",
   CLAIM_STALE: "The ring has changed since this claim was filed, so it's no longer valid.",
+  KILL_METHOD_REQUIRED: "Pick the kill method you used.",
+  KILL_METHOD_NOT_FOUND: "That kill method no longer exists. The page has been refreshed.",
+  KILL_METHOD_DISABLED: "That kill method is disabled. Pick another one.",
   NOT_CLAIM_PARTICIPANT: "You can't respond to that claim.",
 };
 
@@ -42,8 +46,12 @@ async function run(fn: () => Promise<unknown>): Promise<ActionResult> {
 
 export async function fileClaimAction(
   gameId: string,
+  _prev: ActionResult,
+  formData: FormData,
 ): Promise<ActionResult> {
-  return run(() => fileKillClaim(gameId));
+  const killMethodId = readMethodId(formData);
+  if (killMethodId === null) return { error: MESSAGES.KILL_METHOD_REQUIRED };
+  return run(() => fileKillClaim(gameId, killMethodId));
 }
 
 export async function withdrawClaimAction(

@@ -85,6 +85,27 @@ export type AdminPlayer = {
   currentTarget: PlayerRef | null;
 };
 
+export type KillMethodRef = { id: number; name: string };
+
+export type KillMethod = KillMethodRef & { points: number; enabled: boolean };
+
+/** One edit of the game's methods when starting a round; no id adds a new method. */
+export type KillMethodInput = {
+  id?: number;
+  name: string;
+  points: number;
+  enabled: boolean;
+};
+
+/** A recorded kill, as the admin sees it. */
+export type AdminKill = {
+  killId: number;
+  killer: PlayerRef;
+  victim: PlayerRef;
+  killMethod: KillMethodRef;
+  createdAt: string;
+};
+
 export type KillResult = {
   killId: number;
   killer: PlayerRef;
@@ -92,6 +113,7 @@ export type KillResult = {
   /** Null when the kill ended the round. */
   newTarget: PlayerRef | null;
   roundEnded: boolean;
+  killMethod: KillMethodRef;
 };
 
 export type Ring = {
@@ -148,7 +170,7 @@ export type ClaimAcceptResult = {
 
 export type MyClaims = {
   outgoing: ClaimStatus | null;
-  incoming: { id: number; killerName: string } | null;
+  incoming: { id: number; killerName: string; killMethod: KillMethodRef } | null;
 };
 
 export type AdminClaim = {
@@ -157,6 +179,7 @@ export type AdminClaim = {
   killerName: string;
   victimName: string;
   createdAt: string;
+  killMethod: KillMethodRef;
 };
 
 export type LeaderboardEntry = {

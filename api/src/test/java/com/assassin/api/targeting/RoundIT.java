@@ -54,8 +54,8 @@ class RoundIT extends IntegrationTest {
         // Round 1 is still open, with an open claim in it.
         Long assignment = jdbc.queryForObject("select id from game.assignment where assassin_id = ?", Long.class, a);
         UUID victim = jdbc.queryForObject("select target_id from game.assignment where assassin_id = ?", UUID.class, a);
-        jdbc.update("insert into game.kill_claim (game_id, assignment_id, killer_id, victim_id, status) values (?, ?, ?, ?, 'PENDING')",
-                gameId, assignment, a, victim);
+        jdbc.update("insert into game.kill_claim (game_id, assignment_id, killer_id, victim_id, kill_method_id, status) values (?, ?, ?, ?, ?, 'PENDING')",
+                gameId, assignment, a, victim, methodId(gameId, "Clamp"));
         UUID lateJoiner = player("late", "ALIVE");
         UUID unticked = c;
 
@@ -126,7 +126,8 @@ class RoundIT extends IntegrationTest {
 
     private ResultActions kill(UUID victim) throws Exception {
         return mvc.perform(asAdmin(post("/api/admin/games/" + gameId + "/kills")
-                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + victim + "\"}")));
+                .contentType(MediaType.APPLICATION_JSON).content("{\"victimId\": \"" + victim + "\", \"killMethodId\": "
+                        + methodId(gameId, "Clamp") + "}")));
     }
 
     @Test

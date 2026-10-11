@@ -33,7 +33,7 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     void truncateGameTables() {
-        jdbc.execute("truncate game.point_event, game.kill_claim, game.kill, game.assignment, game.allocation, game.game_round, game.player, game.game");
+        jdbc.execute("truncate game.point_event, game.kill_claim, game.kill, game.assignment, game.allocation, game.game_round, game.player, game.kill_method, game.game");
     }
 
     /** Inserts a game directly; returns its id. */
@@ -42,9 +42,17 @@ public abstract class IntegrationTest {
     }
 
     protected UUID insertGame(String name, String joinCode, String status, boolean signupsOpen) {
-        return jdbc.queryForObject(
+        UUID id = jdbc.queryForObject(
                 "insert into game.game (name, join_code, status, signups_open) values (?, ?, ?, ?) returning id",
                 UUID.class, name, joinCode, status, signupsOpen);
+        jdbc.update("insert into game.kill_method (game_id, name, points) values (?, 'Clamp', 10), (?, 'Duel', 15)", id, id);
+        return id;
+    }
+
+    /** Id of the seeded method called {@code name} in the game. */
+    protected long methodId(UUID gameId, String name) {
+        return jdbc.queryForObject("select id from game.kill_method where game_id = ? and name = ?", Long.class,
+                gameId, name);
     }
 
     /** Inserts a player directly, with the {@code sub} test tokens use for {@code email}; returns its id. */

@@ -32,6 +32,9 @@ public class Kill {
     @Column(name = "victim_id", nullable = false)
     private UUID victimId;
 
+    @Column(name = "kill_method_id", nullable = false)
+    private long killMethodId;
+
     @Column(name = "registered_by", nullable = false)
     private String registeredBy;
 
@@ -41,12 +44,14 @@ public class Kill {
     protected Kill() {
     }
 
-    public Kill(UUID gameId, UUID gameRoundId, long assignmentId, UUID killerId, UUID victimId, String registeredBy, Instant createdAt) {
+    public Kill(UUID gameId, UUID gameRoundId, long assignmentId, UUID killerId, UUID victimId, long killMethodId,
+            String registeredBy, Instant createdAt) {
         this.gameId = gameId;
         this.gameRoundId = gameRoundId;
         this.assignmentId = assignmentId;
         this.killerId = killerId;
         this.victimId = victimId;
+        this.killMethodId = killMethodId;
         this.registeredBy = registeredBy;
         this.createdAt = createdAt;
     }
@@ -73,6 +78,14 @@ public class Kill {
 
     public UUID getVictimId() {
         return victimId;
+    }
+
+    public long getKillMethodId() {
+        return killMethodId;
+    }
+
+    public void setKillMethodId(long killMethodId) {
+        this.killMethodId = killMethodId;
     }
 
     public String getRegisteredBy() {

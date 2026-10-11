@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/action-form";
 import {
+  changeKillMethod,
   confirmKillClaim,
   createGame,
   dismissKillClaim,
@@ -18,6 +19,7 @@ import {
   type UpdateGameRequest,
 } from "@/lib/api";
 import { normalizeJoinCode } from "@/lib/join-code";
+import { parseKillMethods, readMethodId } from "@/lib/kill-methods";
 import { isUuid } from "@/lib/uuid";
 
 // Every action checks that the caller is an admin first: server actions are public endpoints, so the admin pages'
@@ -48,6 +50,13 @@ const MESSAGES: Record<string, string> = {
   CLAIM_NOT_OPEN: "That claim has already been resolved. The page has been refreshed.",
   CLAIM_STALE:
     "The ring has changed since this claim was filed, so it's no longer valid. The page has been refreshed.",
+  KILL_METHOD_REQUIRED: "Pick the kill method used.",
+  KILL_METHOD_NOT_FOUND: "That kill method no longer exists. The page has been refreshed.",
+  KILL_METHOD_DISABLED: "That kill method is disabled. Pick another one.",
+  KILL_METHOD_NAME_TAKEN: "Two kill methods can't have the same name.",
+  INVALID_KILL_METHOD: "Each kill method needs a name and zero or more points.",
+  NO_ENABLED_METHODS: "At least one kill method must stay enabled.",
+  KILL_NOT_FOUND: "That kill no longer exists. The page has been refreshed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
@@ -146,8 +155,23 @@ export async function registerKillAction(
   await requireAdmin();
   if (!isUuid(gameId)) return INVALID_REQUEST;
   const victimId = String(formData.get("victimId") ?? "");
+  const killMethodId = readMethodId(formData);
   if (!isUuid(victimId)) return INVALID_REQUEST;
-  return run(() => registerKill(gameId, victimId));
+  if (killMethodId === null) return { error: MESSAGES.KILL_METHOD_REQUIRED };
+  return run(() => registerKill(gameId, victimId, killMethodId));
+}
+
+export async function changeKillMethodAction(
+  gameId: string,
+  killId: number,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(gameId) || !Number.isInteger(killId)) return INVALID_REQUEST;
+  const killMethodId = readMethodId(formData);
+  if (killMethodId === null) return { error: MESSAGES.KILL_METHOD_REQUIRED };
+  return run(() => changeKillMethod(gameId, killId, killMethodId));
 }
 
 export async function shuffleRingAction(
@@ -163,7 +187,9 @@ export async function shuffleRingAction(
   if (expected !== null && (!Number.isInteger(expected) || expected < 1)) {
     return INVALID_REQUEST;
   }
-  return run(() => shuffleRing(gameId, expected));
+  const killMethods = parseKillMethods(formData);
+  if (killMethods === null) return { error: MESSAGES.INVALID_KILL_METHOD };
+  return run(() => shuffleRing(gameId, expected, killMethods));
 }
 
 export async function startRoundAction(
@@ -178,7 +204,9 @@ export async function startRoundAction(
   if (!Number.isInteger(expected) || expected < 1 || !playerIds.every(isUuid)) {
     return INVALID_REQUEST;
   }
-  return run(() => startRound(gameId, expected, playerIds));
+  const killMethods = parseKillMethods(formData);
+  if (killMethods === null) return { error: MESSAGES.INVALID_KILL_METHOD };
+  return run(() => startRound(gameId, expected, playerIds, killMethods));
 }
 
 export async function confirmClaimAction(

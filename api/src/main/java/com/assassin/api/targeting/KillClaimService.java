@@ -4,6 +4,7 @@ import com.assassin.api.common.ApiException;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
+import com.assassin.api.game.KillMethodService;
 import com.assassin.api.player.Player;
 import com.assassin.api.player.PlayerRepository;
 import java.time.Instant;
@@ -23,22 +24,26 @@ public class KillClaimService {
     private final AssignmentRepository assignments;
     private final KillClaimRepository claims;
     private final KillService killService;
+    private final KillMethodService killMethods;
 
     public KillClaimService(GameService gameService, PlayerRepository players, AssignmentRepository assignments,
-            KillClaimRepository claims, KillService killService) {
+            KillClaimRepository claims, KillService killService,
+            KillMethodService killMethods) {
         this.gameService = gameService;
         this.players = players;
         this.assignments = assignments;
         this.claims = claims;
         this.killService = killService;
+        this.killMethods = killMethods;
     }
 
     /** The caller claims a kill on their ACTIVE target. */
     @Transactional
-    public ClaimStatus file(UUID gameId, UUID authUserId) {
+    public ClaimStatus file(UUID gameId, UUID authUserId, Long killMethodId) {
         Player killer = requirePlayer(gameId, authUserId);
         Game game = gameService.lockForChange(gameId);
         requireActive(game);
+        long methodId = killMethods.requireEnabled(game.getId(), killMethodId).getId();
         Assignment assignment = assignments.findByAssassinIdAndStatus(killer.getId(), AssignmentStatus.ACTIVE)
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "NO_TARGET", "You have no target right now."));
         if (claims.existsByVictimIdAndStatusIn(assignment.getTargetId(), OPEN)) {
@@ -46,7 +51,7 @@ public class KillClaimService {
                     "There is already an open kill claim against your target.");
         }
         KillClaim claim = claims.save(new KillClaim(game.getId(), assignment.getId(), killer.getId(),
-                assignment.getTargetId(), Instant.now()));
+                assignment.getTargetId(), methodId, Instant.now()));
         return new ClaimStatus(claim.getId(), claim.getStatus());
     }
 
@@ -100,7 +105,8 @@ public class KillClaimService {
                 .map(c -> new ClaimStatus(c.getId(), c.getStatus()))
                 .orElse(null);
         Incoming incoming = claims.findFirstByVictimIdAndStatus(me.getId(), KillClaimStatus.PENDING)
-                .map(c -> new Incoming(c.getId(), players.getReferenceById(c.getKillerId()).getDisplayName()))
+                .map(c -> new Incoming(c.getId(), players.getReferenceById(c.getKillerId()).getDisplayName(),
+                        methodRef(gameId, c)))
                 .orElse(null);
         return new MyClaims(outgoing, incoming);
     }
@@ -112,7 +118,8 @@ public class KillClaimService {
         return claims.findByGameIdAndStatusInOrderByCreatedAtAsc(gameId, OPEN).stream()
                 .map(c -> new AdminClaim(c.getId(), c.getStatus(),
                         players.getReferenceById(c.getKillerId()).getDisplayName(),
-                        players.getReferenceById(c.getVictimId()).getDisplayName(), c.getCreatedAt()))
+                        players.getReferenceById(c.getVictimId()).getDisplayName(), c.getCreatedAt(),
+                        methodRef(gameId, c)))
                 .toList();
     }
 
@@ -149,9 +156,14 @@ public class KillClaimService {
             throw new ApiException(HttpStatus.CONFLICT, "CLAIM_STALE", "That claim is out of date.");
         }
         Player victim = players.getReferenceById(claim.getVictimId());
-        KillService.KillResult result = killService.applyKill(game, victim, resolvedBy);
+        KillService.KillResult result = killService.applyKill(game, victim,
+                killMethods.require(game.getId(), claim.getKillMethodId()), resolvedBy);
         claim.confirm(result.killId(), resolvedBy, Instant.now());
         return result;
+    }
+
+    private KillService.KillMethodRef methodRef(UUID gameId, KillClaim claim) {
+        return KillService.KillMethodRef.from(killMethods.require(gameId, claim.getKillMethodId()));
     }
 
     private Player requirePlayer(UUID gameId, UUID authUserId) {
@@ -195,11 +207,11 @@ public class KillClaimService {
     public record AcceptResult(KillClaimStatus status, boolean roundEnded) {
     }
 
-    public record Incoming(long id, String killerName) {
+    public record Incoming(long id, String killerName, KillService.KillMethodRef killMethod) {
     }
 
     public record AdminClaim(long id, KillClaimStatus status, String killerName, String victimName,
-            Instant createdAt) {
+            Instant createdAt, KillService.KillMethodRef killMethod) {
     }
 
     public record MyClaims(ClaimStatus outgoing, Incoming incoming) {

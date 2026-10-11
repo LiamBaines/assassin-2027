@@ -22,10 +22,12 @@ public class GameService {
 
     private final GameRepository games;
     private final PlayerRepository players;
+    private final KillMethodRepository killMethods;
 
-    public GameService(GameRepository games, PlayerRepository players) {
+    public GameService(GameRepository games, PlayerRepository players, KillMethodRepository killMethods) {
         this.games = games;
         this.players = players;
+        this.killMethods = killMethods;
     }
 
     public static ApiException gameNotFound() {
@@ -81,7 +83,12 @@ public class GameService {
             throw joinCodeTaken();
         }
         try {
-            return new GameWithCount(games.saveAndFlush(new Game(name, joinCode)), 0);
+            Game game = games.saveAndFlush(new Game(name, joinCode));
+            Instant now = Instant.now();
+            killMethods.saveAll(KillMethodDefaults.STANDARD.stream()
+                    .map(m -> new KillMethod(game.getId(), m.name(), m.points(), now))
+                    .toList());
+            return new GameWithCount(game, 0);
         } catch (DataIntegrityViolationException e) {
             throw translateJoinCodeRace(e);
         }

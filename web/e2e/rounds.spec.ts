@@ -8,6 +8,7 @@ import {
   PLAYERS,
   readJoinLinkPath,
   readRing,
+  selectMethod,
 } from "./support";
 
 // Round 1 ends with a kill, then the admin starts round 2: a revived player, a late joiner and an unticked player.
@@ -52,6 +53,7 @@ test("round 1 ends with a winner after the kills", async () => {
   for (const name of [victim, dropped]) {
     await admin.goto(`/admin/games/${gameId}/players`);
     const row = playerRow(name);
+    await selectMethod(row);
     await row.getByRole("button", { name: "Register kill" }).click();
     await row.getByRole("button", { name: "Register kill" }).last().click();
     await expect(playerRow(name)).toContainText("DEAD");
@@ -126,6 +128,7 @@ test("the leaderboard totals points across both rounds", async () => {
   // A kill in round 2: the late joiner dies.
   await admin.goto(`/admin/games/${gameId}/players`);
   const row = playerRow(LATE);
+  await selectMethod(row);
   await row.getByRole("button", { name: "Register kill" }).click();
   await row.getByRole("button", { name: "Register kill" }).last().click();
   await expect(playerRow(LATE)).toContainText("DEAD");

@@ -15,6 +15,7 @@ const setPlayerStatus = vi.fn();
 const shuffleRing = vi.fn();
 const updateGame = vi.fn();
 const joinGame = vi.fn();
+const registerKill = vi.fn();
 const requireAdmin = vi.fn();
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -28,11 +29,13 @@ vi.mock("@/lib/api", () => ({
   shuffleRing,
   updateGame,
   joinGame,
+  registerKill,
 }));
 
 const {
   createGameAction,
   finishGameAction,
+  registerKillAction,
   setPlayerStatusAction,
   setSignupsAction,
   shuffleRingAction,
@@ -90,13 +93,54 @@ describe("admin action error messages", () => {
     shuffleRing.mockImplementation(() => fail(409, "GAME_FINISHED"));
     const result = await shuffleRingAction(GAME, {}, form({ expectedCurrentRoundNo: "1" }));
     expect(result.error).toMatch(/finished/);
-    expect(shuffleRing).toHaveBeenCalledWith(GAME, 1);
+    expect(shuffleRing).toHaveBeenCalledWith(GAME, 1, undefined);
   });
 
   it("sends null before the first round", async () => {
     shuffleRing.mockResolvedValue({});
     await shuffleRingAction(GAME, {}, form({ expectedCurrentRoundNo: "" }));
-    expect(shuffleRing).toHaveBeenCalledWith(GAME, null);
+    expect(shuffleRing).toHaveBeenCalledWith(GAME, null, undefined);
+  });
+
+  it("passes the edited kill methods when generating the first ring", async () => {
+    shuffleRing.mockResolvedValue({});
+    await shuffleRingAction(
+      GAME,
+      {},
+      form({
+        expectedCurrentRoundNo: "",
+        "method.0.id": "2",
+        "method.0.name": "Clamp",
+        "method.0.points": "12",
+        "method.0.enabled": "on",
+      }),
+    );
+    expect(shuffleRing).toHaveBeenCalledWith(GAME, null, [
+      { id: 2, name: "Clamp", points: 12, enabled: true },
+    ]);
+  });
+
+  it("rejects an invalid kill method row without calling the API", async () => {
+    const result = await shuffleRingAction(
+      GAME,
+      {},
+      form({ expectedCurrentRoundNo: "", "method.0.name": "", "method.0.points": "1" }),
+    );
+    expect(result.error).toMatch(/needs a name/);
+    expect(shuffleRing).not.toHaveBeenCalled();
+  });
+
+  it("requires a kill method to register a kill", async () => {
+    const result = await registerKillAction(GAME, {}, form({ victimId: PLAYER }));
+    expect(result.error).toMatch(/kill method/);
+    expect(registerKill).not.toHaveBeenCalled();
+  });
+
+  it("registers a kill with the chosen method and maps a disabled one", async () => {
+    registerKill.mockImplementation(() => fail(409, "KILL_METHOD_DISABLED"));
+    const result = await registerKillAction(GAME, {}, form({ victimId: PLAYER, killMethodId: "3" }));
+    expect(registerKill).toHaveBeenCalledWith(GAME, PLAYER, 3);
+    expect(result.error).toMatch(/disabled/);
   });
 
   it("maps CONCURRENT_UPDATE from finishing a game", async () => {

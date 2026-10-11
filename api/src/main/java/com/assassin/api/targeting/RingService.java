@@ -4,6 +4,8 @@ import com.assassin.api.common.ApiException;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
+import com.assassin.api.game.KillMethodService;
+import com.assassin.api.game.KillMethodService.KillMethodInput;
 import com.assassin.api.player.Player;
 import com.assassin.api.player.PlayerRef;
 import com.assassin.api.player.PlayerRepository;
@@ -44,17 +46,20 @@ public class RingService {
     private final AllocationRepository allocations;
     private final AssignmentRepository assignments;
     private final KillClaimRepository claims;
+    private final KillMethodService killMethods;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
 
     public RingService(GameService gameService, PlayerRepository players, GameRoundRepository rounds,
-            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, JdbcTemplate jdbc, RandomGenerator random) {
+            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, KillMethodService killMethods, JdbcTemplate jdbc,
+            RandomGenerator random) {
         this.gameService = gameService;
         this.players = players;
         this.rounds = rounds;
         this.allocations = allocations;
         this.assignments = assignments;
         this.claims = claims;
+        this.killMethods = killMethods;
         this.jdbc = jdbc;
         this.random = random;
     }
@@ -65,10 +70,12 @@ public class RingService {
      *
      * @param gameId the game
      * @param expectedCurrentRoundNo the allocation number the caller last saw, or null if it saw no allocations
+     * @param methodEdits kill method changes, applied with the first ring only (null = unchanged)
      * @param createdBy the admin's email
      */
     @Transactional
-    public RingView shuffle(UUID gameId, Integer expectedCurrentRoundNo, String createdBy) {
+    public RingView shuffle(UUID gameId, Integer expectedCurrentRoundNo, List<KillMethodInput> methodEdits,
+            String createdBy) {
         // 1. Lock the game row; concurrent shuffles (and admin edits) of this game queue behind this.
         Game game = gameService.lockForChange(gameId);
 
@@ -91,6 +98,15 @@ public class RingService {
         if (alive.size() < 2) {
             throw new ApiException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS",
                     "At least 2 alive players are needed to make a ring.");
+        }
+
+        // 4b. Methods can only change as part of starting a round.
+        if (!initial && methodEdits != null) {
+            throw new ApiException(HttpStatus.CONFLICT, "KILL_METHODS_LOCKED",
+                    "Kill methods can only be changed when starting a round.");
+        }
+        if (initial) {
+            killMethods.applyForNewRound(game.getId(), methodEdits);
         }
 
         // 5. Supersede the active assignments in one UPDATE, executed before any new ACTIVE row is inserted.
@@ -121,9 +137,11 @@ public class RingService {
      *
      * @param expectedRoundNo the round number the caller last saw
      * @param playerIds the players taking part
+     * @param methodEdits kill method changes (null = unchanged)
      */
     @Transactional
-    public RingView startRound(UUID gameId, Integer expectedRoundNo, Collection<UUID> playerIds, String createdBy) {
+    public RingView startRound(UUID gameId, Integer expectedRoundNo, Collection<UUID> playerIds,
+            List<KillMethodInput> methodEdits, String createdBy) {
         Game game = gameService.lockForChange(gameId);
 
         GameRound previous = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId()).orElseThrow(() -> new ApiException(
@@ -142,6 +160,8 @@ public class RingService {
         if (picked.size() < 2) {
             throw new ApiException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS", "At least 2 players are needed to start a round.");
         }
+
+        killMethods.applyForNewRound(game.getId(), methodEdits);
 
         Instant now = Instant.now();
         if (previous.getEndedAt() == null) {
