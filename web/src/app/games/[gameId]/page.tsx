@@ -20,9 +20,11 @@ import {
   getGamePlayers,
   getMe,
   getMyKillClaims,
+  getMyKillMethods,
   getMyRounds,
   getMyTarget,
 } from "@/lib/api";
+import { KillMethodSelect } from "@/components/kill-method-select";
 import { isOpenClaim, outgoingClaimLabel } from "@/lib/claim-status";
 import { formatDateTime } from "@/lib/format";
 import { roundOutcomeLabel } from "@/lib/round-outcome";
@@ -43,11 +45,12 @@ export default async function GamePage(props: {
   // Finishing a game keeps the last assignments, so don't show a stale target.
   const finished = game.status === "FINISHED";
   const active = game.status === "ACTIVE";
-  const [assignment, roster, claims, pastRounds] = await Promise.all([
+  const [assignment, roster, claims, pastRounds, killMethods] = await Promise.all([
     finished ? null : getMyTarget(gameId),
     game.status === "SETUP" ? null : getGamePlayers(gameId),
     active ? getMyKillClaims(gameId) : null,
     game.currentRoundNo === null ? [] : getMyRounds(gameId),
+    active ? getMyKillMethods(gameId) : [],
   ]);
   const incoming = claims?.incoming ?? null;
   const outgoing = claims?.outgoing ?? null;
@@ -84,7 +87,7 @@ export default async function GamePage(props: {
         <Card className="space-y-3">
           <div data-testid="incoming-claim">
             <Alert tone="info">
-              {incoming.killerName} says they killed you.
+              {incoming.killerName} says they killed you ({incoming.killMethod.name}).
             </Alert>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -135,7 +138,11 @@ export default async function GamePage(props: {
                 </SubmitButton>
               </ActionForm>
             ) : (
-              <ActionForm action={fileClaimAction.bind(null, gameId)}>
+              <ActionForm
+                action={fileClaimAction.bind(null, gameId)}
+                className="flex flex-wrap items-center justify-center gap-2"
+              >
+                <KillMethodSelect methods={killMethods} />
                 <ConfirmSubmit
                   label="Register kill"
                   confirmLabel="Yes, I killed them"

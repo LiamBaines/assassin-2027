@@ -3,11 +3,15 @@ import {
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
+import { KillMethodSelect } from "@/components/kill-method-select";
 import { Card, dangerButtonClass, secondaryButtonClass } from "@/components/ui";
 import {
+  getAdminKillMethods,
   getAdminPlayers,
+  listKills,
   listOpenKillClaims,
   type AdminPlayer,
+  type KillMethod,
 } from "@/lib/api";
 import {
   formatDateTime,
@@ -15,6 +19,7 @@ import {
   removePlayerMessage,
 } from "@/lib/format";
 import {
+  changeKillMethodAction,
   confirmClaimAction,
   dismissClaimAction,
   registerKillAction,
@@ -32,10 +37,13 @@ export default async function AdminPlayersPage(props: {
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(props.params);
-  const [players, claims] = await Promise.all([
+  const [players, claims, allMethods, kills] = await Promise.all([
     getAdminPlayers(game.id),
     listOpenKillClaims(game.id),
+    getAdminKillMethods(game.id),
+    listKills(game.id),
   ]);
+  const enabledMethods = allMethods.filter((m) => m.enabled);
   const editable = game.status !== "FINISHED";
   const alive = players.filter((p) => p.status === "ALIVE").length;
   const aliveInRing = players.filter(
@@ -66,7 +74,8 @@ export default async function AdminPlayersPage(props: {
                   <p>
                     <span className="font-medium">{c.killerName}</span> says
                     they killed{" "}
-                    <span className="font-medium">{c.victimName}</span>
+                    <span className="font-medium">{c.victimName}</span> with{" "}
+                    <span data-testid="claim-method">{c.killMethod.name}</span>
                   </p>
                   <p className="text-zinc-600">
                     {c.status === "CONTESTED"
@@ -100,6 +109,47 @@ export default async function AdminPlayersPage(props: {
                     </SubmitButton>
                   </ActionForm>
                 </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      {kills.length > 0 && (
+        <Card className="space-y-3">
+          <h3 className="font-semibold">Kills</h3>
+          <ul className="divide-y divide-zinc-100">
+            {kills.map((k) => (
+              <li
+                key={k.killId}
+                data-testid="kill-row"
+                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+              >
+                <p>
+                  <span className="font-medium">{k.killer.displayName}</span>{" "}
+                  killed{" "}
+                  <span className="font-medium">{k.victim.displayName}</span>{" "}
+                  with <span data-testid="kill-method">{k.killMethod.name}</span>{" "}
+                  <span className="text-zinc-600">
+                    · {formatDateTime(k.createdAt)}
+                  </span>
+                </p>
+                {editable && (
+                  <ActionForm
+                    action={changeKillMethodAction.bind(null, game.id, k.killId)}
+                    className="flex flex-wrap items-center gap-2"
+                  >
+                    <KillMethodSelect
+                      methods={enabledMethods}
+                      defaultValue={k.killMethod.id}
+                    />
+                    <SubmitButton
+                      className={secondaryButtonClass}
+                      pendingLabel="Saving…"
+                    >
+                      Change method
+                    </SubmitButton>
+                  </ActionForm>
+                )}
               </li>
             ))}
           </ul>
@@ -151,6 +201,7 @@ export default async function AdminPlayersPage(props: {
                         player={p}
                         active={game.status === "ACTIVE"}
                         aliveInRing={aliveInRing}
+                        methods={enabledMethods}
                       />
                     </td>
                   )}
@@ -169,11 +220,13 @@ function PlayerAction({
   player,
   active,
   aliveInRing,
+  methods,
 }: {
   gameId: string;
   player: AdminPlayer;
   active: boolean;
   aliveInRing: number;
+  methods: KillMethod[];
 }) {
   const restoring = player.status === "REMOVED";
   // Only a player with a target is in the ring, and only a ring player can be killed.
@@ -187,6 +240,7 @@ function PlayerAction({
           className="flex flex-wrap items-center justify-end gap-2"
         >
           <input type="hidden" name="victimId" value={player.id} />
+          <KillMethodSelect methods={methods} />
           <ConfirmSubmit
             label="Register kill"
             confirmLabel="Register kill"

@@ -5,12 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   AdminClaim,
   AdminGame,
+  AdminKill,
   AdminPlayer,
   AdminRound,
   ClaimAcceptResult,
   ClaimStatus,
   CreateGameRequest,
   JoinPreview,
+  KillMethod,
+  KillMethodInput,
   JoinRequest,
   Leaderboard,
   KillResult,
@@ -174,8 +177,12 @@ const claimsPath = (gameId: string) =>
   `/api/me/games/${seg(gameId)}/kill-claims`;
 
 /** Files a kill claim against the caller's current target. */
-export const fileKillClaim = (gameId: string) =>
-  request<ClaimStatus>("POST", claimsPath(gameId));
+export const fileKillClaim = (gameId: string, killMethodId: number) =>
+  request<ClaimStatus>("POST", claimsPath(gameId), { killMethodId });
+
+/** The enabled kill methods a player can pick. */
+export const getMyKillMethods = (gameId: string) =>
+  request<KillMethod[]>("GET", `/api/me/games/${seg(gameId)}/kill-methods`);
 
 export const withdrawKillClaim = (gameId: string, claimId: number) =>
   request<ClaimStatus>("POST", `${claimsPath(gameId)}/${claimId}/withdraw`);
@@ -225,20 +232,49 @@ export const setPlayerStatus = (
     { status },
   );
 
-export const registerKill = (gameId: string, victimId: string) =>
-  request<KillResult>("POST", `${gamePath(gameId)}/kills`, { victimId });
+export const registerKill = (
+  gameId: string,
+  victimId: string,
+  killMethodId: number,
+) =>
+  request<KillResult>("POST", `${gamePath(gameId)}/kills`, {
+    victimId,
+    killMethodId,
+  });
+
+/** Every kill method of the game, disabled ones included. */
+export const getAdminKillMethods = (gameId: string) =>
+  request<KillMethod[]>("GET", `${gamePath(gameId)}/kill-methods`);
+
+/** The game's kills, newest first. */
+export const listKills = (gameId: string) =>
+  request<AdminKill[]>("GET", `${gamePath(gameId)}/kills`);
+
+/** Corrects the method of a recorded kill; the API adjusts the killer's points. */
+export const changeKillMethod = (
+  gameId: string,
+  killId: number,
+  killMethodId: number,
+) =>
+  request<{ killId: number }>(
+    "PATCH",
+    `${gamePath(gameId)}/kills/${killId}`,
+    { killMethodId },
+  );
 
 /**
  * Generates the initial ring or runs a shakeup. Pass the round number the
  * admin saw (null when there is no round yet) so concurrent runs fail with
- * STALE_ROUND.
+ * STALE_ROUND. `killMethods` edits the game's methods when generating round 1.
  */
 export const shuffleRing = (
   gameId: string,
   expectedCurrentRoundNo: number | null,
+  killMethods?: KillMethodInput[],
 ) =>
   request<Ring>("POST", `${gamePath(gameId)}/rings`, {
     expectedCurrentRoundNo,
+    killMethods,
   });
 
 /** Closes the open round and starts the next with the given players. */
@@ -246,10 +282,12 @@ export const startRound = (
   gameId: string,
   expectedRoundNo: number,
   playerIds: string[],
+  killMethods?: KillMethodInput[],
 ) =>
   request<Ring>("POST", `${gamePath(gameId)}/rounds`, {
     expectedRoundNo,
     playerIds,
+    killMethods,
   });
 
 /** Game rounds, newest first. */

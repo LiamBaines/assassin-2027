@@ -6,7 +6,8 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/ui";
-import type { AdminPlayer } from "@/lib/api-types";
+import { KillMethodsEditor } from "@/components/kill-methods-editor";
+import type { AdminPlayer, KillMethod } from "@/lib/api-types";
 
 type Action = (
   prev: { error?: string },
@@ -18,10 +19,12 @@ export function StartRoundForm({
   action,
   expectedRoundNo,
   players,
+  killMethods,
 }: {
   action: Action;
   expectedRoundNo: number;
   players: Pick<AdminPlayer, "id" | "displayName" | "status">[];
+  killMethods: KillMethod[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -64,6 +67,7 @@ export function StartRoundForm({
           </li>
         ))}
       </ul>
+      <KillMethodsEditor methods={killMethods} />
       <div className="flex items-center gap-3">
         <SubmitButton pendingLabel="Starting…" className={primaryButtonClass}>
           Start round {expectedRoundNo + 1}

@@ -44,6 +44,10 @@ const {
   previewJoin,
   requireAdmin,
   registerKill,
+  fileKillClaim,
+  changeKillMethod,
+  listKills,
+  getMyKillMethods,
   setPlayerStatus,
   shuffleRing,
   toApiError,
@@ -304,11 +308,11 @@ describe("admin contracts", () => {
         { status: 201 },
       ),
     );
-    const result = await registerKill("g 1", "v");
+    const result = await registerKill("g 1", "v", 3);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("http://api.test/api/admin/games/g%201/kills");
     expect(init?.method).toBe("POST");
-    expect(init?.body).toBe(JSON.stringify({ victimId: "v" }));
+    expect(init?.body).toBe(JSON.stringify({ victimId: "v", killMethodId: 3 }));
     expect(result.roundEnded).toBe(true);
   });
 });
@@ -329,3 +333,31 @@ describe("requireAdmin", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me");
   });
 });
+
+describe("kill methods", () => {
+  it("files a claim with the chosen method", async () => {
+    fetchMock.mockResolvedValue(Response.json({ id: 5, status: "PENDING" }, { status: 201 }));
+    await fileKillClaim("g 1", 4);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/me/games/g%201/kill-claims");
+    expect(init?.body).toBe(JSON.stringify({ killMethodId: 4 }));
+  });
+
+  it("lists the player's enabled methods and the admin's kills", async () => {
+    fetchMock.mockImplementation(async () => Response.json([]));
+    await getMyKillMethods("g1");
+    await listKills("g1");
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g1/kill-methods");
+    expect(fetchMock.mock.calls[1][0]).toBe("http://api.test/api/admin/games/g1/kills");
+  });
+
+  it("corrects a kill's method with PATCH", async () => {
+    fetchMock.mockResolvedValue(Response.json({ killId: 9 }));
+    await changeKillMethod("g1", 9, 2);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/admin/games/g1/kills/9");
+    expect(init?.method).toBe("PATCH");
+    expect(init?.body).toBe(JSON.stringify({ killMethodId: 2 }));
+  });
+});
+

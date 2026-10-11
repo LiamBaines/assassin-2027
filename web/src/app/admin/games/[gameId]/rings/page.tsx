@@ -1,7 +1,9 @@
 import { ActionForm, ConfirmSubmit } from "@/components/action-form";
 import { Alert, Card, primaryButtonClass } from "@/components/ui";
+import { KillMethodsEditor } from "@/components/kill-methods-editor";
 import { StartRoundForm } from "@/components/start-round-form";
 import {
+  getAdminKillMethods,
   getAdminPlayers,
   getAdminRounds,
   getCurrentRing,
@@ -21,11 +23,12 @@ export default async function AdminRingsPage(props: {
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(props.params);
-  const [currentRing, history, rounds, players] = await Promise.all([
+  const [currentRing, history, rounds, players, killMethods] = await Promise.all([
     getCurrentRing(game.id),
     getRingHistory(game.id),
     getAdminRounds(game.id),
     getAdminPlayers(game.id),
+    getAdminKillMethods(game.id),
   ]);
 
   const latestRound = rounds[0] ?? null;
@@ -65,6 +68,7 @@ export default async function AdminRingsPage(props: {
               action={shuffleRingAction.bind(null, game.id)}
               className="flex max-w-md flex-wrap items-center justify-end gap-3"
             >
+              {!isShakeup && <KillMethodsEditor methods={killMethods} />}
               <input
                 type="hidden"
                 name="expectedCurrentRoundNo"
@@ -88,6 +92,7 @@ export default async function AdminRingsPage(props: {
               action={startRoundAction.bind(null, game.id)}
               expectedRoundNo={latestRound.roundNo}
               players={players}
+              killMethods={killMethods}
             />
           )}
           </div>
