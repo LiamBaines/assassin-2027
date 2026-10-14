@@ -197,3 +197,14 @@ export type Leaderboard = {
   rounds: number[];
   entries: LeaderboardEntry[];
 };
+
+/** One entry of a game's event log; `data` is the type-specific payload. */
+export type GameEvent = {
+  id: number;
+  type: string;
+  createdAt: string;
+  data: Record<string, unknown>;
+};
+
+/** A most-recent-first page; `nextBefore` is the `before` for the next page, null at the end. */
+export type GameEventPage = { events: GameEvent[]; nextBefore: number | null };

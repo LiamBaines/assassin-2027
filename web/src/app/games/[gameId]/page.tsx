@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, ConfirmSubmit, SubmitButton } from "@/components/action-form";
+import { EventLog } from "@/components/event-log";
 import { KillMethodSelect } from "@/components/kill-method-select";
 import { PlayerLeaderboard } from "@/components/player-leaderboard";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -17,6 +18,7 @@ import {
 import {
   getGamePlayers,
   getMe,
+  getMyEvents,
   getMyKillClaims,
   getMyKillMethods,
   getMyLeaderboard,
@@ -39,11 +41,11 @@ import { GameShell, type GameView } from "./game-shell";
 
 export const metadata: Metadata = { title: "Game · Assassin 2027" };
 
-const VIEWS: GameView[] = ["target", "players", "leaderboard", "rounds"];
+const VIEWS: GameView[] = ["target", "players", "leaderboard", "rounds", "log"];
 
 export default async function GamePage(props: {
   params: Promise<{ gameId: string }>;
-  searchParams: Promise<{ view?: string | string[]; round?: string | string[] }>;
+  searchParams: Promise<{ view?: string | string[]; round?: string | string[]; before?: string | string[] }>;
 }) {
   const { gameId } = await props.params;
   const search = await props.searchParams;
@@ -57,13 +59,17 @@ export default async function GamePage(props: {
   const finished = game.status === "FINISHED";
   const active = game.status === "ACTIVE";
   const started = game.status !== "SETUP";
-  const [assignment, roster, claims, pastRounds, killMethods, total] = await Promise.all([
+  const before = typeof search.before === "string" ? Number(search.before) : NaN;
+  const [assignment, roster, claims, pastRounds, killMethods, total, events] = await Promise.all([
     finished ? null : getMyTarget(gameId),
     started ? getGamePlayers(gameId) : null,
     active ? getMyKillClaims(gameId) : null,
     game.currentRoundNo === null ? [] : getMyRounds(gameId),
     active ? getMyKillMethods(gameId) : [],
     started ? getMyLeaderboard(gameId) : null,
+    getMyEvents(gameId, Number.isSafeInteger(before) && before > 0 ? before : undefined).catch(
+      () => null,
+    ),
   ]);
   const perRound: Record<number, Leaderboard> = {};
   if (total) {
@@ -223,6 +229,13 @@ export default async function GamePage(props: {
     </section>
   );
 
+  const logView = (
+    <section>
+      <h2 className="mb-3 font-display text-xl font-semibold">Game log</h2>
+      <EventLog page={events} moreHref={(b) => `?view=log&before=${b}`} />
+    </section>
+  );
+
   const requested = typeof search.view === "string" ? search.view : "";
   const initialView = VIEWS.find((v) => v === requested) ?? "target";
 
@@ -237,6 +250,7 @@ export default async function GamePage(props: {
         players: playersView || undefined,
         leaderboard: leaderboardView || undefined,
         rounds: started ? roundsView : undefined,
+        log: logView,
       }}
       menuLinks={
         <>
