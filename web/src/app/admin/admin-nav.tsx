@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  History,
   LayoutList,
   Menu,
   Network,
@@ -29,6 +30,7 @@ function useNavItems(): { primary: Item[]; game: Item[] } {
       { href: `${base}/players`, label: "Players", icon: Users },
       { href: `${base}/rings`, label: "Rings", icon: Network },
       { href: `${base}/leaderboard`, label: "Leaderboard", icon: Trophy },
+      { href: `${base}/log`, label: "Log", icon: History },
     ],
   };
 }

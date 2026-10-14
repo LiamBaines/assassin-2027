@@ -1,6 +1,7 @@
 package com.assassin.api.targeting;
 
 import com.assassin.api.common.ApiException;
+import com.assassin.api.event.GameEventService;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
@@ -30,10 +31,11 @@ public class KillService {
     private final GameRoundRepository rounds;
     private final PointService pointService;
     private final KillMethodService killMethods;
+    private final GameEventService events;
 
     public KillService(GameService gameService, PlayerRepository players, RingService ringService,
             KillRepository kills, GameRoundRepository rounds, PointService pointService,
-            KillMethodService killMethods) {
+            KillMethodService killMethods, GameEventService events) {
         this.gameService = gameService;
         this.players = players;
         this.ringService = ringService;
@@ -41,6 +43,7 @@ public class KillService {
         this.rounds = rounds;
         this.pointService = pointService;
         this.killMethods = killMethods;
+        this.events = events;
     }
 
     /**
@@ -108,6 +111,8 @@ public class KillService {
         if (roundEnded) {
             openRound.end(now, killer.getId());
         }
+        events.record(game.getId(), "KILL", Map.of("killer", PlayerRef.from(killer),
+                "victim", PlayerRef.from(victim), "method", KillMethodRef.from(method)));
         Player newTarget = roundEnded ? null : players.getReferenceById(splice.targetId());
         return new KillResult(kill.getId(), PlayerRef.from(killer), PlayerRef.from(victim),
                 newTarget == null ? null : PlayerRef.from(newTarget), roundEnded, KillMethodRef.from(method));

@@ -1,17 +1,18 @@
 "use client";
 
-import { Crosshair, History, Menu, Trophy, Users, type LucideIcon } from "lucide-react";
+import { Crosshair, History, Menu, ScrollText, Trophy, Users, type LucideIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Sheet } from "@/components/overlay";
 import { IconButton } from "@/components/ui";
 
-export type GameView = "target" | "players" | "leaderboard" | "rounds";
+export type GameView = "target" | "players" | "leaderboard" | "rounds" | "log";
 
 const VIEW_META: Record<GameView, { label: string; icon: LucideIcon }> = {
   target: { label: "Target", icon: Crosshair },
   players: { label: "Players", icon: Users },
   leaderboard: { label: "Leaderboard", icon: Trophy },
   rounds: { label: "Past rounds", icon: History },
+  log: { label: "Game log", icon: ScrollText },
 };
 
 /** The bottom bar holds the frequent views; the rest live in the menu. */

@@ -68,3 +68,6 @@ History of the build, moved out of `CLAUDE.md`. Append new entries at the bottom
   - Admin: persistent sidebar (sheet plus tab strip on mobile). Sections stay separate routes, with skeleton `loading.tsx`, rather than in-page panels. Row actions are icon buttons (`SubmitButton`/`ConfirmSubmit` `icon` + `iconOnly`; `icon` is an element so Server Components can pass it).
   - E2E: all `data-testid`s kept. Specs changed for new navigation (Players tab, Menu > Past rounds), sentence-case statuses, and the "Round N, allocation M" heading.
   - Not checked: real-device touch and screen readers; mobile admin tables scroll sideways.
+- 2026-10-14: **Game event log** on `game-event-log` (spec in `docs/specs/game-event-log.md`). V12 adds the append-only `game.game_event` table (type + jsonb payload with names snapshotted; no backfill). `GameEventService.record` is `MANDATORY`, called from kill, removal/restore, round start, shakeup and signup. `GET /api/{admin|me}/games/{gameId}/events` uses keyset pagination (`before`, `limit`).
+  - Web: shared `EventLog` component (unknown types get a generic line), player `?view=log`, admin `/admin/games/[gameId]/log`; "Load more" is a server-rendered `before` link.
+  - E2E: `game-log.spec.ts` (own game `LOG0001`): joins and round start, removal, and kill with method, in both admin and player logs.

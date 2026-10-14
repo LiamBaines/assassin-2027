@@ -14,6 +14,7 @@ import type {
   JoinPreview,
   KillMethod,
   KillMethodInput,
+  GameEventPage,
   JoinRequest,
   Leaderboard,
   KillResult,
@@ -173,6 +174,12 @@ export const getMyLeaderboard = (gameId: string, roundNo?: number) =>
     `/api/me/games/${seg(gameId)}/leaderboard${leaderboardQuery(roundNo)}`,
   );
 
+const eventsQuery = (before?: number) => (before === undefined ? "" : `?before=${before}`);
+
+/** The game's event log as a player sees it, newest first. */
+export const getMyEvents = (gameId: string, before?: number) =>
+  request<GameEventPage>("GET", `/api/me/games/${seg(gameId)}/events${eventsQuery(before)}`);
+
 const claimsPath = (gameId: string) =>
   `/api/me/games/${seg(gameId)}/kill-claims`;
 
@@ -307,6 +314,9 @@ export const getAdminLeaderboard = (gameId: string, roundNo?: number) =>
     "GET",
     `${gamePath(gameId)}/leaderboard${leaderboardQuery(roundNo)}`,
   );
+
+export const getAdminEvents = (gameId: string, before?: number) =>
+  request<GameEventPage>("GET", `${gamePath(gameId)}/events${eventsQuery(before)}`);
 
 export const listOpenKillClaims = (gameId: string) =>
   request<AdminClaim[]>("GET", `${gamePath(gameId)}/kill-claims?status=open`);
