@@ -12,6 +12,7 @@ export function GameNav({ gameId }: { gameId: string }) {
     { href: `${base}/players`, label: "Players" },
     { href: `${base}/rings`, label: "Rings" },
     { href: `${base}/leaderboard`, label: "Leaderboard" },
+    { href: `${base}/log`, label: "Log" },
   ];
 
   return (
