@@ -21,7 +21,7 @@ Decisions (from Q&A): dedicated `game.game_event` table; events at launch = KILL
 2. [x] Record events from kill, removal, round/shakeup, join (+ IT assertions per type)
 3. [x] Web api client, `EventLog` component, player `log` view + vitest for rendering/formatting
 4. [x] Admin log page + nav entry
-5. [ ] Playwright e2e: kill and removal appear in log; update `docs/progress.md`
+5. [x] Playwright e2e: kill and removal appear in log; update `docs/progress.md`
 
 ## Verification
 `./mvnw test -Dtest=...` per task, `./mvnw verify` once at end; `pnpm lint && pnpm typecheck && pnpm test`; `./scripts/e2e.sh e2e/<new spec>` then full e2e.
