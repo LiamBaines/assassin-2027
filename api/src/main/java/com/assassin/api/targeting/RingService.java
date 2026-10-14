@@ -1,6 +1,7 @@
 package com.assassin.api.targeting;
 
 import com.assassin.api.common.ApiException;
+import com.assassin.api.event.GameEventService;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
@@ -49,10 +50,11 @@ public class RingService {
     private final KillMethodService killMethods;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
+    private final GameEventService events;
 
     public RingService(GameService gameService, PlayerRepository players, GameRoundRepository rounds,
             AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, KillMethodService killMethods, JdbcTemplate jdbc,
-            RandomGenerator random) {
+            RandomGenerator random, GameEventService events) {
         this.gameService = gameService;
         this.players = players;
         this.rounds = rounds;
@@ -62,6 +64,7 @@ public class RingService {
         this.killMethods = killMethods;
         this.jdbc = jdbc;
         this.random = random;
+        this.events = events;
     }
 
     /**
@@ -123,6 +126,8 @@ public class RingService {
 
         // 7. Batch-insert the ring.
         insertRing(allocation, alive, now);
+        events.record(game.getId(), initial ? "ROUND_STARTED" : "SHAKEUP", initial
+                ? Map.of("roundNo", 1, "playerCount", alive.size()) : Map.of("roundNo", round.getRoundNo()));
 
         // 8. The first ring starts the game.
         if (game.getStatus() == GameStatus.SETUP) {
@@ -180,6 +185,8 @@ public class RingService {
         Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(), round.getId(), allocationNo,
                 AllocationReason.INITIAL, picked.size(), createdBy, now));
         insertRing(allocation, new ArrayList<>(picked), now);
+        events.record(game.getId(), "ROUND_STARTED",
+                Map.of("roundNo", round.getRoundNo(), "playerCount", picked.size()));
         return view(game, allocation, round);
     }
 

@@ -18,7 +18,7 @@ Decisions (from Q&A): dedicated `game.game_event` table; events at launch = KILL
 
 ## Tasks
 1. [x] Migration + `GameEventService` + list endpoints + IT (pagination order, non-member 404)
-2. [ ] Record events from kill, removal, round/shakeup, join (+ IT assertions per type)
+2. [x] Record events from kill, removal, round/shakeup, join (+ IT assertions per type)
 3. [ ] Web api client, `EventLog` component, player `log` view + vitest for rendering/formatting
 4. [ ] Admin log page + nav entry
 5. [ ] Playwright e2e: kill and removal appear in log; update `docs/progress.md`

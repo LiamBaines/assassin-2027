@@ -1,6 +1,7 @@
 package com.assassin.api.player;
 
 import com.assassin.api.common.ApiException;
+import com.assassin.api.event.GameEventService;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.targeting.Assignment;
@@ -24,13 +25,15 @@ public class AdminPlayerService {
     private final PlayerRepository players;
     private final AssignmentRepository assignments;
     private final RingService ringService;
+    private final GameEventService events;
 
     public AdminPlayerService(GameService gameService, PlayerRepository players, AssignmentRepository assignments,
-            RingService ringService) {
+            RingService ringService, GameEventService events) {
         this.gameService = gameService;
         this.players = players;
         this.assignments = assignments;
         this.ringService = ringService;
+        this.events = events;
     }
 
     /** Players of the game in join order, each with their current target (if any). */
@@ -66,6 +69,8 @@ public class AdminPlayerService {
             ringService.spliceOut(player.getId());
         }
         player.setStatus(status);
+        events.record(game.getId(), status == PlayerStatus.REMOVED ? "PLAYER_REMOVED" : "PLAYER_RESTORED",
+                Map.of("player", PlayerRef.from(player)));
         return player;
     }
 
