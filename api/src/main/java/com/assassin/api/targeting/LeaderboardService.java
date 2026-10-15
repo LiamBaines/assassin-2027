@@ -35,7 +35,7 @@ public class LeaderboardService {
 
     /** The leaderboard of one game; {@code roundNo} null means the game total. */
     @Transactional(readOnly = true)
-    public Leaderboard leaderboard(UUID gameId, Integer roundNo) {
+    public Leaderboard leaderboard(String gameId, Integer roundNo) {
         List<Row> rows;
         if (roundNo == null) {
             rows = jdbc.query(TOTALS.formatted(""), LeaderboardService::row, gameId);

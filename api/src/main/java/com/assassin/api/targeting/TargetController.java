@@ -29,7 +29,7 @@ public class TargetController {
     /** The game's closed rounds with the caller's outcome in each. 404 NOT_IN_GAME if the caller doesn't play in it. */
     @GetMapping("/api/me/games/{gameId}/rounds")
     @Transactional(readOnly = true)
-    public List<RoundHistoryService.PlayerRound> myRounds(CurrentUser user, @PathVariable UUID gameId) {
+    public List<RoundHistoryService.PlayerRound> myRounds(CurrentUser user, @PathVariable String gameId) {
         Player me = players.findByGameIdAndAuthUserId(gameId, user.authUserId()).orElseThrow(
                 () -> new ApiException(HttpStatus.NOT_FOUND, "NOT_IN_GAME", "You are not in this game."));
         return history.playerRounds(gameId, me.getId());
@@ -41,7 +41,7 @@ public class TargetController {
      */
     @GetMapping("/api/me/games/{gameId}/target")
     @Transactional(readOnly = true)
-    public TargetResponse myTarget(CurrentUser user, @PathVariable UUID gameId) {
+    public TargetResponse myTarget(CurrentUser user, @PathVariable String gameId) {
         return players.findByGameIdAndAuthUserId(gameId, user.authUserId())
                 .flatMap(p -> assignments.findByAssassinIdAndStatus(p.getId(), AssignmentStatus.ACTIVE))
                 .flatMap(a -> players.findById(a.getTargetId())

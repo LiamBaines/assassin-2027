@@ -11,9 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface KillClaimRepository extends JpaRepository<KillClaim, Long> {
 
-    List<KillClaim> findByGameIdAndStatusInOrderByCreatedAtAsc(UUID gameId, List<KillClaimStatus> statuses);
+    List<KillClaim> findByGameIdAndStatusInOrderByCreatedAtAsc(String gameId, List<KillClaimStatus> statuses);
 
-    Optional<KillClaim> findByIdAndGameId(Long id, UUID gameId);
+    Optional<KillClaim> findByIdAndGameId(Long id, String gameId);
 
     boolean existsByVictimIdAndStatusIn(UUID victimId, Collection<KillClaimStatus> statuses);
 
@@ -30,7 +30,7 @@ public interface KillClaimRepository extends JpaRepository<KillClaim, Long> {
                and c.status in (com.assassin.api.targeting.KillClaimStatus.PENDING,
                                 com.assassin.api.targeting.KillClaimStatus.CONTESTED)
             """)
-    int voidOpenInGame(UUID gameId, Instant at);
+    int voidOpenInGame(String gameId, Instant at);
 
     /** Bulk-voids every open claim where the player is the killer or the victim. */
     @Modifying(flushAutomatically = true)

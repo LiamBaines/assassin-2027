@@ -20,7 +20,7 @@ public class KillClaim {
     private Long id;
 
     @Column(name = "game_id", nullable = false)
-    private UUID gameId;
+    private String gameId;
 
     @Column(name = "assignment_id", nullable = false)
     private long assignmentId;
@@ -53,7 +53,7 @@ public class KillClaim {
     protected KillClaim() {
     }
 
-    public KillClaim(UUID gameId, long assignmentId, UUID killerId, UUID victimId, long killMethodId,
+    public KillClaim(String gameId, long assignmentId, UUID killerId, UUID victimId, long killMethodId,
             Instant createdAt) {
         this.gameId = gameId;
         this.assignmentId = assignmentId;
@@ -89,7 +89,7 @@ public class KillClaim {
         return id;
     }
 
-    public UUID getGameId() {
+    public String getGameId() {
         return gameId;
     }
 

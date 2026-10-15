@@ -39,7 +39,7 @@ public class KillClaimService {
 
     /** The caller claims a kill on their ACTIVE target. */
     @Transactional
-    public ClaimStatus file(UUID gameId, UUID authUserId, Long killMethodId) {
+    public ClaimStatus file(String gameId, UUID authUserId, Long killMethodId) {
         Player killer = requirePlayer(gameId, authUserId);
         Game game = gameService.lockForChange(gameId);
         requireActive(game);
@@ -57,7 +57,7 @@ public class KillClaimService {
 
     /** Killer only, open claims only. */
     @Transactional
-    public ClaimStatus withdraw(UUID gameId, long claimId, UUID authUserId) {
+    public ClaimStatus withdraw(String gameId, long claimId, UUID authUserId) {
         Player caller = requirePlayer(gameId, authUserId);
         gameService.lockForChange(gameId);
         KillClaim claim = requireClaim(gameId, claimId);
@@ -69,7 +69,7 @@ public class KillClaimService {
 
     /** Victim only, PENDING only. Confirms the kill. */
     @Transactional
-    public AcceptResult accept(UUID gameId, long claimId, UUID authUserId) {
+    public AcceptResult accept(String gameId, long claimId, UUID authUserId) {
         Player caller = requirePlayer(gameId, authUserId);
         Game game = gameService.lockForChange(gameId);
         KillClaim claim = requireClaim(gameId, claimId);
@@ -81,7 +81,7 @@ public class KillClaimService {
 
     /** Victim only, PENDING only. The claim stays open for the admin. */
     @Transactional
-    public ClaimStatus contest(UUID gameId, long claimId, UUID authUserId) {
+    public ClaimStatus contest(String gameId, long claimId, UUID authUserId) {
         Player caller = requirePlayer(gameId, authUserId);
         gameService.lockForChange(gameId);
         KillClaim claim = requireClaim(gameId, claimId);
@@ -96,7 +96,7 @@ public class KillClaimService {
      * dismissed it as long as they still hunt the same target. Incoming is the PENDING claim against them.
      */
     @Transactional(readOnly = true)
-    public MyClaims mine(UUID gameId, UUID authUserId) {
+    public MyClaims mine(String gameId, UUID authUserId) {
         Player me = requirePlayer(gameId, authUserId);
         ClaimStatus outgoing = claims.findFirstByKillerIdOrderByIdDesc(me.getId())
                 .filter(c -> c.isOpen() || (c.getStatus() == KillClaimStatus.DISMISSED
@@ -113,7 +113,7 @@ public class KillClaimService {
 
     /** Admin: open claims of the game, oldest first. */
     @Transactional(readOnly = true)
-    public List<AdminClaim> listOpen(UUID gameId) {
+    public List<AdminClaim> listOpen(String gameId) {
         gameService.find(gameId);
         return claims.findByGameIdAndStatusInOrderByCreatedAtAsc(gameId, OPEN).stream()
                 .map(c -> new AdminClaim(c.getId(), c.getStatus(),
@@ -125,7 +125,7 @@ public class KillClaimService {
 
     /** Admin: confirms an open claim, whether or not the victim responded. */
     @Transactional
-    public KillService.KillResult adminConfirm(UUID gameId, long claimId, String adminEmail) {
+    public KillService.KillResult adminConfirm(String gameId, long claimId, String adminEmail) {
         Game game = gameService.lockForChange(gameId);
         KillClaim claim = requireClaim(gameId, claimId);
         requireOpen(claim);
@@ -134,7 +134,7 @@ public class KillClaimService {
 
     /** Admin: dismisses an open claim. */
     @Transactional
-    public ClaimStatus adminDismiss(UUID gameId, long claimId, String adminEmail) {
+    public ClaimStatus adminDismiss(String gameId, long claimId, String adminEmail) {
         gameService.lockForChange(gameId);
         KillClaim claim = requireClaim(gameId, claimId);
         requireOpen(claim);
@@ -162,16 +162,16 @@ public class KillClaimService {
         return result;
     }
 
-    private KillService.KillMethodRef methodRef(UUID gameId, KillClaim claim) {
+    private KillService.KillMethodRef methodRef(String gameId, KillClaim claim) {
         return KillService.KillMethodRef.from(killMethods.require(gameId, claim.getKillMethodId()));
     }
 
-    private Player requirePlayer(UUID gameId, UUID authUserId) {
+    private Player requirePlayer(String gameId, UUID authUserId) {
         return players.findByGameIdAndAuthUserId(gameId, authUserId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_IN_GAME", "You are not in this game."));
     }
 
-    private KillClaim requireClaim(UUID gameId, long claimId) {
+    private KillClaim requireClaim(String gameId, long claimId) {
         return claims.findByIdAndGameId(claimId, gameId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLAIM_NOT_FOUND", "No such kill claim."));
     }

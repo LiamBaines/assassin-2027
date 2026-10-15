@@ -25,14 +25,14 @@ public class KillMethodController {
 
     /** Every method of the game, disabled ones included. */
     @GetMapping("/api/admin/games/{gameId}/kill-methods")
-    public List<KillMethodService.KillMethodView> admin(@PathVariable UUID gameId) {
+    public List<KillMethodService.KillMethodView> admin(@PathVariable String gameId) {
         games.find(gameId);
         return service.list(gameId, false);
     }
 
     /** The enabled methods a player can pick. 404 NOT_IN_GAME if the caller doesn't play in the game. */
     @GetMapping("/api/me/games/{gameId}/kill-methods")
-    public List<KillMethodService.KillMethodView> mine(CurrentUser user, @PathVariable UUID gameId) {
+    public List<KillMethodService.KillMethodView> mine(CurrentUser user, @PathVariable String gameId) {
         players.findByGameIdAndAuthUserId(gameId, user.authUserId()).orElseThrow(
                 () -> new ApiException(HttpStatus.NOT_FOUND, "NOT_IN_GAME", "You are not in this game."));
         return service.list(gameId, true);

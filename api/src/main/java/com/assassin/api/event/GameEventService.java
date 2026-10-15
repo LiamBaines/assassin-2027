@@ -29,7 +29,7 @@ public class GameEventService {
 
     /** Appends an event; must run inside the transaction of the action it describes. */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void record(UUID gameId, String type, Object payload) {
+    public void record(String gameId, String type, Object payload) {
         try {
             jdbc.update("insert into game.game_event (game_id, type, payload) values (?, ?, cast(? as jsonb))",
                     gameId, type, json.writeValueAsString(payload));
@@ -40,7 +40,7 @@ public class GameEventService {
 
     /** One page of events with id below {@code beforeId} (null for the newest); limit defaults to 30, max 100. */
     @Transactional(readOnly = true)
-    public EventPage list(UUID gameId, Long beforeId, Integer limit) {
+    public EventPage list(String gameId, Long beforeId, Integer limit) {
         int size = limit == null ? DEFAULT_LIMIT : Math.max(1, Math.min(limit, MAX_LIMIT));
         List<Event> rows = new ArrayList<>(jdbc.query("""
                 select id, type, created_at, payload from game.game_event

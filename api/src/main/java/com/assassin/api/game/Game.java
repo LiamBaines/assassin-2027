@@ -4,22 +4,18 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.Locale;
-import java.util.UUID;
 
 @Entity
 @Table(name = "game")
 public class Game {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
 
     @Column(nullable = false)
     private String name;
@@ -44,12 +40,13 @@ public class Game {
     private Instant finishedAt;
 
     @Version
-    private long version;
+    private Long version;
 
     protected Game() {
     }
 
-    public Game(String name, String joinCode) {
+    public Game(String id, String name, String joinCode) {
+        this.id = id;
         this.name = name;
         this.joinCode = joinCode;
         this.status = GameStatus.SETUP;
@@ -84,7 +81,7 @@ public class Game {
         this.finishedAt = at;
     }
 
-    public UUID getId() {
+    public String getId() {
         return id;
     }
 
@@ -117,6 +114,6 @@ public class Game {
     }
 
     public long getVersion() {
-        return version;
+        return version == null ? 0 : version;
     }
 }

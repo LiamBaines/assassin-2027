@@ -20,7 +20,7 @@ public class PointEvent {
     private Long id;
 
     @Column(name = "game_id", nullable = false)
-    private UUID gameId;
+    private String gameId;
 
     @Column(name = "game_round_id")
     private UUID gameRoundId;
@@ -47,7 +47,7 @@ public class PointEvent {
     protected PointEvent() {
     }
 
-    public PointEvent(UUID gameId, UUID gameRoundId, UUID playerId, int points, PointType type, Long killId,
+    public PointEvent(String gameId, UUID gameRoundId, UUID playerId, int points, PointType type, Long killId,
             Instant createdAt, String createdBy) {
         this.gameId = gameId;
         this.gameRoundId = gameRoundId;
@@ -63,7 +63,7 @@ public class PointEvent {
         return id;
     }
 
-    public UUID getGameId() {
+    public String getGameId() {
         return gameId;
     }
 

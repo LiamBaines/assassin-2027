@@ -50,7 +50,7 @@ public class RoundHistoryService {
 
     /** Every round of the game, newest first. */
     @Transactional(readOnly = true)
-    public List<AdminRound> adminRounds(UUID gameId) {
+    public List<AdminRound> adminRounds(String gameId) {
         return jdbc.query(ROUNDS.formatted(""), (rs, i) -> new AdminRound(rs.getInt("round_no"),
                 rs.getObject("started_at", java.time.OffsetDateTime.class).toInstant(), instant(rs, "ended_at"),
                 winner(rs), rs.getInt("player_count")), gameId);
@@ -58,7 +58,7 @@ public class RoundHistoryService {
 
     /** The closed rounds of the game as seen by one of its players, newest first. */
     @Transactional(readOnly = true)
-    public List<PlayerRound> playerRounds(UUID gameId, UUID playerId) {
+    public List<PlayerRound> playerRounds(String gameId, UUID playerId) {
         Map<UUID, KillInfo> killedIn = jdbc.query(KILLS_BY_VICTIM,
                 (rs, i) -> Map.entry(rs.getObject("game_round_id", UUID.class),
                         new KillInfo(rs.getString("killer_name"))), playerId)

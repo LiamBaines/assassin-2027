@@ -26,7 +26,7 @@ public class GameEventController {
 
     /** The event log of any game, newest first. 404 GAME_NOT_FOUND. */
     @GetMapping("/api/admin/games/{gameId}/events")
-    public GameEventService.EventPage admin(@PathVariable UUID gameId, @RequestParam(required = false) Long before,
+    public GameEventService.EventPage admin(@PathVariable String gameId, @RequestParam(required = false) Long before,
             @RequestParam(required = false) Integer limit) {
         games.find(gameId);
         return events.list(gameId, before, limit);
@@ -34,7 +34,7 @@ public class GameEventController {
 
     /** The same log for a player of the game. 404 NOT_IN_GAME for non-members and unknown games. */
     @GetMapping("/api/me/games/{gameId}/events")
-    public GameEventService.EventPage player(CurrentUser user, @PathVariable UUID gameId,
+    public GameEventService.EventPage player(CurrentUser user, @PathVariable String gameId,
             @RequestParam(required = false) Long before, @RequestParam(required = false) Integer limit) {
         if (!players.existsByGameIdAndAuthUserId(gameId, user.authUserId())) {
             throw new ApiException(HttpStatus.NOT_FOUND, "NOT_IN_GAME", "You aren't a player in this game.");

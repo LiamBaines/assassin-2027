@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KillMethodRepository extends JpaRepository<KillMethod, Long> {
 
-    List<KillMethod> findByGameIdOrderById(UUID gameId);
+    List<KillMethod> findByGameIdOrderById(String gameId);
 }

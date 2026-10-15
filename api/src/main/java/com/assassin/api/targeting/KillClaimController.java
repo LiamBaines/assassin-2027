@@ -23,7 +23,7 @@ public class KillClaimController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public KillClaimService.ClaimStatus file(CurrentUser user, @PathVariable UUID gameId,
+    public KillClaimService.ClaimStatus file(CurrentUser user, @PathVariable String gameId,
             @RequestBody(required = false) FileClaimRequest request) {
         return service.file(gameId, user.authUserId(), request == null ? null : request.killMethodId());
     }
@@ -32,22 +32,22 @@ public class KillClaimController {
     }
 
     @PostMapping("/{id}/withdraw")
-    public KillClaimService.ClaimStatus withdraw(CurrentUser user, @PathVariable UUID gameId, @PathVariable long id) {
+    public KillClaimService.ClaimStatus withdraw(CurrentUser user, @PathVariable String gameId, @PathVariable long id) {
         return service.withdraw(gameId, id, user.authUserId());
     }
 
     @PostMapping("/{id}/accept")
-    public KillClaimService.AcceptResult accept(CurrentUser user, @PathVariable UUID gameId, @PathVariable long id) {
+    public KillClaimService.AcceptResult accept(CurrentUser user, @PathVariable String gameId, @PathVariable long id) {
         return service.accept(gameId, id, user.authUserId());
     }
 
     @PostMapping("/{id}/contest")
-    public KillClaimService.ClaimStatus contest(CurrentUser user, @PathVariable UUID gameId, @PathVariable long id) {
+    public KillClaimService.ClaimStatus contest(CurrentUser user, @PathVariable String gameId, @PathVariable long id) {
         return service.contest(gameId, id, user.authUserId());
     }
 
     @GetMapping("/mine")
-    public KillClaimService.MyClaims mine(CurrentUser user, @PathVariable UUID gameId) {
+    public KillClaimService.MyClaims mine(CurrentUser user, @PathVariable String gameId) {
         return service.mine(gameId, user.authUserId());
     }
 }

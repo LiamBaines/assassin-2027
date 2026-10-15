@@ -42,7 +42,7 @@ public class PlayerService {
         return new JoinPreview(game.getId(), game.getName(), game.getStatus(), game.isSignupsOpen(), alreadyJoined);
     }
 
-    public record JoinPreview(UUID gameId, String name, GameStatus status, boolean signupsOpen, boolean alreadyJoined) {
+    public record JoinPreview(String gameId, String name, GameStatus status, boolean signupsOpen, boolean alreadyJoined) {
     }
 
     /** Registers the caller in the game with this join code. */

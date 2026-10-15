@@ -21,18 +21,18 @@ public class AdminKillClaimController {
     }
 
     @GetMapping
-    public List<KillClaimService.AdminClaim> list(@PathVariable UUID gameId,
+    public List<KillClaimService.AdminClaim> list(@PathVariable String gameId,
             @RequestParam(defaultValue = "open") String status) {
         return service.listOpen(gameId);
     }
 
     @PostMapping("/{id}/confirm")
-    public KillService.KillResult confirm(@PathVariable UUID gameId, @PathVariable long id, CurrentUser admin) {
+    public KillService.KillResult confirm(@PathVariable String gameId, @PathVariable long id, CurrentUser admin) {
         return service.adminConfirm(gameId, id, admin.email());
     }
 
     @PostMapping("/{id}/dismiss")
-    public KillClaimService.ClaimStatus dismiss(@PathVariable UUID gameId, @PathVariable long id,
+    public KillClaimService.ClaimStatus dismiss(@PathVariable String gameId, @PathVariable long id,
             CurrentUser admin) {
         return service.adminDismiss(gameId, id, admin.email());
     }

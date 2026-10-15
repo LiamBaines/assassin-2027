@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
-    List<Assignment> findByGameIdAndStatusOrderById(UUID gameId, AssignmentStatus status);
+    List<Assignment> findByGameIdAndStatusOrderById(String gameId, AssignmentStatus status);
 
     Optional<Assignment> findByAssassinIdAndStatus(UUID assassinId, AssignmentStatus status);
 
@@ -24,5 +24,5 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
              where a.gameId = :gameId
                and a.status = com.assassin.api.targeting.AssignmentStatus.ACTIVE
             """)
-    int supersedeActive(UUID gameId, Instant endedAt);
+    int supersedeActive(String gameId, Instant endedAt);
 }

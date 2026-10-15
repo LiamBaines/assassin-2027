@@ -27,18 +27,18 @@ public class AdminKillController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public KillService.KillResult register(@PathVariable UUID gameId, CurrentUser admin,
+    public KillService.KillResult register(@PathVariable String gameId, CurrentUser admin,
             @Valid @RequestBody RegisterKillRequest request) {
         return killService.register(gameId, request.victimId(), request.killMethodId(), admin.email());
     }
 
     @GetMapping
-    public List<KillService.KillView> list(@PathVariable UUID gameId) {
+    public List<KillService.KillView> list(@PathVariable String gameId) {
         return killService.list(gameId);
     }
 
     @PatchMapping("/{killId}")
-    public KillService.KillMethodChange changeMethod(@PathVariable UUID gameId, @PathVariable long killId,
+    public KillService.KillMethodChange changeMethod(@PathVariable String gameId, @PathVariable long killId,
             CurrentUser admin, @Valid @RequestBody ChangeMethodRequest request) {
         return killService.changeMethod(gameId, killId, request.killMethodId(), admin.email());
     }
