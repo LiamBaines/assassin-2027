@@ -138,20 +138,32 @@ export async function registerKill(scope: Page | Locator, name = "Clamp", points
   await scope.getByRole("button", { name: "Register kill" }).last().click();
 }
 
-/** Targets are hidden on load; click the eye until the name shows (waits for hydration). */
+/**
+ * Targets show only while the eye is held: press and leave the mouse down until
+ * the name shows (waits for hydration). Call `releaseTarget` when done.
+ */
 export async function revealTarget(page: Page): Promise<void> {
   const toggle = page.getByTestId("target-toggle");
   if ((await toggle.count()) === 0) return;
+  await toggle.hover();
   await expect(async () => {
-    if ((await page.getByTestId("target-name-hidden").count()) > 0) await toggle.click();
+    if ((await page.getByTestId("target-name-hidden").count()) > 0) {
+      await page.mouse.up();
+      await page.mouse.down();
+    }
     await expect(page.getByTestId("target-name")).toBeVisible({ timeout: 1000 });
   }).toPass();
+}
+
+export async function releaseTarget(page: Page): Promise<void> {
+  await page.mouse.up();
 }
 
 export async function expectTarget(page: Page, gameId: string, name: string): Promise<void> {
   await page.goto(`/${gameId}`);
   await revealTarget(page);
   await expect(page.getByTestId("target-name")).toHaveText(name);
+  await releaseTarget(page);
 }
 
 /** Joins a game from its join page (`/join/CODE`), landing on the game page. */

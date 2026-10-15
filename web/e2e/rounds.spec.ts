@@ -10,6 +10,7 @@ import {
   readRing,
   type Pair,
   registerKill,
+  releaseTarget,
   revealTarget,
 } from "./support";
 
@@ -97,6 +98,7 @@ test("players see Round 2, and past round 1", async () => {
   await expect(page.getByTestId("round-badge")).toHaveText("Round 2");
   await revealTarget(page);
   await expect(page.getByTestId("target-name")).not.toHaveText("No target yet");
+  await releaseTarget(page);
   await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Past rounds" }).click();
   await expect(page.getByTestId("past-round")).toHaveCount(1);

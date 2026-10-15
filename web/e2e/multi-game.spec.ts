@@ -3,6 +3,7 @@ import {
   ADMIN,
   createGame,
   expectTarget,
+  releaseTarget,
   revealTarget,
   generateRing,
   joinThroughLink,
@@ -80,6 +81,7 @@ test("a player in both games sees both on /me with the right target in each", as
   await expect(alicePage.getByTestId("player-name")).toHaveText("Alice B");
   await revealTarget(alicePage);
   await expect(alicePage.getByTestId("target-name")).toHaveText("Carol B");
+  await releaseTarget(alicePage);
 
   await expectTarget(alicePage, gameA, "Bob A");
   await expect(alicePage.getByTestId("player-name")).toHaveText("Alice A");
