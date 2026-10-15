@@ -134,7 +134,8 @@ export async function selectMethod(scope: Page | Locator, name = "Clamp", points
 export async function registerKill(scope: Page | Locator, name = "Clamp", points = 10): Promise<void> {
   await scope.getByRole("button", { name: "Register kill" }).click();
   await selectMethod(scope, name, points);
-  await scope.getByRole("button", { name: "Register kill" }).click();
+  // The admin form opens in a dialog, so the row's icon button is still in the tree.
+  await scope.getByRole("button", { name: "Register kill" }).last().click();
 }
 
 /** Targets are hidden on load; click the eye until the name shows (waits for hydration). */

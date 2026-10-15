@@ -1,4 +1,4 @@
-import { inputClass } from "@/components/ui";
+import { Select } from "@/components/ui";
 import type { KillMethod } from "@/lib/api-types";
 
 /** Select for the `killMethodId` field; callers pass only the methods that can be chosen. */
@@ -12,13 +12,7 @@ export function KillMethodSelect({
   name?: string;
 }) {
   return (
-    <select
-      name={name}
-      required
-      defaultValue={defaultValue ?? ""}
-      aria-label="Kill method"
-      className={`${inputClass} !w-auto !py-2 text-sm`}
-    >
+    <Select name={name} required defaultValue={defaultValue ?? ""} aria-label="Kill method">
       <option value="" disabled>
         Method…
       </option>
@@ -27,6 +21,6 @@ export function KillMethodSelect({
           {m.name} ({m.points} pts)
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

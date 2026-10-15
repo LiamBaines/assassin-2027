@@ -165,6 +165,10 @@ export function IconButton({
 export const iconButtonClass =
   "inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted hover:bg-raised hover:text-bone disabled:opacity-50";
 
+/** Icon button that also shows its label from the xl breakpoint, where the table has room. */
+export const iconLabelButtonClass =
+  "inline-flex size-9 shrink-0 items-center justify-center gap-2 rounded-control text-sm text-muted hover:bg-raised hover:text-bone disabled:opacity-50 xl:size-auto xl:h-9 xl:px-3";
+
 export const inputClass =
   "w-full rounded-control border border-line bg-ink px-3 py-2.5 text-base text-bone placeholder:text-muted";
 

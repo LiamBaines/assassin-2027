@@ -19,12 +19,12 @@ export function LeaderboardTable({ data }: { data: LeaderboardData }) {
       <table className="tabular w-full text-sm [&_td:nth-child(2)]:whitespace-nowrap">
         <thead className="border-b border-line text-left text-muted">
           <tr>
-            <th className="px-3 py-2 font-medium">#</th>
-            <th className="px-3 py-2 font-medium">Player</th>
-            <th className="px-3 py-2 text-right font-medium">Pts</th>
-            <th className="px-3 py-2 text-right font-medium">Kills</th>
-            <th className="px-3 py-2 text-right font-medium">Deaths</th>
-            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-2 py-2 sm:px-3 font-medium">#</th>
+            <th className="px-2 py-2 sm:px-3 font-medium">Player</th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium">Pts</th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium">Kills</th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium">Deaths</th>
+            <th className="px-2 py-2 sm:px-3 font-medium">Status</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -32,18 +32,18 @@ export function LeaderboardTable({ data }: { data: LeaderboardData }) {
             const view = rosterStatusView(e.status);
             return (
               <tr key={e.player.id} data-testid="leaderboard-row">
-                <td data-testid="lb-rank" className="px-3 py-2 text-muted">{e.rank}</td>
-                <td data-testid="lb-name" className="px-3 py-2">
+                <td data-testid="lb-rank" className="px-2 py-2 sm:px-3 text-muted">{e.rank}</td>
+                <td data-testid="lb-name" className="px-2 py-2 sm:px-3">
                   {e.player.displayName}
                 </td>
-                <td data-testid="lb-points" className="px-3 py-2 text-right font-semibold">
+                <td data-testid="lb-points" className="px-2 py-2 sm:px-3 text-right font-semibold">
                   {e.points}
                 </td>
-                <td data-testid="lb-kills" className="px-3 py-2 text-right">{e.kills}</td>
-                <td data-testid="lb-deaths" className="px-3 py-2 text-right">{e.deaths}</td>
-                <td className="px-3 py-2">
+                <td data-testid="lb-kills" className="px-2 py-2 sm:px-3 text-right">{e.kills}</td>
+                <td data-testid="lb-deaths" className="px-2 py-2 sm:px-3 text-right">{e.deaths}</td>
+                <td className="px-2 py-2 sm:px-3">
                   <StatusChip tone={view.tone} icon={view.icon}>
-                    <span className="sr-only sm:not-sr-only">{view.label}</span>
+                    {view.label}
                   </StatusChip>
                 </td>
               </tr>

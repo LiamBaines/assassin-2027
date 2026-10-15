@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Alert, iconButtonClass } from "@/components/ui";
+import { Alert, iconLabelButtonClass } from "@/components/ui";
 
 export type ActionResult = { error?: string };
 
@@ -47,7 +47,7 @@ function ButtonFace({
   return (
     <>
       {pending ? <Loader2 aria-hidden className="size-4 animate-spin" /> : icon}
-      {!iconOnly && children}
+      {iconOnly ? <span className="hidden xl:inline">{children}</span> : children}
     </>
   );
 }
@@ -77,7 +77,7 @@ export function SubmitButton({
       disabled={pending}
       aria-label={iconOnly ? labelOf(children) : undefined}
       title={iconOnly ? labelOf(children) : undefined}
-      className={iconOnly ? `${iconButtonClass} ${className ?? ""}` : className}
+      className={iconOnly ? `${iconLabelButtonClass} ${className ?? ""}` : className}
     >
       <ButtonFace icon={icon} iconOnly={iconOnly} pending={pending}>
         {label}
@@ -119,7 +119,7 @@ export function ConfirmSubmit({
         disabled={pending}
         aria-label={iconOnly ? label : undefined}
         title={iconOnly ? label : undefined}
-        className={iconOnly ? `${iconButtonClass} ${className ?? ""}` : className}
+        className={iconOnly ? `${iconLabelButtonClass} ${className ?? ""}` : className}
       >
         <ButtonFace icon={icon} iconOnly={iconOnly} pending={pending}>
           {pending ? "Working…" : label}

@@ -4,7 +4,8 @@ import { Crosshair } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { KillMethodSelect } from "@/components/kill-method-select";
-import { dangerButtonClass, iconButtonClass, primaryButtonClass } from "@/components/ui";
+import { Dialog } from "@/components/overlay";
+import { dangerButtonClass, iconLabelButtonClass, primaryButtonClass } from "@/components/ui";
 import type { KillMethod } from "@/lib/api-types";
 
 type Action = (
@@ -32,50 +33,70 @@ export function RegisterKill({
 }) {
   const [open, setOpen] = useState(false);
 
-  if (!open && labelled) {
+  if (labelled) {
+    if (!open) {
+      return (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={`${primaryButtonClass} inline-flex items-center gap-2`}
+        >
+          <Crosshair aria-hidden className="size-4" />
+          Register kill
+        </button>
+      );
+    }
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={`${primaryButtonClass} inline-flex items-center gap-2`}
-      >
-        <Crosshair aria-hidden className="size-4" />
-        Register kill
-      </button>
+      <ActionForm action={action} className="flex flex-wrap items-center gap-2">
+        {victimId && <input type="hidden" name="victimId" value={victimId} />}
+        <span className="basis-full whitespace-normal text-sm">{message}</span>
+        <KillMethodSelect methods={methods} />
+        <SubmitButton className={dangerButtonClass} pendingLabel="Registering…">
+          Register kill
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm text-muted underline hover:text-bone"
+        >
+          Cancel
+        </button>
+      </ActionForm>
     );
   }
 
-  if (!open) {
-    return (
+  // Admin table rows: a dialog keeps the table columns from shifting.
+  return (
+    <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Register kill"
         title="Register kill"
-        className={iconButtonClass}
+        className={iconLabelButtonClass}
       >
         <Crosshair aria-hidden className="size-4" />
+        <span className="hidden xl:inline">Register kill</span>
       </button>
-    );
-  }
-
-  return (
-    <ActionForm action={action} className={`flex flex-wrap items-center gap-2 ${labelled ? "" : "justify-end"}`}>
-      {victimId && <input type="hidden" name="victimId" value={victimId} />}
-      <span
-        className={`basis-full whitespace-normal text-sm ${labelled ? "" : "text-right"}`}
-      >{message}</span>
-      <KillMethodSelect methods={methods} />
-      <SubmitButton className={dangerButtonClass} pendingLabel="Registering…">
-        Register kill
-      </SubmitButton>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="text-sm text-muted underline hover:text-bone"
-      >
-        Cancel
-      </button>
-    </ActionForm>
+      <Dialog open={open} onClose={() => setOpen(false)} title="Register kill">
+        <ActionForm action={action} className="space-y-4 whitespace-normal">
+          {victimId && <input type="hidden" name="victimId" value={victimId} />}
+          <p className="text-sm text-muted">{message}</p>
+          <KillMethodSelect methods={methods} />
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-sm text-muted underline hover:text-bone"
+            >
+              Cancel
+            </button>
+            <SubmitButton className={dangerButtonClass} pendingLabel="Registering…">
+              Register kill
+            </SubmitButton>
+          </div>
+        </ActionForm>
+      </Dialog>
+    </>
   );
 }
