@@ -1,15 +1,25 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
+import type { KeyboardEvent } from "react";
 import { useState } from "react";
 import { IconButton } from "@/components/ui";
 
 /**
  * The target's name, hidden on every load so it can't be read over a
- * shoulder. Visibility is local state only; the eye button toggles it.
+ * shoulder. Visibility is local state only, and only while the eye is held
+ * down (pointer or Space/Enter); releasing, cancelling or blurring hides it.
  */
 export function TargetReveal({ name, assignedAt }: { name: string; assignedAt: string }) {
   const [shown, setShown] = useState(false);
+  const show = () => setShown(true);
+  const hide = () => setShown(false);
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") show();
+  };
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") hide();
+  };
 
   return (
     <>
@@ -35,9 +45,19 @@ export function TargetReveal({ name, assignedAt }: { name: string; assignedAt: s
         <IconButton
           data-testid="target-toggle"
           icon={shown ? EyeOff : Eye}
-          label={shown ? "Hide target" : "Show target"}
-          onClick={() => setShown((s) => !s)}
-          aria-pressed={shown}
+          label="Hold to show target"
+          className="touch-none select-none"
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            show();
+          }}
+          onPointerUp={hide}
+          onPointerCancel={hide}
+          onLostPointerCapture={hide}
+          onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onBlur={hide}
+          onContextMenu={(e) => e.preventDefault()}
         />
       </div>
       <div aria-hidden className="h-0.5 w-16 bg-blood" />
