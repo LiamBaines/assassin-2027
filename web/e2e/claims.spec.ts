@@ -71,9 +71,10 @@ function playerRow(name: string) {
 }
 
 async function openAdminClaims(gameId: string) {
-  await admin.goto(`/admin/games/${gameId}/players`);
+  await admin.goto(`/admin/games/${gameId}/kills`);
   const claim = admin.getByTestId("kill-claim");
   await expect(claim).toHaveCount(1);
+  await expect(admin.getByTestId("kills-badge")).toHaveText(/1/);
   return claim;
 }
 
@@ -88,7 +89,9 @@ test("the victim accepts a claim and is killed without the admin", async () => {
 
   await admin.goto(`/admin/games/${gameId}/players`);
   await expect(playerRow(VICTIM)).toContainText("Dead");
+  await admin.goto(`/admin/games/${gameId}/kills`);
   await expect(admin.getByTestId("kill-claim")).toHaveCount(0);
+  await expect(admin.getByTestId("kills-badge")).toHaveCount(0);
   await expectTarget(killerPage, gameId, inherited);
 });
 
@@ -106,6 +109,8 @@ test("a contested claim stays open until the admin dismisses it", async () => {
   await expect(claim).toContainText("Contested by the victim");
   await claim.getByRole("button", { name: "Dismiss" }).click();
   await expect(admin.getByTestId("kill-claim")).toHaveCount(0);
+  await expect(admin.getByTestId("kills-badge")).toHaveCount(0);
+  await admin.goto(`/admin/games/${gameId}/players`);
   await expect(playerRow(VICTIM)).toContainText("Alive");
 
   await killerPage.goto(`/${gameId}`);
@@ -124,6 +129,7 @@ test("the admin can confirm a contested claim", async () => {
   await claim.getByRole("button", { name: "Confirm kill" }).click();
   await claim.getByRole("button", { name: "Confirm kill" }).last().click();
   await expect(admin.getByTestId("kill-claim")).toHaveCount(0);
+  await admin.goto(`/admin/games/${gameId}/players`);
   await expect(playerRow(VICTIM)).toContainText("Dead");
   await expectTarget(killerPage, gameId, inherited);
 });

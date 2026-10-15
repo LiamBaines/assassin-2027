@@ -89,7 +89,7 @@ test("the kill that leaves one player ends the round, not the game", async () =>
 });
 
 test("the kill list shows the method and the admin can correct it", async () => {
-  await admin.goto(`/admin/games/${gameId}/players`);
+  await admin.goto(`/admin/games/${gameId}/kills`);
   const row = admin.getByTestId("kill-row").filter({ hasText: VICTIM });
   await expect(row.getByTestId("kill-method")).toHaveText("Duel");
 
