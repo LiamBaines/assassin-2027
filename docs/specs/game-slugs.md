@@ -21,7 +21,7 @@ Game URLs like `/games/ccd6ac14-…` are ugly. Games get a name-derived slug (`w
 3. [x] API tests: unit test for the slug generator (collision, reserved, empty); update ITs for `String` ids.
 4. [x] Web: move `app/games/[gameId]/**` → `app/[slug]/**` (reserved top-level routes win in Next). Rename param in admin routes. Delete `lib/uuid.ts` (+ test) and its use in `load-game.ts`, `actions.ts`, `last-view.ts`; update links, `api.ts`, `api-types.ts`, `proxy.ts` auth paths, `safeNextPath` callers.
 5. [x] E2E: update the specs (`full-flow`, `multi-game`, `join-link`, etc.) for the new URLs; keep every `data-testid`.
-6. [ ] Docs: amend ADR 0003 (id in path is now the slug), `docs/architecture.md`, append to `docs/progress.md`; copy this plan to `docs/specs/game-slugs.md`.
+6. [x] Docs: amend ADR 0003 (id in path is now the slug), `docs/architecture.md`, append to `docs/progress.md`; copy this plan to `docs/specs/game-slugs.md`.
 
 ## Verification
 - `./mvnw test`, then `./mvnw verify` (needs Colima/Docker) for ITs.
