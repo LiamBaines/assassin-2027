@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { Leaderboard } from "@/lib/api-types";
-import { LeaderboardTable, roundLabel, viewTabClass } from "./leaderboard";
+import { LeaderboardTable } from "./leaderboard";
+import { RoundSelect } from "./round-select";
 
 /** Total plus one board per round, all fetched up front so switching is instant. */
 export function PlayerLeaderboard({
@@ -20,20 +21,7 @@ export function PlayerLeaderboard({
   const data = round === null ? total : rounds[round];
   return (
     <div className="space-y-4">
-      <div role="group" aria-label="Leaderboard view" className="flex flex-wrap gap-2">
-        {[null, ...total.rounds].map((r) => (
-          <button
-            key={r ?? "total"}
-            type="button"
-            onClick={() => setRound(r)}
-            aria-current={r === round ? "page" : undefined}
-            data-testid="leaderboard-view"
-            className={viewTabClass(r === round)}
-          >
-            {roundLabel(r)}
-          </button>
-        ))}
-      </div>
+      <RoundSelect rounds={total.rounds} value={round} onChange={setRound} />
       <LeaderboardTable data={data} />
     </div>
   );

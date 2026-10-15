@@ -8,7 +8,9 @@ import {
   PLAYERS,
   readJoinLinkPath,
   readRing,
-  selectMethod,
+  type Pair,
+  registerKill,
+  revealTarget,
 } from "./support";
 
 // Round 1 ends with a kill, then the admin starts round 2: a revived player, a late joiner and an unticked player.
@@ -53,15 +55,13 @@ test("round 1 ends with a winner after the kills", async () => {
   for (const name of [victim, dropped]) {
     await admin.goto(`/admin/games/${gameId}/players`);
     const row = playerRow(name);
-    await selectMethod(row);
-    await row.getByRole("button", { name: "Register kill" }).click();
-    await row.getByRole("button", { name: "Register kill" }).last().click();
+    await registerKill(row);
     await expect(playerRow(name)).toContainText("Dead");
   }
 
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  await expect(admin.getByRole("heading", { name: "Round 1 has ended" })).toBeVisible();
-  await expect(admin.getByRole("button", { name: "Shake up" })).toHaveCount(0);
+  await admin.goto(`/admin/games/${gameId}/leaderboard`);
+  await admin.getByRole("button", { name: "Round actions" }).click();
+  await expect(admin.getByRole("menuitem", { name: "Generate ring" })).toBeDisabled();
 });
 
 test("a late joiner waits on the bench", async () => {
@@ -70,15 +70,19 @@ test("a late joiner waits on the bench", async () => {
 });
 
 test("starting round 2 revives, removes the unticked and includes the late joiner", async () => {
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  await admin.getByRole("button", { name: "Start new round" }).click();
+  await admin.goto(`/admin/games/${gameId}/leaderboard`);
+  await admin.getByRole("button", { name: "Round actions" }).click();
+  await admin.getByRole("menuitem", { name: "Start next round" }).click();
   const list = admin.getByTestId("round-players");
   await expect(list.locator("input[type=checkbox]:checked")).toHaveCount(4);
   await list.getByLabel(new RegExp(`^${dropped}`)).uncheck();
   await admin.getByRole("button", { name: "Start round 2" }).click();
-
-  await expect(admin.getByRole("heading", { name: /Round 2, allocation \d+ \(Initial\)/ })).toBeVisible();
-  const ring = await readRing(admin, gameId);
+  // The dialog closes on submit; poll until the new round's ring shows up.
+  let ring: Pair[] = [];
+  await expect(async () => {
+    ring = await readRing(admin, gameId);
+    expect(ring).toHaveLength(3);
+  }).toPass();
   expect(ring.map((p) => p.assassin).sort()).toEqual([victim, survivor, LATE].sort());
 
   await admin.goto(`/admin/games/${gameId}/players`);
@@ -91,6 +95,7 @@ test("players see Round 2, and past round 1", async () => {
   const page = pages.get(victim)!;
   await page.goto(`/games/${gameId}`);
   await expect(page.getByTestId("round-badge")).toHaveText("Round 2");
+  await revealTarget(page);
   await expect(page.getByTestId("target-name")).not.toHaveText("No target yet");
   await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("button", { name: "Past rounds" }).click();
@@ -106,11 +111,9 @@ test("players see Round 2, and past round 1", async () => {
 /** One leaderboard row per player name, read from the page's table. */
 async function readLeaderboard(page: Page, path: string, view: string) {
   await page.goto(path);
-  await page.getByTestId("leaderboard-view").filter({ hasText: new RegExp(`^${view}$`) }).click();
-  await expect(page.getByTestId("leaderboard-view").filter({ hasText: new RegExp(`^${view}$`) })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  const select = page.getByTestId("leaderboard-view");
+  await select.selectOption({ label: view });
+  await expect(select.locator("option:checked")).toHaveText(view);
   const rows = await page.getByTestId("leaderboard-row").evaluateAll((els) =>
     els.map((el) => {
       const text = (id: string) => el.querySelector(`[data-testid="${id}"]`)!.textContent!.trim();
@@ -130,9 +133,7 @@ test("the leaderboard totals points across both rounds", async () => {
   // A kill in round 2: the late joiner dies.
   await admin.goto(`/admin/games/${gameId}/players`);
   const row = playerRow(LATE);
-  await selectMethod(row);
-  await row.getByRole("button", { name: "Register kill" }).click();
-  await row.getByRole("button", { name: "Register kill" }).last().click();
+  await registerKill(row);
   await expect(playerRow(LATE)).toContainText("Dead");
 
   const adminPath = `/admin/games/${gameId}/leaderboard`;

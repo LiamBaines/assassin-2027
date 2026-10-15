@@ -2,17 +2,18 @@ import { History, ShieldCheck, Swords, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionForm, ConfirmSubmit, SubmitButton } from "@/components/action-form";
+import { ActionForm, SubmitButton } from "@/components/action-form";
 import { EventLog } from "@/components/event-log";
-import { KillMethodSelect } from "@/components/kill-method-select";
+import { LastViewRecorder } from "@/components/last-view-recorder";
 import { PlayerLeaderboard } from "@/components/player-leaderboard";
+import { RegisterKill } from "@/components/register-kill";
 import { SignOutButton } from "@/components/sign-out-button";
+import { TargetReveal } from "@/components/target-reveal";
 import {
   Alert,
   EmptyState,
   StatusChip,
   dangerButtonClass,
-  primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/ui";
 import {
@@ -112,16 +113,10 @@ export default async function GamePage(props: {
           </p>
         ) : assignment ? (
           <>
-            <p
-              data-testid="target-name"
-              className="font-display text-6xl leading-none font-bold break-words"
-            >
-              {assignment.target.displayName}
-            </p>
-            <div aria-hidden className="h-0.5 w-16 bg-blood" />
-            <p className="text-sm text-muted">
-              Assigned {formatDateTime(assignment.assignedAt)}
-            </p>
+            <TargetReveal
+              name={assignment.target.displayName}
+              assignedAt={formatDateTime(assignment.assignedAt)}
+            />
           </>
         ) : (
           <div data-testid="target-name" className="font-display text-3xl font-semibold">
@@ -149,18 +144,12 @@ export default async function GamePage(props: {
               <SubmitButton className={secondaryButtonClass}>Withdraw claim</SubmitButton>
             </ActionForm>
           ) : (
-            <ActionForm
+            <RegisterKill
+              labelled
               action={fileClaimAction.bind(null, gameId)}
-              className="flex flex-wrap items-center gap-2"
-            >
-              <KillMethodSelect methods={killMethods} />
-              <ConfirmSubmit
-                label="Register kill"
-                confirmLabel="Yes, I killed them"
-                message={`Did you kill ${assignment.target.displayName}?`}
-                className={primaryButtonClass}
-              />
-            </ActionForm>
+              methods={killMethods}
+              message="Choose how you killed your target."
+            />
           )}
         </section>
       )}
@@ -240,6 +229,8 @@ export default async function GamePage(props: {
   const initialView = VIEWS.find((v) => v === requested) ?? "target";
 
   return (
+    <>
+      <LastViewRecorder area="player" gameId={game.id} />
     <GameShell
       gameName={game.name}
       playerName={player.displayName}
@@ -274,5 +265,6 @@ export default async function GamePage(props: {
       }
       menuFooter={<SignOutButton />}
     />
+    </>
   );
 }

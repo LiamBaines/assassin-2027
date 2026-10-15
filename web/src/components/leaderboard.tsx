@@ -1,20 +1,11 @@
-import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { EmptyState, StatusChip } from "@/components/ui";
 import type { Leaderboard as LeaderboardData } from "@/lib/api-types";
-import { leaderboardHref } from "@/lib/leaderboard";
 import { rosterStatusView } from "@/lib/player-status";
-
-export const viewTabClass = (current: boolean) =>
-  `rounded-control border px-3 py-1.5 text-sm ${
-    current
-      ? "border-bone bg-bone font-medium text-ink"
-      : "border-line text-muted hover:border-muted hover:text-bone"
-  }`;
 
 export const roundLabel = (r: number | null) => (r === null ? "Total" : `Round ${r}`);
 
-/** Ranked table; the caller supplies the Total / Round N selector. */
+/** Ranked table; the caller supplies the round selector. */
 export function LeaderboardTable({ data }: { data: LeaderboardData }) {
   if (data.entries.length === 0) {
     return (
@@ -60,35 +51,6 @@ export function LeaderboardTable({ data }: { data: LeaderboardData }) {
           })}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-/** Link-based selector (admin pages); the player view switches client-side instead. */
-export function Leaderboard({
-  data,
-  basePath,
-}: {
-  data: LeaderboardData;
-  basePath: string;
-}) {
-  const views = [null, ...data.rounds];
-  return (
-    <div className="space-y-4">
-      <nav aria-label="Leaderboard view" className="flex flex-wrap gap-2">
-        {views.map((r) => (
-          <Link
-            key={r ?? "total"}
-            href={leaderboardHref(basePath, r)}
-            aria-current={r === data.roundNo ? "page" : undefined}
-            data-testid="leaderboard-view"
-            className={viewTabClass(r === data.roundNo)}
-          >
-            {roundLabel(r)}
-          </Link>
-        ))}
-      </nav>
-      <LeaderboardTable data={data} />
     </div>
   );
 }

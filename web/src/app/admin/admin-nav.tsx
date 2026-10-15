@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  History,
-  LayoutList,
-  Menu,
-  Network,
-  ScrollText,
-  Trophy,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { LayoutList, Menu, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -18,22 +9,7 @@ import { IconButton } from "@/components/ui";
 
 type Item = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
-function useNavItems(): { primary: Item[]; game: Item[] } {
-  const { gameId } = useParams<{ gameId?: string }>();
-  const primary: Item[] = [{ href: "/admin", label: "Games", icon: LayoutList, exact: true }];
-  if (!gameId) return { primary, game: [] };
-  const base = `/admin/games/${encodeURIComponent(gameId)}`;
-  return {
-    primary,
-    game: [
-      { href: base, label: "Details", icon: ScrollText, exact: true },
-      { href: `${base}/players`, label: "Players", icon: Users },
-      { href: `${base}/rings`, label: "Rings", icon: Network },
-      { href: `${base}/leaderboard`, label: "Leaderboard", icon: Trophy },
-      { href: `${base}/log`, label: "Log", icon: History },
-    ],
-  };
-}
+const ITEMS: Item[] = [{ href: "/admin", label: "Games", icon: LayoutList, exact: true }];
 
 function NavLink({ item, onNavigate }: { item: Item; onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -55,22 +31,11 @@ function NavLink({ item, onNavigate }: { item: Item; onNavigate?: () => void }) 
 }
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
-  const { primary, game } = useNavItems();
   return (
-    <nav aria-label="Admin" className="space-y-4">
-      <div className="space-y-1">
-        {primary.map((i) => (
-          <NavLink key={i.href} item={i} onNavigate={onNavigate} />
-        ))}
-      </div>
-      {game.length > 0 && (
-        <div className="space-y-1 border-t border-line pt-4">
-          <p className="px-3 pb-1 text-xs text-muted">This game</p>
-          {game.map((i) => (
-            <NavLink key={i.href} item={i} onNavigate={onNavigate} />
-          ))}
-        </div>
-      )}
+    <nav aria-label="Admin" className="space-y-1">
+      {ITEMS.map((i) => (
+        <NavLink key={i.href} item={i} onNavigate={onNavigate} />
+      ))}
     </nav>
   );
 }
@@ -87,6 +52,15 @@ export function AdminChrome({
   footer: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const { gameId } = useParams<{ gameId?: string }>();
+  // Game screens bring their own top bar and tabs; the sidebar is for the games list.
+  if (gameId) {
+    return (
+      <main className="min-w-0 flex-1 px-4 py-4 md:px-8 md:py-6">
+        <div className="mx-auto w-full max-w-6xl">{children}</div>
+      </main>
+    );
+  }
   return (
     <div className="flex flex-1 flex-col md:flex-row">
       <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-surface md:flex">

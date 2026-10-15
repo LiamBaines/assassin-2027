@@ -2,6 +2,7 @@ import { Gamepad2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LastViewRecorder } from "@/components/last-view-recorder";
 import { SignOutButton } from "@/components/sign-out-button";
 import { requireAdmin } from "@/lib/api";
 import { AdminChrome } from "./admin-nav";
@@ -29,6 +30,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </>
       }
     >
+      <LastViewRecorder area="admin" />
       {children}
     </AdminChrome>
   );

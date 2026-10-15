@@ -16,7 +16,7 @@ const VIEW_META: Record<GameView, { label: string; icon: LucideIcon }> = {
 };
 
 /** The bottom bar holds the frequent views; the rest live in the menu. */
-const BAR_VIEWS: GameView[] = ["target", "players", "leaderboard"];
+const BAR_VIEWS: GameView[] = ["target", "players", "leaderboard", "log"];
 
 /**
  * Client chrome for the player game page. Each view's content is rendered on

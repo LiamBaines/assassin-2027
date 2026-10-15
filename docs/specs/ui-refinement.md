@@ -16,12 +16,12 @@ Follow-up to `ui-overhaul.md`. Goals: professional, compact, dense admin, clear 
 
 ## Tasks (one at a time; stop after each)
 1. [x] Branch `ui-refinement`. Primitives: `font-mono` token, `JoinCode` component, `Select` dropdown, `InlineEdit` (pencil -> input with Enter/Escape, save/cancel, inline error), `RelativeTime` (short "2d ago", full date-time `title`/tooltip after short hover delay), clickable-row helper. Update CLAUDE.md UI rules.
-2. [ ] Cookies + root redirect: record last area/game, rewrite `app/page.tsx`, handle stale game ids; unit-test the resolver in `lib/`.
-3. [ ] Admin games list: whole-row click (keyboard-accessible, real link semantics), drop "at <date>" for finished games, relative Created, mono join codes, remove right-hand form; "New game" button top right opens `Dialog` with name/join code fields.
-4. [ ] Admin game shell: top bar + tabs (`game-nav.tsx`, `layout.tsx`), remove sidebar on game routes, inline-editable name and join code in the header, default route -> Leaderboard (redirect from `/admin/games/{id}`), delete Details and Rings pages.
-5. [ ] Leaderboard: round dropdown (admin and player), "Round actions" menu with shakeup/next round/generate ring dialogs, state-aware enable/disable.
-6. [ ] Admin Players tab: kill method select appears only after "Register kill" is clicked (inline popover/row expand with confirm/cancel); denser table. Settings tab content per decisions.
-7. [ ] Player: target hidden with eye toggle; same click-to-reveal kill-method flow; log reachable; round selectors as dropdowns; mono join code.
+2. [x] Cookies + root redirect: record last area/game, rewrite `app/page.tsx`, handle stale game ids; unit-test the resolver in `lib/`.
+3. [x] Admin games list: whole-row click (keyboard-accessible, real link semantics), drop "at <date>" for finished games, relative Created, mono join codes, remove right-hand form; "New game" button top right opens `Dialog` with name/join code fields.
+4. [x] Admin game shell: top bar + tabs (`game-nav.tsx`, `layout.tsx`), remove sidebar on game routes, inline-editable name and join code in the header, default route -> Leaderboard (redirect from `/admin/games/{id}`), delete Details and Rings pages.
+5. [x] Leaderboard: round dropdown (admin and player), "Round actions" menu with shakeup/next round/generate ring dialogs, state-aware enable/disable.
+6. [x] Admin Players tab: kill method select appears only after "Register kill" is clicked (inline popover/row expand with confirm/cancel); denser table. Settings tab content per decisions.
+7. [x] Player: target hidden with eye toggle; same click-to-reveal kill-method flow; log reachable; round selectors as dropdowns; mono join code.
 8. [ ] Update e2e specs for navigation changes; `pnpm lint`, `pnpm typecheck`, `pnpm test`, then `./scripts/e2e.sh` once; Playwright screenshots (390px player, 1440px admin) to critique; append `docs/progress.md`; squash-merge.
 
 ## Critical files

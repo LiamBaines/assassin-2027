@@ -2,7 +2,6 @@ import { Clock, Flag, Play, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { StatusChip, inputClass, type StatusTone } from "@/components/ui";
 import type { AdminGame, GameStatus } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
 
 /** Name and join code inputs, shared by the create and edit forms. */
 export function GameFields({ game }: { game?: AdminGame }) {
@@ -30,7 +29,7 @@ export function GameFields({ game }: { game?: AdminGame }) {
           title="6–16 letters or numbers"
           autoComplete="off"
           spellCheck={false}
-          className={`${inputClass} font-display text-lg tracking-widest uppercase`}
+          className={`${inputClass} font-mono text-base tracking-wide uppercase`}
         />
       </label>
     </div>
@@ -43,16 +42,12 @@ const STATUS_VIEW: Record<GameStatus, { label: string; tone: StatusTone; icon: L
   FINISHED: { label: "Finished", tone: "neutral", icon: Flag },
 };
 
-/** Game status chip; a finished game shows when it finished. */
+/** Game status chip. */
 export function GameStatusBadge({ game }: { game: AdminGame }) {
   const view = STATUS_VIEW[game.status];
-  const label =
-    game.status === "FINISHED" && game.finishedAt
-      ? `Finished ${formatDateTime(game.finishedAt)}`
-      : view.label;
   return (
     <StatusChip data-testid="game-status" tone={view.tone} icon={view.icon}>
-      {label}
+      {view.label}
     </StatusChip>
   );
 }

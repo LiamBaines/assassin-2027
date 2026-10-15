@@ -83,42 +83,45 @@ export async function pageFor(browser: Browser, user: E2eUser): Promise<Page> {
  */
 export async function createGame(admin: Page, name: string, joinCode: string): Promise<string> {
   await admin.goto("/admin");
+  await admin.getByRole("button", { name: "New game" }).click();
   await admin.getByLabel("Name").fill(name);
   await admin.getByLabel("Join code").fill(joinCode);
   await admin.getByRole("button", { name: "Create game" }).click();
-  await admin.waitForURL(/\/admin\/games\/[^/]+$/);
+  await admin.waitForURL(/\/admin\/games\/[^/]+\/leaderboard$/);
   await expect(admin.getByRole("heading", { level: 1, name })).toBeVisible();
-  return decodeURIComponent(new URL(admin.url()).pathname.split("/").pop()!);
+  return decodeURIComponent(new URL(admin.url()).pathname.split("/")[3]);
 }
 
 /** The game's join link as shown to the admin, as a same-origin path. */
 export async function readJoinLinkPath(admin: Page, gameId: string): Promise<string> {
-  await admin.goto(`/admin/games/${gameId}`);
+  await admin.goto(`/admin/games/${gameId}/settings`);
   const link = await admin.getByTestId("join-link").inputValue();
   return new URL(link).pathname;
 }
 
 export type Pair = { assassin: string; target: string };
 
-/** The current ring as shown on the game's admin rings page, in display order. */
+/** The current ring as shown by the "Current target" column of the admin players tab. */
 export async function readRing(admin: Page, gameId: string): Promise<Pair[]> {
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  const rows = admin.getByTestId("ring-pair");
+  await admin.goto(`/admin/games/${gameId}/players`);
+  const rows = admin.getByTestId("player-row");
   await expect(rows.first()).toBeVisible();
-  return rows.evaluateAll((els) =>
-    els.map((el) => ({
-      assassin: el.querySelector('[data-role="assassin"]')!.textContent!.trim(),
-      target: el.querySelector('[data-role="target"]')!.textContent!.trim(),
-    })),
+  const pairs = await rows.evaluateAll((els) =>
+    els.map((el) => {
+      const cells = el.querySelectorAll("td");
+      return { assassin: cells[0].textContent!.trim(), target: cells[3].textContent!.trim() };
+    }),
   );
+  return pairs.filter((p) => p.target !== "—");
 }
 
-/** Generates the first ring of a game from its admin rings page. */
+/** Generates the first ring of a game from the Round actions menu on the leaderboard tab. */
 export async function generateRing(admin: Page, gameId: string): Promise<void> {
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  await admin.getByRole("button", { name: "Generate ring" }).click();
+  await admin.goto(`/admin/games/${gameId}/leaderboard`);
+  await admin.getByRole("button", { name: "Round actions" }).click();
+  await admin.getByRole("menuitem", { name: "Generate ring" }).click();
   await admin.getByRole("button", { name: "Yes, generate" }).click();
-  await expect(admin.getByRole("heading", { name: /allocation 1 \(Initial\)/ })).toBeVisible();
+  await expect(admin.getByTestId("game-status")).toHaveText("Active");
 }
 
 /** Asserts the target a player sees on their page for one game. */
@@ -127,8 +130,26 @@ export async function selectMethod(scope: Page | Locator, name = "Clamp", points
   await scope.getByLabel("Kill method").selectOption({ label: `${name} (${points} pts)` });
 }
 
+/** Registers a kill from a row or player page: open the form, pick a method, confirm. */
+export async function registerKill(scope: Page | Locator, name = "Clamp", points = 10): Promise<void> {
+  await scope.getByRole("button", { name: "Register kill" }).click();
+  await selectMethod(scope, name, points);
+  await scope.getByRole("button", { name: "Register kill" }).click();
+}
+
+/** Targets are hidden on load; click the eye until the name shows (waits for hydration). */
+export async function revealTarget(page: Page): Promise<void> {
+  const toggle = page.getByTestId("target-toggle");
+  if ((await toggle.count()) === 0) return;
+  await expect(async () => {
+    if ((await page.getByTestId("target-name-hidden").count()) > 0) await toggle.click();
+    await expect(page.getByTestId("target-name")).toBeVisible({ timeout: 1000 });
+  }).toPass();
+}
+
 export async function expectTarget(page: Page, gameId: string, name: string): Promise<void> {
   await page.goto(`/games/${gameId}`);
+  await revealTarget(page);
   await expect(page.getByTestId("target-name")).toHaveText(name);
 }
 
