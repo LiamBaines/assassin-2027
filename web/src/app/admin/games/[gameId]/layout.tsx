@@ -29,7 +29,7 @@ export default async function AdminGameLayout({
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <GameTitle gameId={game.id} name={game.name} joinCode={game.joinCode} />
+          <GameTitle name={game.name} joinCode={game.joinCode} />
           <GameStatusBadge game={game} />
         </div>
         <GameNav gameId={game.id} />

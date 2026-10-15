@@ -51,7 +51,7 @@ public class AdminGameController {
     @PatchMapping("/{gameId}")
     public GameResponse update(@PathVariable String gameId, @Valid @RequestBody UpdateGameRequest request) {
         return GameResponse.from(gameService.update(
-                gameId, request.name(), request.joinCode(), request.signupsOpen(), request.status()));
+                gameId, request.signupsOpen(), request.status()));
     }
 
     public record CreateGameRequest(
@@ -64,17 +64,7 @@ public class AdminGameController {
         }
     }
 
-    public record UpdateGameRequest(
-            @Size(min = 1, max = 100) String name,
-            @Pattern(regexp = JOIN_CODE_PATTERN, message = JOIN_CODE_MESSAGE) String joinCode,
-            Boolean signupsOpen,
-            GameStatus status) {
-
-        public UpdateGameRequest {
-            name = strip(name);
-            joinCode = Game.normalizeJoinCode(joinCode);
-        }
-    }
+    public record UpdateGameRequest(Boolean signupsOpen, GameStatus status) {}
 
     public record GameResponse(String id, String name, String joinCode, GameStatus status, boolean signupsOpen,
             Instant createdAt, Instant startedAt, Instant finishedAt, long playerCount) {

@@ -101,19 +101,6 @@ export async function createGameAction(
   redirect(`/admin/games/${encodeURIComponent(game.id)}`);
 }
 
-export async function editGameAction(
-  gameId: string,
-  fields: { name: string; joinCode: string },
-): Promise<ActionResult> {
-  await requireAdmin();
-  const formData = new FormData();
-  formData.set("name", fields.name);
-  formData.set("joinCode", fields.joinCode);
-  const parsed = readGameFields(formData);
-  if ("error" in parsed) return { error: parsed.error };
-  return run(() => updateGame(gameId, parsed));
-}
-
 export async function setSignupsAction(
   gameId: string,
   _prev: ActionResult,

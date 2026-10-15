@@ -234,16 +234,27 @@ class AdminGameIT extends IntegrationTest {
     }
 
     @Test
+    void patchIgnoresNameAndJoinCode() throws Exception {
+        String id = createGame("One", "AAAAAA");
+        update(id, """
+                {"name": "Renamed", "joinCode": "BBBBBB"}
+                """)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("One"))
+                .andExpect(jsonPath("$.joinCode").value("AAAAAA"));
+    }
+
+    @Test
     void patchEditsFields() throws Exception {
         String id = createGame("One", "AAAAAA");
         insertPlayer(id, "alice@example.com", "Alice", "ALIVE");
         update(id, """
-                {"name": "Renamed", "joinCode": "bbbbbb", "signupsOpen": false}
+                {"signupsOpen": false}
                 """)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
-                .andExpect(jsonPath("$.name").value("Renamed"))
-                .andExpect(jsonPath("$.joinCode").value("BBBBBB"))
+                .andExpect(jsonPath("$.name").value("One"))
+                .andExpect(jsonPath("$.joinCode").value("AAAAAA"))
                 .andExpect(jsonPath("$.signupsOpen").value(false))
                 .andExpect(jsonPath("$.status").value("SETUP"))
                 .andExpect(jsonPath("$.playerCount").value(1));
@@ -254,40 +265,9 @@ class AdminGameIT extends IntegrationTest {
         String one = createGame("One", "AAAAAA");
         String two = createGame("Two", "BBBBBB");
         update(two, """
-                {"name": "Renamed"}
+                {"signupsOpen": false}
                 """).andExpect(status().isOk());
-        mvc.perform(asAdmin(get("/api/admin/games/" + one))).andExpect(jsonPath("$.name").value("One"));
-    }
-
-    @Test
-    void patchKeepingItsOwnCodeIsFine() throws Exception {
-        String id = createGame("One", "AAAAAA");
-        update(id, """
-                {"joinCode": "aaaaaa"}
-                """).andExpect(status().isOk()).andExpect(jsonPath("$.joinCode").value("AAAAAA"));
-    }
-
-    @Test
-    void patchToACodeInUseIsJoinCodeTaken() throws Exception {
-        createGame("One", "AAAAAA");
-        String two = createGame("Two", "BBBBBB");
-        update(two, """
-                {"joinCode": "AAAAAA"}
-                """)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("JOIN_CODE_TAKEN"));
-        assertThat(jdbc.queryForObject("select join_code from game.game where id = ?", String.class, two))
-                .isEqualTo("BBBBBB");
-    }
-
-    @Test
-    void patchToAFinishedGamesCodeIsAllowed() throws Exception {
-        String one = createGame("One", "AAAAAA");
-        finish(one);
-        String two = createGame("Two", "BBBBBB");
-        update(two, """
-                {"joinCode": "AAAAAA"}
-                """).andExpect(status().isOk()).andExpect(jsonPath("$.joinCode").value("AAAAAA"));
+        mvc.perform(asAdmin(get("/api/admin/games/" + one))).andExpect(jsonPath("$.signupsOpen").value(true));
     }
 
     @Test

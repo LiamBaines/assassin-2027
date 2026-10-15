@@ -108,20 +108,10 @@ public class GameService {
 
     /** Applies the non-null fields. {@code status} may only be FINISHED. A FINISHED game can't be changed. */
     @Transactional
-    public GameWithCount update(String gameId, String name, String joinCode, Boolean signupsOpen, GameStatus status) {
+    public GameWithCount update(String gameId, Boolean signupsOpen, GameStatus status) {
         Game game = lockForChange(gameId);
         if (status != null && status != GameStatus.FINISHED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS", "A game's status can only be set to FINISHED.");
-        }
-        if (joinCode != null && !joinCode.equals(game.getJoinCode())
-                && games.findLiveByJoinCode(joinCode).isPresent()) {
-            throw joinCodeTaken();
-        }
-        if (name != null) {
-            game.rename(name);
-        }
-        if (joinCode != null) {
-            game.changeJoinCode(joinCode);
         }
         if (signupsOpen != null) {
             game.setSignupsOpen(signupsOpen);
@@ -129,11 +119,7 @@ public class GameService {
         if (status == GameStatus.FINISHED) {
             game.finish(Instant.now());
         }
-        try {
-            game = games.saveAndFlush(game);
-        } catch (DataIntegrityViolationException e) {
-            throw translateJoinCodeRace(e);
-        }
+        game = games.saveAndFlush(game);
         return new GameWithCount(game, players.countByGameId(game.getId()));
     }
 
