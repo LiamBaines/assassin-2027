@@ -86,7 +86,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
 | GET | `/api/me/games/{gameId}/target` | user | `{target:{displayName}, assignedAt}` or 404 `NO_TARGET` |
 | GET | `/api/me/games/{gameId}/players` | user | Roster of a started game, sorted by display name: `{players:[{displayName, status}]}`, status `ALIVE`/`DEAD`/`REMOVED`/`WAITING` (`WAITING` = alive with no active assignment, computed). 404 `NOT_IN_GAME` (non-member or unknown game), 404 `GAME_NOT_STARTED` (SETUP) |
 | GET/POST | `/api/admin/games` | admin | List every game, newest first, as `{id, name, joinCode, status, signupsOpen, createdAt, startedAt, finishedAt, playerCount}`, or create one `{name, joinCode}` (`JOIN_CODE_TAKEN`) |
-| GET/PATCH | `/api/admin/games/{gameId}` | admin | Read, or edit name, code (`JOIN_CODE_TAKEN`), signupsOpen, or FINISHED (`INVALID_STATUS` for any other status) |
+| GET/PATCH | `/api/admin/games/{gameId}` | admin | Read, or edit signupsOpen or FINISHED (name and join code are fixed at creation; `JOIN_CODE_TAKEN` only on create) (`INVALID_STATUS` for any other status) |
 | GET | `/api/admin/games/{gameId}/players` | admin | Includes each player's current target |
 | PATCH | `/api/admin/games/{gameId}/players/{playerId}` | admin | `{status}`: REMOVED or ALIVE. Removing a player in the ring splices them out (see Decisions). Errors: `INVALID_STATUS`, `PLAYER_NOT_FOUND` |
 | POST | `/api/admin/games/{gameId}/kills` | admin | `{victimId}`. 201 `{killId, killer, victim, newTarget, roundEnded}`; `newTarget` is null when the kill ended the round (the game stays ACTIVE). Errors: `GAME_NOT_STARTED`, `GAME_FINISHED`, `PLAYER_NOT_FOUND`, `PLAYER_NOT_ALIVE`, `NOT_IN_RING` |

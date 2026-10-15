@@ -147,8 +147,6 @@ export type RoundSummary = {
 export type JoinRequest = { displayName: string; joinCode: string };
 export type CreateGameRequest = { name: string; joinCode: string };
 export type UpdateGameRequest = {
-  name?: string;
-  joinCode?: string;
   signupsOpen?: boolean;
   status?: "FINISHED";
 };

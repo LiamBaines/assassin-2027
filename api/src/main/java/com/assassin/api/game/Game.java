@@ -59,14 +59,6 @@ public class Game {
         return code == null ? null : code.strip().toUpperCase(Locale.ROOT);
     }
 
-    public void rename(String name) {
-        this.name = name;
-    }
-
-    public void changeJoinCode(String joinCode) {
-        this.joinCode = joinCode;
-    }
-
     public void setSignupsOpen(boolean signupsOpen) {
         this.signupsOpen = signupsOpen;
     }
