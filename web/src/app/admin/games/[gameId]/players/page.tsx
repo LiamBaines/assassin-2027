@@ -1,10 +1,9 @@
-import { Users, Check, Save, UserMinus, UserPlus, X } from "lucide-react";
+import { Users, UserMinus, UserPlus } from "lucide-react";
 import {
   ActionForm,
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
-import { KillMethodSelect } from "@/components/kill-method-select";
 import { RegisterKill } from "@/components/register-kill";
 import {
   EmptyState,
@@ -17,20 +16,11 @@ import { rosterStatusView } from "@/lib/player-status";
 import {
   getAdminKillMethods,
   getAdminPlayers,
-  listKills,
-  listOpenKillClaims,
   type AdminPlayer,
   type KillMethod,
 } from "@/lib/api";
+import { registerKillMessage, removePlayerMessage } from "@/lib/format";
 import {
-  formatDateTime,
-  registerKillMessage,
-  removePlayerMessage,
-} from "@/lib/format";
-import {
-  changeKillMethodAction,
-  confirmClaimAction,
-  dismissClaimAction,
   registerKillAction,
   setPlayerStatusAction,
 } from "../../../actions";
@@ -42,11 +32,9 @@ export default async function AdminPlayersPage(props: {
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(props.params);
-  const [players, claims, allMethods, kills] = await Promise.all([
+  const [players, allMethods] = await Promise.all([
     getAdminPlayers(game.id),
-    listOpenKillClaims(game.id),
     getAdminKillMethods(game.id),
-    listKills(game.id),
   ]);
   const enabledMethods = allMethods.filter((m) => m.enabled);
   const editable = game.status !== "FINISHED";
@@ -63,99 +51,6 @@ export default async function AdminPlayersPage(props: {
           {players.length} registered, {alive} alive
         </p>
       </div>
-      {claims.length > 0 && (
-        <Panel className="space-y-3">
-          <h3 className="font-semibold" data-testid="kill-claims-heading">
-            Kill claims
-          </h3>
-          <ul className="divide-y divide-line">
-            {claims.map((c) => (
-              <li
-                key={c.id}
-                data-testid="kill-claim"
-                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
-              >
-                <div>
-                  <p>
-                    <span className="font-medium">{c.killerName}</span> says
-                    they killed{" "}
-                    <span className="font-medium">{c.victimName}</span> with{" "}
-                    <span data-testid="claim-method">{c.killMethod.name}</span>
-                  </p>
-                  <p className="text-muted">
-                    {c.status === "CONTESTED"
-                      ? "Contested by the victim"
-                      : "Waiting for the victim"}{" "}
-                    · filed {formatDateTime(c.createdAt)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <ActionForm
-                    action={confirmClaimAction.bind(null, game.id, c.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <ConfirmSubmit
-                      label="Confirm kill"
-                      confirmLabel="Confirm kill"
-                      icon={<Check {...ICON} />}
-                      iconOnly
-                      message={`Confirm that ${c.killerName} killed ${c.victimName}? This removes ${c.victimName} from the ring.`}
-                      className="!text-alive"
-                      confirmClassName={dangerButtonClass}
-                    />
-                  </ActionForm>
-                  <ActionForm
-                    action={dismissClaimAction.bind(null, game.id, c.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <SubmitButton icon={<X {...ICON} />} iconOnly pendingLabel="Dismissing…">
-                      Dismiss
-                    </SubmitButton>
-                  </ActionForm>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
-      {kills.length > 0 && (
-        <Panel className="space-y-3">
-          <h3 className="font-semibold">Kills</h3>
-          <ul className="divide-y divide-line">
-            {kills.map((k) => (
-              <li
-                key={k.killId}
-                data-testid="kill-row"
-                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
-              >
-                <p>
-                  <span className="font-medium">{k.killer.displayName}</span>{" "}
-                  killed{" "}
-                  <span className="font-medium">{k.victim.displayName}</span>{" "}
-                  with <span data-testid="kill-method">{k.killMethod.name}</span>{" "}
-                  <span className="text-muted">
-                    · {formatDateTime(k.createdAt)}
-                  </span>
-                </p>
-                {editable && (
-                  <ActionForm
-                    action={changeKillMethodAction.bind(null, game.id, k.killId)}
-                    className="flex flex-wrap items-center gap-2"
-                  >
-                    <KillMethodSelect
-                      methods={enabledMethods}
-                      defaultValue={k.killMethod.id}
-                    />
-                    <SubmitButton icon={<Save {...ICON} />} iconOnly pendingLabel="Saving…">
-                      Change method
-                    </SubmitButton>
-                  </ActionForm>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
       <Panel flush className="overflow-x-auto">
         {players.length === 0 ? (
           <div className="px-5">

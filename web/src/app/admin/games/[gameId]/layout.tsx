@@ -1,6 +1,7 @@
 import { ArrowLeft, Gamepad2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { listOpenKillClaims } from "@/lib/api";
 import { GameStatusBadge } from "../../game-fields";
 import { GameNav } from "./game-nav";
 import { GameTitle } from "./game-title";
@@ -14,6 +15,7 @@ export default async function AdminGameLayout({
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(params);
+  const openClaims = (await listOpenKillClaims(game.id)).length;
 
   return (
     <div className="space-y-6">
@@ -32,7 +34,7 @@ export default async function AdminGameLayout({
           <GameTitle gameId={game.id} name={game.name} joinCode={game.joinCode} />
           <GameStatusBadge game={game} />
         </div>
-        <GameNav gameId={game.id} />
+        <GameNav gameId={game.id} openClaims={openClaims} />
       </div>
       {children}
     </div>

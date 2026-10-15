@@ -4,14 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /** Section tabs for one game. */
-export function GameNav({ gameId }: { gameId: string }) {
+export function GameNav({
+  gameId,
+  openClaims = 0,
+}: {
+  gameId: string;
+  openClaims?: number;
+}) {
   const pathname = usePathname();
   const base = `/admin/games/${encodeURIComponent(gameId)}`;
   const items = [
-    { href: `${base}/leaderboard`, label: "Leaderboard" },
-    { href: `${base}/players`, label: "Players" },
-    { href: `${base}/settings`, label: "Settings" },
-    { href: `${base}/log`, label: "Log" },
+    { href: `${base}/leaderboard`, label: "Leaderboard", badge: 0 },
+    { href: `${base}/players`, label: "Players", badge: 0 },
+    { href: `${base}/kills`, label: "Kills", badge: openClaims },
+    { href: `${base}/settings`, label: "Settings", badge: 0 },
+    { href: `${base}/log`, label: "Log", badge: 0 },
   ];
 
   return (
@@ -33,6 +40,17 @@ export function GameNav({ gameId }: { gameId: string }) {
             }`}
           >
             {item.label}
+            {item.badge > 0 && (
+              <span
+                data-testid="kills-badge"
+                className="tabular ml-2 inline-block min-w-5 rounded-full bg-blood px-1.5 text-center text-xs font-medium text-bone"
+              >
+                <span aria-hidden>{item.badge}</span>
+                <span className="sr-only">
+                  {item.badge} unresolved kill {item.badge === 1 ? "claim" : "claims"}
+                </span>
+              </span>
+            )}
           </Link>
         );
       })}
