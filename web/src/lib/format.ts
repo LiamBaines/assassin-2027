@@ -32,3 +32,23 @@ export function removePlayerMessage(player: AdminPlayer): string {
     ? `${question} Their assassin will inherit their target, ${player.currentTarget.displayName}.`
     : question;
 }
+
+/** Short relative age such as "5m ago" or "2d ago". Pair with the full date-time as a tooltip. */
+export function formatRelative(iso: string | null | undefined, now: number = Date.now()): string {
+  if (!iso) return "—";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "—";
+  const seconds = Math.floor((now - then) / 1000);
+  if (seconds < 60) return "just now";
+  const units: [string, number][] = [
+    ["y", 365 * 86400],
+    ["mo", 30 * 86400],
+    ["d", 86400],
+    ["h", 3600],
+    ["m", 60],
+  ];
+  for (const [unit, size] of units) {
+    if (seconds >= size) return `${Math.floor(seconds / size)}${unit} ago`;
+  }
+  return "just now";
+}

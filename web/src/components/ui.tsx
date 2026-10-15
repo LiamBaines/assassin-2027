@@ -1,6 +1,7 @@
-import { AlertTriangle, Info, ShieldCheck, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ChevronDown, Info, ShieldCheck, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import { formatDateTime, formatRelative } from "@/lib/format";
 
 /** Mobile-first single-column page used by the player views. */
 export function PlayerShell({
@@ -175,3 +176,48 @@ export const secondaryButtonClass =
 
 export const dangerButtonClass =
   "inline-flex items-center justify-center gap-2 rounded-control border border-blood px-4 py-2 text-sm font-medium text-bone hover:bg-blood/20 disabled:opacity-60";
+
+/** Join codes are the one place monospace is used. */
+export function JoinCode({ code, className = "" }: { code: string; className?: string }) {
+  return <span className={`font-mono tracking-wide ${className}`}>{code}</span>;
+}
+
+/** Short relative age ("2d ago"); the native tooltip shows the full date-time after the browser's hover delay. */
+export function RelativeTime({ iso, className = "" }: { iso: string | null | undefined; className?: string }) {
+  if (!iso) return <span className={className}>—</span>;
+  return (
+    <time dateTime={iso} title={formatDateTime(iso)} className={className}>
+      {formatRelative(iso)}
+    </time>
+  );
+}
+
+/** Styled native select: keyboard and screen-reader accessible for free. */
+export function Select({
+  className = "",
+  children,
+  ...rest
+}: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <span className="relative inline-flex">
+      <select
+        {...rest}
+        className={`w-full appearance-none rounded-control border border-line bg-raised py-2 pr-8 pl-3 text-sm text-bone hover:border-muted disabled:opacity-60 ${className}`}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted"
+      />
+    </span>
+  );
+}
+
+/**
+ * Whole-row click that keeps real link semantics: put `rowLinkClass` on the
+ * row's primary <Link> and `clickableRowClass` on the <tr>/<li>. The link's
+ * ::after stretches over the row, so middle-click, focus and Enter all work.
+ */
+export const clickableRowClass = "relative hover:bg-raised focus-within:bg-raised";
+export const rowLinkClass = "after:absolute after:inset-0 after:content-['']";
