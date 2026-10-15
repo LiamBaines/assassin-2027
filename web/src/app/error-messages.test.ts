@@ -37,7 +37,6 @@ const {
   finishGameAction,
   registerKillAction,
   setPlayerStatusAction,
-  setSignupsAction,
   shuffleRingAction,
   editGameAction,
 } = await import("./admin/actions");
@@ -168,21 +167,6 @@ describe("admin action error messages", () => {
     expect(redirect).toHaveBeenCalledWith("/admin/games/g%202");
   });
 
-  it.each([
-    ["update", () => editGameAction("nope", { name: "Spring", joinCode: "SPRING26" })],
-    ["signups", () => setSignupsAction("../x", {}, form({ signupsOpen: "true" }))],
-    ["finish", () => finishGameAction("")],
-    ["player status", () => setPlayerStatusAction("g1", {}, form({ playerId: PLAYER, status: "ALIVE" }))],
-    ["shuffle", () => shuffleRingAction(`${GAME}/x`, {}, form({ expectedCurrentRoundNo: "" }))],
-  ])("rejects a malformed game id for %s without calling the API", async (_name, action) => {
-    const result = await action();
-    expect(result).toEqual({ error: "Invalid request." });
-    expect(requireAdmin).toHaveBeenCalled();
-    expect(updateGame).not.toHaveBeenCalled();
-    expect(setPlayerStatus).not.toHaveBeenCalled();
-    expect(shuffleRing).not.toHaveBeenCalled();
-  });
-
   it("rejects a malformed player id without calling the API", async () => {
     const result = await setPlayerStatusAction(GAME, {}, form({ playerId: "p1", status: "ALIVE" }));
     expect(result).toEqual({ error: "Invalid request." });
@@ -227,7 +211,7 @@ describe("join actions", () => {
     joinGame.mockResolvedValue({ game: { id: "g1" }, player: { id: "p1" } });
     await joinAction("abc123", {}, form({ displayName: " Alice " }));
     expect(joinGame).toHaveBeenCalledWith({ displayName: "Alice", joinCode: "ABC123" });
-    expect(redirect).toHaveBeenCalledWith("/games/g1");
+    expect(redirect).toHaveBeenCalledWith("/g1");
   });
 
   it.each([

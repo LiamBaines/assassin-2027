@@ -4,8 +4,8 @@ import { confirmRedirectUrl, loginPathWithNext, returnPathFromConfirm } from "./
 describe("loginPathWithNext", () => {
   it("keeps the original path and query as next", () => {
     expect(loginPathWithNext("/join/ABC123", "")).toBe("/login?next=%2Fjoin%2FABC123");
-    expect(loginPathWithNext("/games/g1", "?x=1&y=2")).toBe(
-      "/login?next=%2Fgames%2Fg1%3Fx%3D1%26y%3D2",
+    expect(loginPathWithNext("/g1", "?x=1&y=2")).toBe(
+      "/login?next=%2Fg1%3Fx%3D1%26y%3D2",
     );
   });
 

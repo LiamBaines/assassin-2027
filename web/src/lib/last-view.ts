@@ -1,4 +1,3 @@
-import { isUuid } from "@/lib/uuid";
 
 export const LAST_AREA_COOKIE = "last-area";
 export const LAST_GAME_COOKIE = "last-game";
@@ -18,8 +17,8 @@ export function resolveHome(opts: {
 }): string {
   if (opts.isAdmin && parseArea(opts.lastArea) === "admin") return "/admin";
   const { lastGame } = opts;
-  if (lastGame && isUuid(lastGame) && opts.gameIds.includes(lastGame)) {
-    return `/games/${encodeURIComponent(lastGame)}`;
+  if (lastGame && opts.gameIds.includes(lastGame)) {
+    return `/${encodeURIComponent(lastGame)}`;
   }
   return opts.gameIds.length > 0 ? "/me" : "/join";
 }

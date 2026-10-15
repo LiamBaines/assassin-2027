@@ -23,7 +23,7 @@ export default async function MePage() {
           return (
             <li key={game.id} data-testid="my-game">
               <Link
-                href={`/games/${encodeURIComponent(game.id)}`}
+                href={`/${encodeURIComponent(game.id)}`}
                 className="flex items-center gap-3 p-4 hover:bg-raised"
               >
                 <div className="min-w-0 flex-1 space-y-1">

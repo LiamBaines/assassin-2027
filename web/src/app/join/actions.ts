@@ -79,5 +79,5 @@ export async function joinAction(
   }
 
   revalidatePath("/", "layout");
-  redirect(`/games/${encodeURIComponent(gameId)}`);
+  redirect(`/${encodeURIComponent(gameId)}`);
 }

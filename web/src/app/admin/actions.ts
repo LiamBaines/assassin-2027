@@ -106,7 +106,6 @@ export async function editGameAction(
   fields: { name: string; joinCode: string },
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   const formData = new FormData();
   formData.set("name", fields.name);
   formData.set("joinCode", fields.joinCode);
@@ -121,7 +120,6 @@ export async function setSignupsAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   const patch: UpdateGameRequest = {
     signupsOpen: formData.get("signupsOpen") === "true",
   };
@@ -130,7 +128,6 @@ export async function setSignupsAction(
 
 export async function finishGameAction(gameId: string): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   return run(() => updateGame(gameId, { status: "FINISHED" }));
 }
 
@@ -140,7 +137,6 @@ export async function setPlayerStatusAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   const playerId = String(formData.get("playerId") ?? "");
   const status = formData.get("status");
   if (!isUuid(playerId) || (status !== "ALIVE" && status !== "REMOVED")) {
@@ -155,7 +151,6 @@ export async function registerKillAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   const victimId = String(formData.get("victimId") ?? "");
   const killMethodId = readMethodId(formData);
   if (!isUuid(victimId)) return INVALID_REQUEST;
@@ -170,7 +165,7 @@ export async function changeKillMethodAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId) || !Number.isInteger(killId)) return INVALID_REQUEST;
+  if (!Number.isInteger(killId)) return INVALID_REQUEST;
   const killMethodId = readMethodId(formData);
   if (killMethodId === null) return { error: MESSAGES.KILL_METHOD_REQUIRED };
   return run(() => changeKillMethod(gameId, killId, killMethodId));
@@ -182,7 +177,6 @@ export async function shuffleRingAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   // Empty means no ring has been generated yet; the API expects null in that case.
   const raw = formData.get("expectedCurrentRoundNo");
   const expected = raw ? Number(raw) : null;
@@ -200,7 +194,6 @@ export async function startRoundAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId)) return INVALID_REQUEST;
   const expected = Number(formData.get("expectedRoundNo"));
   const playerIds = formData.getAll("playerIds").map(String);
   if (!Number.isInteger(expected) || expected < 1 || !playerIds.every(isUuid)) {
@@ -218,7 +211,7 @@ export async function confirmClaimAction(
   _prev: ActionResult,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId) || !Number.isInteger(claimId)) return INVALID_REQUEST;
+  if (!Number.isInteger(claimId)) return INVALID_REQUEST;
   return run(() => confirmKillClaim(gameId, claimId));
 }
 
@@ -229,6 +222,6 @@ export async function dismissClaimAction(
   _prev: ActionResult,
 ): Promise<ActionResult> {
   await requireAdmin();
-  if (!isUuid(gameId) || !Number.isInteger(claimId)) return INVALID_REQUEST;
+  if (!Number.isInteger(claimId)) return INVALID_REQUEST;
   return run(() => dismissKillClaim(gameId, claimId));
 }

@@ -35,7 +35,7 @@ export default async function JoinCodePage(props: {
   const [me, result] = await Promise.all([getMe(), loadPreview(code)]);
 
   if (result.kind === "ok" && result.preview.alreadyJoined) {
-    redirect(`/games/${encodeURIComponent(result.preview.gameId)}`);
+    redirect(`/${encodeURIComponent(result.preview.gameId)}`);
   }
 
   const footer = (

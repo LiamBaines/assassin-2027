@@ -19,10 +19,10 @@ describe("parseRoundParam", () => {
 
 describe("leaderboardHref", () => {
   it("links to the total without a query", () => {
-    expect(leaderboardHref("/games/g1/leaderboard", null)).toBe("/games/g1/leaderboard");
+    expect(leaderboardHref("/g1/leaderboard", null)).toBe("/g1/leaderboard");
   });
 
   it("links to a round", () => {
-    expect(leaderboardHref("/games/g1/leaderboard", 2)).toBe("/games/g1/leaderboard?round=2");
+    expect(leaderboardHref("/g1/leaderboard", 2)).toBe("/g1/leaderboard?round=2");
   });
 });
