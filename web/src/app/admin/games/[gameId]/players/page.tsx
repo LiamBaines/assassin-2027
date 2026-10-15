@@ -1,13 +1,15 @@
-import { Users, Check, Crosshair, Save, UserMinus, UserPlus, X } from "lucide-react";
+import { Users, Check, Save, UserMinus, UserPlus, X } from "lucide-react";
 import {
   ActionForm,
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
 import { KillMethodSelect } from "@/components/kill-method-select";
+import { RegisterKill } from "@/components/register-kill";
 import {
   EmptyState,
   Panel,
+  RelativeTime,
   StatusChip,
   dangerButtonClass,
 } from "@/components/ui";
@@ -158,20 +160,20 @@ export default async function AdminPlayersPage(props: {
         {players.length === 0 ? (
           <div className="px-5">
             <EmptyState icon={Users} title="No players yet">
-              Share the join link from the Details tab so players can sign up.
+              Share the join link from the Settings tab so players can sign up.
             </EmptyState>
           </div>
         ) : (
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line text-muted">
               <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Current target</th>
-                <th className="px-4 py-3 font-medium">Joined</th>
+                <th className="px-3 py-2 font-medium">Name</th>
+                <th className="px-3 py-2 font-medium">Email</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Current target</th>
+                <th className="px-3 py-2 font-medium">Joined</th>
                 {editable && (
-                  <th className="px-4 py-3 font-medium">
+                  <th className="px-3 py-2 font-medium">
                     <span className="sr-only">Actions</span>
                   </th>
                 )}
@@ -180,21 +182,21 @@ export default async function AdminPlayersPage(props: {
             <tbody className="divide-y divide-line">
               {players.map((p) => (
                 <tr key={p.id} data-testid="player-row" className="align-top whitespace-nowrap">
-                  <td className="px-4 py-3 font-medium">{p.displayName}</td>
-                  <td className="px-4 py-3 text-muted">{p.email}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 font-medium">{p.displayName}</td>
+                  <td className="px-3 py-2 text-muted">{p.email}</td>
+                  <td className="px-3 py-2">
                     <PlayerStatus status={p.status} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     {p.currentTarget?.displayName ?? (
                       <span className="text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-muted">
-                    {formatDateTime(p.joinedAt)}
+                  <td className="px-3 py-2 whitespace-nowrap text-muted">
+                    <RelativeTime iso={p.joinedAt} />
                   </td>
                   {editable && (
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-2 text-right">
                       <PlayerAction
                         gameId={game.id}
                         player={p}
@@ -243,21 +245,12 @@ function PlayerAction({
   return (
     <div className="flex items-center justify-end gap-2">
       {killable && (
-        <ActionForm
+        <RegisterKill
           action={registerKillAction.bind(null, gameId)}
-          className="flex flex-wrap items-center justify-end gap-2"
-        >
-          <input type="hidden" name="victimId" value={player.id} />
-          <KillMethodSelect methods={methods} />
-          <ConfirmSubmit
-            label="Register kill"
-            confirmLabel="Register kill"
-            icon={<Crosshair {...ICON} />}
-            iconOnly
-            message={registerKillMessage(player, aliveInRing)}
-            confirmClassName={dangerButtonClass}
-          />
-        </ActionForm>
+          victimId={player.id}
+          methods={methods}
+          message={registerKillMessage(player, aliveInRing)}
+        />
       )}
       <ActionForm
         action={setPlayerStatusAction.bind(null, gameId)}

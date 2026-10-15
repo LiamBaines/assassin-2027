@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LastViewRecorder } from "@/components/last-view-recorder";
 import { SignOutButton } from "@/components/sign-out-button";
 import { PlayerShell, StatusChip, secondaryButtonClass } from "@/components/ui";
 import { getMe } from "@/lib/api";
@@ -15,6 +16,7 @@ export default async function MePage() {
 
   return (
     <PlayerShell title="My games" isAdmin={me.isAdmin}>
+      <LastViewRecorder area="player" />
       <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
         {me.games.map(({ game, player }) => {
           const status = playerStatusView(player.status, game.status);

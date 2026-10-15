@@ -3,6 +3,7 @@ import {
   ADMIN,
   assertSingleCycle,
   expectTarget,
+  generateRing,
   JOIN_CODE,
   joinThroughLink,
   pageFor,
@@ -36,15 +37,17 @@ test.afterAll(async () => {
 test("admin creates game TEST42 and gets its join link", async () => {
   await admin.goto("/admin");
   await expect(admin.getByRole("heading", { level: 1, name: "Games" })).toBeVisible();
+  await admin.getByRole("button", { name: "New game" }).click();
   await admin.getByLabel("Name").fill(GAME_NAME);
   await admin.getByLabel("Join code").fill(JOIN_CODE.toLowerCase());
   await admin.getByRole("button", { name: "Create game" }).click();
 
-  await admin.waitForURL(/\/admin\/games\/[^/]+$/);
-  gameId = new URL(admin.url()).pathname.split("/").pop()!;
+  await admin.waitForURL(/\/admin\/games\/[^/]+\/leaderboard$/);
+  gameId = new URL(admin.url()).pathname.split("/")[3];
   await expect(admin.getByRole("heading", { level: 1, name: GAME_NAME })).toBeVisible();
   await expect(admin.getByTestId("game-status")).toHaveText("Setup");
   await expect(admin.getByTestId("join-code")).toHaveText(JOIN_CODE);
+  await admin.getByRole("link", { name: "Settings" }).click();
   await expect(admin.getByTestId("signups-state")).toHaveText("open");
   await expect(admin.getByTestId("join-link")).toHaveValue(
     `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/join/${JOIN_CODE}`,
@@ -111,8 +114,10 @@ test("the other players join through the join link", async () => {
 test("a player's home lists the game", async () => {
   const p = PLAYERS[0];
   const page = players.get(p.displayName)!;
+  // The root sends a player back to the game they last viewed; /me is the full list.
   await page.goto("/");
-  await expect(page).toHaveURL(/\/me$/);
+  await expect(page).toHaveURL(new RegExp(`/games/${gameId}$`));
+  await page.goto("/me");
   await expect(page.getByRole("heading", { level: 1, name: "My games" })).toBeVisible();
   // Other specs (claims, kills) leave games behind for the same players, so scope to this spec's game.
   const card = page.getByTestId("my-game").filter({ hasText: GAME_NAME });
@@ -123,13 +128,7 @@ test("a player's home lists the game", async () => {
 });
 
 test("admin generates a ring that forms a single cycle", async () => {
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  await expect(admin.getByRole("heading", { name: "No ring yet" })).toBeVisible();
-  await admin.getByRole("button", { name: "Generate ring" }).click();
-  await admin.getByRole("button", { name: "Yes, generate" }).click();
-
-  await expect(admin.getByRole("heading", { name: /allocation 1 \(Initial\)/ })).toBeVisible();
-  await expect(admin.getByTestId("ring-pair")).toHaveCount(3);
+  await generateRing(admin, gameId);
   await expect(admin.getByTestId("game-status")).toHaveText("Active");
 
   const ring = await readRing(admin, gameId);
@@ -146,16 +145,16 @@ test("each player's target matches the admin ring", async () => {
   }
 });
 
-test("a shakeup shows round 2 in the history", async () => {
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  await admin.getByRole("button", { name: "Shake up" }).click();
+test("a shakeup gives every player a new single-cycle ring", async () => {
+  await admin.goto(`/admin/games/${gameId}/leaderboard`);
+  await admin.getByRole("button", { name: "Round actions" }).click();
+  await admin.getByRole("menuitem", { name: "Shake up" }).click();
+  // The dialog closes on submit, so wait for the server action to answer before navigating away.
+  const done = admin.waitForResponse((r) => r.request().method() === "POST");
   await admin.getByRole("button", { name: "Yes, shake up" }).click();
-
-  await expect(admin.getByRole("heading", { name: /allocation 2 \(Shakeup\)/ })).toBeVisible();
-  const rounds = admin.getByTestId("round-row");
-  await expect(rounds).toHaveCount(2);
-  await expect(rounds.nth(0)).toContainText("Shakeup");
-  await expect(rounds.nth(1)).toContainText("Initial");
+  await done;
+  await admin.goto(`/admin/games/${gameId}/log`);
+  await expect(admin.getByTestId("event-item").first()).toContainText("Targets were reshuffled");
 
   ringAfterShakeup = await readRing(admin, gameId);
   expect(ringAfterShakeup).toHaveLength(3);

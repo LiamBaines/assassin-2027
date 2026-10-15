@@ -101,16 +101,18 @@ export async function createGameAction(
   redirect(`/admin/games/${encodeURIComponent(game.id)}`);
 }
 
-export async function updateGameAction(
+export async function editGameAction(
   gameId: string,
-  _prev: ActionResult,
-  formData: FormData,
+  fields: { name: string; joinCode: string },
 ): Promise<ActionResult> {
   await requireAdmin();
   if (!isUuid(gameId)) return INVALID_REQUEST;
-  const fields = readGameFields(formData);
-  if ("error" in fields) return { error: fields.error };
-  return run(() => updateGame(gameId, fields));
+  const formData = new FormData();
+  formData.set("name", fields.name);
+  formData.set("joinCode", fields.joinCode);
+  const parsed = readGameFields(formData);
+  if ("error" in parsed) return { error: parsed.error };
+  return run(() => updateGame(gameId, parsed));
 }
 
 export async function setSignupsAction(

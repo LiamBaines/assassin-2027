@@ -39,7 +39,7 @@ const {
   setPlayerStatusAction,
   setSignupsAction,
   shuffleRingAction,
-  updateGameAction,
+  editGameAction,
 } = await import("./admin/actions");
 const { goToJoinCodeAction, joinAction } = await import("./join/actions");
 
@@ -152,7 +152,7 @@ describe("admin action error messages", () => {
 
   it("maps JOIN_CODE_TAKEN from an edit and a create", async () => {
     updateGame.mockImplementation(() => fail(409, "JOIN_CODE_TAKEN"));
-    const edit = await updateGameAction(GAME, {}, form({ name: "Spring", joinCode: "abc123" }));
+    const edit = await editGameAction(GAME, { name: "Spring", joinCode: "abc123" });
     expect(edit.error).toMatch(/already uses that join code/);
     expect(updateGame).toHaveBeenCalledWith(GAME, { name: "Spring", joinCode: "ABC123" });
 
@@ -169,7 +169,7 @@ describe("admin action error messages", () => {
   });
 
   it.each([
-    ["update", () => updateGameAction("nope", {}, form({ name: "Spring", joinCode: "ABC123" }))],
+    ["update", () => editGameAction("nope", { name: "Spring", joinCode: "SPRING26" })],
     ["signups", () => setSignupsAction("../x", {}, form({ signupsOpen: "true" }))],
     ["finish", () => finishGameAction("")],
     ["player status", () => setPlayerStatusAction("g1", {}, form({ playerId: PLAYER, status: "ALIVE" }))],

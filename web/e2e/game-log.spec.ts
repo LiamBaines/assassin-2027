@@ -8,7 +8,7 @@ import {
   PLAYERS,
   readJoinLinkPath,
   readRing,
-  selectMethod,
+  registerKill,
 } from "./support";
 
 // Each step builds on the previous one's game state.
@@ -80,9 +80,7 @@ test("a kill appears at the top of the log with its method", async () => {
 
   await admin.goto(`/admin/games/${gameId}/players`);
   const row = playerRow(victim);
-  await selectMethod(row, "Duel", 15);
-  await row.getByRole("button", { name: "Register kill" }).click();
-  await row.getByRole("button", { name: "Register kill" }).last().click();
+  await registerKill(row, "Duel", 15);
   await expect(playerRow(victim)).toContainText("Dead");
 
   const text = `${killer} killed ${victim} (Duel)`;

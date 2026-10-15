@@ -9,6 +9,7 @@ import {
   PLAYERS,
   readJoinLinkPath,
   readRing,
+  registerKill as registerKillIn,
   selectMethod,
 } from "./support";
 
@@ -45,9 +46,7 @@ function playerRow(name: string) {
 async function registerKill(name: string, method = "Clamp", points = 10): Promise<void> {
   await admin.goto(`/admin/games/${gameId}/players`);
   const row = playerRow(name);
-  await selectMethod(row, method, points);
-  await row.getByRole("button", { name: "Register kill" }).click();
-  await row.getByRole("button", { name: "Register kill" }).last().click();
+  await registerKillIn(row, method, points);
 }
 
 test("there is no kill button before the game starts", async () => {
@@ -83,8 +82,10 @@ test("the kill that leaves one player ends the round, not the game", async () =>
   await expect(admin.getByTestId("game-status")).toContainText("Active");
   await admin.goto(`/admin/games/${gameId}/players`);
   await expect(admin.getByRole("button", { name: "Register kill" })).toHaveCount(0);
-  await admin.goto(`/admin/games/${gameId}/rings`);
-  await expect(admin.getByRole("heading", { name: "Round 1 has ended" })).toBeVisible();
+  await admin.goto(`/admin/games/${gameId}/leaderboard`);
+  await admin.getByRole("button", { name: "Round actions" }).click();
+  await expect(admin.getByRole("menuitem", { name: "Generate ring" })).toBeDisabled();
+  await expect(admin.getByRole("menuitem", { name: "Start next round" })).toBeEnabled();
 });
 
 test("the kill list shows the method and the admin can correct it", async () => {

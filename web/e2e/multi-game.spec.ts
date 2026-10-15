@@ -3,6 +3,7 @@ import {
   ADMIN,
   createGame,
   expectTarget,
+  revealTarget,
   generateRing,
   joinThroughLink,
   pageFor,
@@ -75,6 +76,7 @@ test("a player in both games sees both on /me with the right target in each", as
   await cardB.getByRole("link").click();
   await expect(alicePage).toHaveURL(new RegExp(`/games/${gameB}$`));
   await expect(alicePage.getByTestId("player-name")).toHaveText("Alice B");
+  await revealTarget(alicePage);
   await expect(alicePage.getByTestId("target-name")).toHaveText("Carol B");
 
   await expectTarget(alicePage, gameA, "Bob A");
@@ -84,7 +86,7 @@ test("a player in both games sees both on /me with the right target in each", as
 });
 
 test("closing signups on game B leaves game A open", async () => {
-  await admin.goto(`/admin/games/${gameB}`);
+  await admin.goto(`/admin/games/${gameB}/settings`);
   await admin.getByRole("button", { name: "Close signups" }).click();
   await expect(admin.getByTestId("signups-state")).toHaveText("closed");
 
@@ -93,12 +95,13 @@ test("closing signups on game B leaves game A open", async () => {
   await expect(bobPage.getByText("Signups are closed.")).toBeVisible();
   await expect(bobPage.getByLabel("Display name")).toHaveCount(0);
 
-  await admin.goto(`/admin/games/${gameA}`);
+  await admin.goto(`/admin/games/${gameA}/settings`);
   await expect(admin.getByTestId("signups-state")).toHaveText("open");
 });
 
 test("a join code used by a live game is rejected", async () => {
   await admin.goto("/admin");
+  await admin.getByRole("button", { name: "New game" }).click();
   await admin.getByLabel("Name").fill("Duplicate code");
   await admin.getByLabel("Join code").fill(B.code);
   await admin.getByRole("button", { name: "Create game" }).click();
@@ -113,22 +116,22 @@ test("a join code used by a live game is rejected", async () => {
 });
 
 test("admin finishes game A", async () => {
-  await admin.goto(`/admin/games/${gameA}`);
+  await admin.goto(`/admin/games/${gameA}/settings`);
   await admin.getByRole("button", { name: "Finish game" }).click();
   await admin.getByRole("button", { name: "Yes, finish it" }).click();
 
-  await expect(admin.getByTestId("game-status")).toHaveText(/^Finished /);
+  await expect(admin.getByTestId("game-status")).toHaveText("Finished");
   await expect(admin.getByRole("heading", { name: "Read-only" })).toBeVisible();
 
   await admin.goto("/admin");
   const rowA = admin.getByTestId("game-row").filter({ hasText: A.name });
-  await expect(rowA.getByTestId("game-status")).toHaveText(/^Finished /);
+  await expect(rowA.getByTestId("game-status")).toHaveText("Finished");
   const rowB = admin.getByTestId("game-row").filter({ hasText: B.name });
   await expect(rowB.getByTestId("game-status")).toHaveText("Active");
 });
 
 test("a finished game's admin pages are read-only", async () => {
-  await admin.goto(`/admin/games/${gameA}`);
+  await admin.goto(`/admin/games/${gameA}/settings`);
   await expect(admin.getByRole("heading", { name: "Read-only" })).toBeVisible();
   await expect(admin.getByTestId("join-code")).toHaveText(A.code);
   for (const name of ["Save changes", "Close signups", "Open signups", "Finish game"]) {
@@ -142,11 +145,10 @@ test("a finished game's admin pages are read-only", async () => {
   await expect(admin.getByRole("button", { name: "Remove" })).toHaveCount(0);
   await expect(admin.getByRole("button", { name: "Restore" })).toHaveCount(0);
 
-  await admin.goto(`/admin/games/${gameA}/rings`);
-  await expect(admin.getByText("The game has finished.")).toBeVisible();
-  await expect(admin.getByTestId("ring-pair")).toHaveCount(2);
-  await expect(admin.getByRole("button", { name: "Shake up" })).toHaveCount(0);
-  await expect(admin.getByRole("button", { name: "Generate ring" })).toHaveCount(0);
+  await admin.goto(`/admin/games/${gameA}/leaderboard`);
+  await admin.getByRole("button", { name: "Round actions" }).click();
+  await expect(admin.getByRole("menuitem", { name: "Shake up" })).toBeDisabled();
+  await expect(admin.getByRole("menuitem", { name: "Start next round" })).toBeDisabled();
 });
 
 test("players see game A as finished, and game B carries on", async () => {
