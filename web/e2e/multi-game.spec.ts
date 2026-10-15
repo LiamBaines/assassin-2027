@@ -38,6 +38,7 @@ test.afterAll(async () => {
 
 test("game A starts with Alice and Bob", async () => {
   gameA = await createGame(admin, A.name, A.code);
+  expect(gameA).toBe("multi-game-a");
   const joinA = await readJoinLinkPath(admin, gameA);
   await joinThroughLink(alicePage, joinA, A.name, "Alice A");
   await joinThroughLink(bobPage, joinA, A.name, "Bob A");
@@ -47,6 +48,7 @@ test("game A starts with Alice and Bob", async () => {
 
 test("admin creates game B while game A is active", async () => {
   gameB = await createGame(admin, B.name, B.code);
+  expect(gameB).toBe("multi-game-b");
   await expect(admin.getByTestId("game-status")).toHaveText("Setup");
 
   // Alice plays in both games, under a different name in each.
@@ -74,7 +76,7 @@ test("a player in both games sees both on /me with the right target in each", as
   await expect(cardB.getByTestId("player-status")).toHaveText("Alive");
 
   await cardB.getByRole("link").click();
-  await expect(alicePage).toHaveURL(new RegExp(`/games/${gameB}$`));
+  await expect(alicePage).toHaveURL(new RegExp(`/${gameB}$`));
   await expect(alicePage.getByTestId("player-name")).toHaveText("Alice B");
   await revealTarget(alicePage);
   await expect(alicePage.getByTestId("target-name")).toHaveText("Carol B");

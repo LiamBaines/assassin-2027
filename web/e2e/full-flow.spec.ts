@@ -89,7 +89,7 @@ test("a player joins by typing the code on /join", async () => {
   await page.getByLabel("Display name").fill(p.displayName);
   await page.getByRole("button", { name: "Join the game" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/games/${gameId}$`));
+  await expect(page).toHaveURL(new RegExp(`/${gameId}$`));
   await expect(page.getByRole("heading", { level: 1, name: GAME_NAME })).toBeVisible();
   await expect(page.getByTestId("player-name")).toHaveText(p.displayName);
   await expect(page.getByTestId("player-status")).toHaveText(/waiting for the game to start/);
@@ -104,7 +104,7 @@ test("the other players join through the join link", async () => {
   // Opening the link again after joining goes straight to the game page.
   const page = players.get(PLAYERS[1].displayName)!;
   await page.goto(joinPath);
-  await expect(page).toHaveURL(new RegExp(`/games/${gameId}$`));
+  await expect(page).toHaveURL(new RegExp(`/${gameId}$`));
 
   await admin.goto(`/admin/games/${gameId}/players`);
   await expect(admin.getByRole("heading", { name: "Players" })).toBeVisible();
@@ -116,7 +116,7 @@ test("a player's home lists the game", async () => {
   const page = players.get(p.displayName)!;
   // The root sends a player back to the game they last viewed; /me is the full list.
   await page.goto("/");
-  await expect(page).toHaveURL(new RegExp(`/games/${gameId}$`));
+  await expect(page).toHaveURL(new RegExp(`/${gameId}$`));
   await page.goto("/me");
   await expect(page.getByRole("heading", { level: 1, name: "My games" })).toBeVisible();
   // Other specs (claims, kills) leave games behind for the same players, so scope to this spec's game.
@@ -124,7 +124,7 @@ test("a player's home lists the game", async () => {
   await expect(card).toHaveCount(1);
   await expect(card).toContainText(`Playing as ${p.displayName}`);
   await card.getByRole("link").click();
-  await expect(page).toHaveURL(new RegExp(`/games/${gameId}$`));
+  await expect(page).toHaveURL(new RegExp(`/${gameId}$`));
 });
 
 test("admin generates a ring that forms a single cycle", async () => {

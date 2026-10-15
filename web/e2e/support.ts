@@ -149,7 +149,7 @@ export async function revealTarget(page: Page): Promise<void> {
 }
 
 export async function expectTarget(page: Page, gameId: string, name: string): Promise<void> {
-  await page.goto(`/games/${gameId}`);
+  await page.goto(`/${gameId}`);
   await revealTarget(page);
   await expect(page.getByTestId("target-name")).toHaveText(name);
 }
@@ -165,7 +165,7 @@ export async function joinThroughLink(
   await expect(page.getByRole("heading", { name: `Join ${gameName}` })).toBeVisible();
   await page.getByLabel("Display name").fill(displayName);
   await page.getByRole("button", { name: "Join the game" }).click();
-  await page.waitForURL(/\/games\/[^/]+$/);
+  await page.waitForURL(/:\d+\/[a-z0-9]+(-[a-z0-9]+)*$/);
   await expect(page.getByRole("heading", { level: 1, name: gameName })).toBeVisible();
   await expect(page.getByTestId("player-name")).toHaveText(displayName);
 }

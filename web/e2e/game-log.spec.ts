@@ -67,7 +67,7 @@ test("a removal appears in the admin and player logs", async () => {
   );
 
   const other = pages.get(PLAYERS[0].displayName)!;
-  await other.goto(`/games/${gameId}?view=log`);
+  await other.goto(`/${gameId}?view=log`);
   await expect(other.getByTestId("event-item").first()).toContainText(
     `${REMOVED} was removed from the game`,
   );
@@ -88,6 +88,6 @@ test("a kill appears at the top of the log with its method", async () => {
   await expect(admin.getByTestId("event-item").first()).toContainText(text);
 
   const other = pages.get(killer)!;
-  await other.goto(`/games/${gameId}?view=log`);
+  await other.goto(`/${gameId}?view=log`);
   await expect(other.getByTestId("event-item").first()).toContainText(text);
 });
