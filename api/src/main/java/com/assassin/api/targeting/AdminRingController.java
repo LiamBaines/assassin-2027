@@ -27,18 +27,18 @@ public class AdminRingController {
     /** Generates the initial ring, or shakes up the current one. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RingService.RingView shuffle(@PathVariable UUID gameId, CurrentUser admin,
+    public RingService.RingView shuffle(@PathVariable String gameId, CurrentUser admin,
             @RequestBody ShuffleRequest request) {
         return ringService.shuffle(gameId, request.expectedCurrentRoundNo(), request.killMethods(), admin.email());
     }
 
     @GetMapping("/current")
-    public RingService.RingView current(@PathVariable UUID gameId) {
+    public RingService.RingView current(@PathVariable String gameId) {
         return ringService.currentRing(gameId);
     }
 
     @GetMapping
-    public List<RoundResponse> history(@PathVariable UUID gameId) {
+    public List<RoundResponse> history(@PathVariable String gameId) {
         return ringService.history(gameId).stream().map(RoundResponse::from).toList();
     }
 

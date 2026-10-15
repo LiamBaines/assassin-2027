@@ -8,11 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GameRoundRepository extends JpaRepository<GameRound, UUID> {
 
-    Optional<GameRound> findFirstByGameIdAndEndedAtIsNull(UUID gameId);
+    Optional<GameRound> findFirstByGameIdAndEndedAtIsNull(String gameId);
 
-    Optional<GameRound> findFirstByGameIdOrderByRoundNoDesc(UUID gameId);
+    Optional<GameRound> findFirstByGameIdOrderByRoundNoDesc(String gameId);
 
-    List<GameRound> findByGameId(UUID gameId);
+    List<GameRound> findByGameId(String gameId);
 
-    List<GameRound> findByGameIdIn(Collection<UUID> gameIds);
+    List<GameRound> findByGameIdIn(Collection<String> gameIds);
 }

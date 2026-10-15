@@ -21,7 +21,7 @@ public class Assignment {
     private Long id;
 
     @Column(name = "game_id", nullable = false)
-    private UUID gameId;
+    private String gameId;
 
     @Column(name = "allocation_id", nullable = false)
     private UUID allocationId;
@@ -59,7 +59,7 @@ public class Assignment {
         return id;
     }
 
-    public UUID getGameId() {
+    public String getGameId() {
         return gameId;
     }
 

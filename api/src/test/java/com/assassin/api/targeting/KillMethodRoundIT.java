@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 class KillMethodRoundIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
     private UUID a;
     private UUID b;
 
@@ -116,7 +116,7 @@ class KillMethodRoundIT extends IntegrationTest {
                 .andExpect(jsonPath("$[0].name").value("Clamp"));
         mvc.perform(as("stranger@example.com", get("/api/me/games/" + gameId + "/kill-methods")))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_IN_GAME"));
-        mvc.perform(asAdmin(get("/api/admin/games/" + UUID.randomUUID() + "/kill-methods")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + "no-such-game" + "/kill-methods")))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
     }
 }

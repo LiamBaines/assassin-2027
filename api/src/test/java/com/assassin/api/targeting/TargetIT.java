@@ -16,7 +16,7 @@ import org.springframework.http.MediaType;
 
 class TargetIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
     private final Map<String, String> emailToName = new LinkedHashMap<>();
 
     @BeforeEach
@@ -34,7 +34,7 @@ class TargetIT extends IntegrationTest {
         shuffle(gameId, expected);
     }
 
-    private void shuffle(UUID game, Integer expected) throws Exception {
+    private void shuffle(String game, Integer expected) throws Exception {
         mvc.perform(asAdmin(post("/api/admin/games/" + game + "/rings").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expectedCurrentRoundNo\": " + expected + "}")))
                 .andExpect(status().isCreated());
@@ -96,14 +96,14 @@ class TargetIT extends IntegrationTest {
     @Test
     void unknownGameHasNoTarget() throws Exception {
         shuffle(null);
-        mvc.perform(as("alice@example.com", get("/api/me/games/" + UUID.randomUUID() + "/target")))
+        mvc.perform(as("alice@example.com", get("/api/me/games/" + "no-such-game" + "/target")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NO_TARGET"));
     }
 
     @Test
     void aPlayerInTwoGamesHasATargetInEach() throws Exception {
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         insertPlayer(other, "alice@example.com", "Ally", "ALIVE");
         insertPlayer(other, "zed@example.com", "Zed", "ALIVE");
         shuffle(null);

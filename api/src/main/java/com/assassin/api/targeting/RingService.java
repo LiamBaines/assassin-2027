@@ -77,7 +77,7 @@ public class RingService {
      * @param createdBy the admin's email
      */
     @Transactional
-    public RingView shuffle(UUID gameId, Integer expectedCurrentRoundNo, List<KillMethodInput> methodEdits,
+    public RingView shuffle(String gameId, Integer expectedCurrentRoundNo, List<KillMethodInput> methodEdits,
             String createdBy) {
         // 1. Lock the game row; concurrent shuffles (and admin edits) of this game queue behind this.
         Game game = gameService.lockForChange(gameId);
@@ -145,7 +145,7 @@ public class RingService {
      * @param methodEdits kill method changes (null = unchanged)
      */
     @Transactional
-    public RingView startRound(UUID gameId, Integer expectedRoundNo, Collection<UUID> playerIds,
+    public RingView startRound(String gameId, Integer expectedRoundNo, Collection<UUID> playerIds,
             List<KillMethodInput> methodEdits, String createdBy) {
         Game game = gameService.lockForChange(gameId);
 
@@ -208,7 +208,7 @@ public class RingService {
      * assignment in the same allocation. In a two-player ring (A == T) nothing is inserted, so A is left without a target.
      * Does nothing if the player has no active assignments.
      *
-     * <p>The caller must already hold the lock on the player's game row ({@link GameService#lockForChange(UUID)}), so
+     * <p>The caller must already hold the lock on the player's game row ({@link GameService#lockForChange(String)}), so
      * this serializes with shuffles of that game.
      */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -258,7 +258,7 @@ public class RingService {
 
     /** The game's current allocation with its active assignments in cycle order, or 404 NO_RING before the first. */
     @Transactional(readOnly = true)
-    public RingView currentRing(UUID gameId) {
+    public RingView currentRing(String gameId) {
         Game game = gameService.find(gameId);
         Allocation allocation = allocations.findFirstByGameIdOrderByAllocationNoDesc(game.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NO_RING", "No ring has been generated yet."));
@@ -290,7 +290,7 @@ public class RingService {
 
     /** All allocations of the game, newest first, each with the number of the round it belongs to. */
     @Transactional(readOnly = true)
-    public List<AllocationEntry> history(UUID gameId) {
+    public List<AllocationEntry> history(String gameId) {
         Game game = gameService.find(gameId);
         Map<UUID, Integer> roundNos = rounds.findByGameId(game.getId()).stream()
                 .collect(Collectors.toMap(GameRound::getId, GameRound::getRoundNo));

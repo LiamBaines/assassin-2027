@@ -6,7 +6,6 @@ import com.assassin.api.player.PlayerRepository.GamePlayerCount;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -19,6 +18,9 @@ public class GameService {
 
     /** The partial unique index that keeps join codes unique among games that are not FINISHED. */
     static final String JOIN_CODE_INDEX = "game_join_code_live_uq";
+
+    /** The primary key, which is the slug; a lost race on it means two games picked the same slug. */
+    static final String GAME_PKEY = "game_pkey";
 
     private final GameRepository games;
     private final PlayerRepository players;
@@ -45,7 +47,7 @@ public class GameService {
     /** Every game, including FINISHED ones, newest first. */
     @Transactional(readOnly = true)
     public List<GameWithCount> list() {
-        Map<UUID, Long> counts = players.countPerGame().stream()
+        Map<String, Long> counts = players.countPerGame().stream()
                 .collect(Collectors.toMap(GamePlayerCount::getGameId, GamePlayerCount::getCount));
         return games.findAllByOrderByCreatedAtDesc().stream()
                 .map(g -> new GameWithCount(g, counts.getOrDefault(g.getId(), 0L)))
@@ -53,14 +55,14 @@ public class GameService {
     }
 
     @Transactional(readOnly = true)
-    public GameWithCount get(UUID gameId) {
+    public GameWithCount get(String gameId) {
         Game game = find(gameId);
         return new GameWithCount(game, players.countByGameId(game.getId()));
     }
 
     /** The game, or 404 GAME_NOT_FOUND. */
     @Transactional(readOnly = true)
-    public Game find(UUID gameId) {
+    public Game find(String gameId) {
         return games.findById(gameId).orElseThrow(GameService::gameNotFound);
     }
 
@@ -69,7 +71,7 @@ public class GameService {
      * 404 GAME_NOT_FOUND if it doesn't exist, 409 GAME_FINISHED if it is finished.
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public Game lockForChange(UUID gameId) {
+    public Game lockForChange(String gameId) {
         Game game = games.findByIdForUpdate(gameId).orElseThrow(GameService::gameNotFound);
         if (game.getStatus() == GameStatus.FINISHED) {
             throw gameFinished();
@@ -83,7 +85,7 @@ public class GameService {
             throw joinCodeTaken();
         }
         try {
-            Game game = games.saveAndFlush(new Game(name, joinCode));
+            Game game = games.saveAndFlush(new Game(freeSlug(name), name, joinCode));
             Instant now = Instant.now();
             killMethods.saveAll(KillMethodDefaults.STANDARD.stream()
                     .map(m -> new KillMethod(game.getId(), m.name(), m.points(), now))
@@ -94,9 +96,19 @@ public class GameService {
         }
     }
 
+    /** The name's slug, or the first {@code slug-2}, {@code slug-3}, ... that no game uses yet. */
+    private String freeSlug(String name) {
+        String base = GameSlugs.base(name);
+        String slug = base;
+        for (int n = 2; games.existsById(slug); n++) {
+            slug = GameSlugs.withSuffix(base, n);
+        }
+        return slug;
+    }
+
     /** Applies the non-null fields. {@code status} may only be FINISHED. A FINISHED game can't be changed. */
     @Transactional
-    public GameWithCount update(UUID gameId, String name, String joinCode, Boolean signupsOpen, GameStatus status) {
+    public GameWithCount update(String gameId, String name, String joinCode, Boolean signupsOpen, GameStatus status) {
         Game game = lockForChange(gameId);
         if (status != null && status != GameStatus.FINISHED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATUS", "A game's status can only be set to FINISHED.");
@@ -129,6 +141,9 @@ public class GameService {
     private static RuntimeException translateJoinCodeRace(DataIntegrityViolationException e) {
         if (String.valueOf(e.getMostSpecificCause().getMessage()).contains(JOIN_CODE_INDEX)) {
             return joinCodeTaken();
+        }
+        if (String.valueOf(e.getMostSpecificCause().getMessage()).contains(GAME_PKEY)) {
+            return new ApiException(HttpStatus.CONFLICT, "SLUG_TAKEN", "Another game was created with that name at the same moment. Try again.");
         }
         return e;
     }

@@ -44,12 +44,12 @@ public class AdminGameController {
     }
 
     @GetMapping("/{gameId}")
-    public GameResponse get(@PathVariable UUID gameId) {
+    public GameResponse get(@PathVariable String gameId) {
         return GameResponse.from(gameService.get(gameId));
     }
 
     @PatchMapping("/{gameId}")
-    public GameResponse update(@PathVariable UUID gameId, @Valid @RequestBody UpdateGameRequest request) {
+    public GameResponse update(@PathVariable String gameId, @Valid @RequestBody UpdateGameRequest request) {
         return GameResponse.from(gameService.update(
                 gameId, request.name(), request.joinCode(), request.signupsOpen(), request.status()));
     }
@@ -76,7 +76,7 @@ public class AdminGameController {
         }
     }
 
-    public record GameResponse(UUID id, String name, String joinCode, GameStatus status, boolean signupsOpen,
+    public record GameResponse(String id, String name, String joinCode, GameStatus status, boolean signupsOpen,
             Instant createdAt, Instant startedAt, Instant finishedAt, long playerCount) {
 
         static GameResponse from(GameService.GameWithCount gc) {

@@ -18,7 +18,7 @@ import org.springframework.http.MediaType;
 class GameEventRecordingIT extends IntegrationTest {
 
     private final ObjectMapper json = new ObjectMapper();
-    private UUID gameId;
+    private String gameId;
     private UUID alice;
     private UUID bob;
     private UUID carol;

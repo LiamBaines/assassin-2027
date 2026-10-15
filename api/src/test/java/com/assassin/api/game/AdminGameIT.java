@@ -38,21 +38,21 @@ class AdminGameIT extends IntegrationTest {
         return mvc.perform(asAdmin(post("/api/admin/games").contentType(MediaType.APPLICATION_JSON).content(body)));
     }
 
-    private UUID createGame(String name, String joinCode) throws Exception {
+    private String createGame(String name, String joinCode) throws Exception {
         String body = create("""
                 {"name": "%s", "joinCode": "%s"}
                 """.formatted(name, joinCode))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        return UUID.fromString(json.readTree(body).get("id").asText());
+        return json.readTree(body).get("id").asText();
     }
 
-    private ResultActions update(UUID gameId, String body) throws Exception {
+    private ResultActions update(String gameId, String body) throws Exception {
         return mvc.perform(asAdmin(patch("/api/admin/games/" + gameId)
                 .contentType(MediaType.APPLICATION_JSON).content(body)));
     }
 
-    private void finish(UUID gameId) throws Exception {
+    private void finish(String gameId) throws Exception {
         update(gameId, """
                 {"status": "FINISHED"}
                 """).andExpect(status().isOk());
@@ -60,8 +60,8 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void newGameIsSeededWithStandardKillMethods() throws Exception {
-        UUID gameId = createGame("Seeded", "SEED01");
-        UUID otherId = createGame("Other", "SEED02");
+        String gameId = createGame("Seeded", "SEED01");
+        String otherId = createGame("Other", "SEED02");
         List<String> names = jdbc.queryForList(
                 "select name from game.kill_method where game_id = ? and enabled order by id", String.class, gameId);
         assertThat(names).hasSize(10).startsWith("Clamp", "Ticker Bomb").endsWith("Remote Shutdown", "Hand Grenade");
@@ -80,10 +80,10 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void unknownGameIs404() throws Exception {
-        mvc.perform(asAdmin(get("/api/admin/games/" + UUID.randomUUID())))
+        mvc.perform(asAdmin(get("/api/admin/games/" + "no-such-game")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
-        update(UUID.randomUUID(), """
+        update("no-such-game", """
                 {"name": "x"}
                 """).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
     }
@@ -129,6 +129,26 @@ class AdminGameIT extends IntegrationTest {
         createGame("Two", "BBBBBB");
         assertThat(jdbc.queryForObject("select count(*) from game.game where status <> 'FINISHED'", Integer.class))
                 .isEqualTo(2);
+    }
+
+    @Test
+    void gameIdIsASlugOfTheNameWithASuffixOnCollision() throws Exception {
+        createGame("Work Assassin", "AAAAAA");
+        createGame("Work Assassin", "BBBBBB");
+        createGame("work   assassin!", "CCCCCC");
+        assertThat(jdbc.queryForList("select id from game.game order by created_at", String.class))
+                .containsExactly("work-assassin", "work-assassin-2", "work-assassin-3");
+        mvc.perform(asAdmin(get("/api/admin/games/work-assassin-2")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("work-assassin-2"));
+    }
+
+    @Test
+    void renamingKeepsTheSlug() throws Exception {
+        createGame("Work Assassin", "AAAAAA");
+        update("work-assassin", """
+                {"name": "Office Assassin"}
+                """).andExpect(status().isOk()).andExpect(jsonPath("$.id").value("work-assassin"));
     }
 
     @Test
@@ -179,9 +199,9 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void aFinishedGamesCodeCanBeReused() throws Exception {
-        UUID one = createGame("One", "AAAAAA");
+        String one = createGame("One", "AAAAAA");
         finish(one);
-        UUID two = createGame("Two", "AAAAAA");
+        String two = createGame("Two", "AAAAAA");
         assertThat(two).isNotEqualTo(one);
         // ... but not while the new game is live.
         create("""
@@ -191,9 +211,9 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void listIsNewestFirstAndIncludesFinishedGamesWithPlayerCounts() throws Exception {
-        UUID oldest = createGame("Oldest", "AAAAAA");
-        UUID middle = createGame("Middle", "BBBBBB");
-        UUID newest = createGame("Newest", "CCCCCC");
+        String oldest = createGame("Oldest", "AAAAAA");
+        String middle = createGame("Middle", "BBBBBB");
+        String newest = createGame("Newest", "CCCCCC");
         finish(oldest);
         insertPlayer(middle, "alice@example.com", "Alice", "ALIVE");
         insertPlayer(middle, "bob@example.com", "Bob", "REMOVED");
@@ -215,7 +235,7 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void patchEditsFields() throws Exception {
-        UUID id = createGame("One", "AAAAAA");
+        String id = createGame("One", "AAAAAA");
         insertPlayer(id, "alice@example.com", "Alice", "ALIVE");
         update(id, """
                 {"name": "Renamed", "joinCode": "bbbbbb", "signupsOpen": false}
@@ -231,8 +251,8 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void patchOnlyTouchesThatGame() throws Exception {
-        UUID one = createGame("One", "AAAAAA");
-        UUID two = createGame("Two", "BBBBBB");
+        String one = createGame("One", "AAAAAA");
+        String two = createGame("Two", "BBBBBB");
         update(two, """
                 {"name": "Renamed"}
                 """).andExpect(status().isOk());
@@ -241,7 +261,7 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void patchKeepingItsOwnCodeIsFine() throws Exception {
-        UUID id = createGame("One", "AAAAAA");
+        String id = createGame("One", "AAAAAA");
         update(id, """
                 {"joinCode": "aaaaaa"}
                 """).andExpect(status().isOk()).andExpect(jsonPath("$.joinCode").value("AAAAAA"));
@@ -250,7 +270,7 @@ class AdminGameIT extends IntegrationTest {
     @Test
     void patchToACodeInUseIsJoinCodeTaken() throws Exception {
         createGame("One", "AAAAAA");
-        UUID two = createGame("Two", "BBBBBB");
+        String two = createGame("Two", "BBBBBB");
         update(two, """
                 {"joinCode": "AAAAAA"}
                 """)
@@ -262,9 +282,9 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void patchToAFinishedGamesCodeIsAllowed() throws Exception {
-        UUID one = createGame("One", "AAAAAA");
+        String one = createGame("One", "AAAAAA");
         finish(one);
-        UUID two = createGame("Two", "BBBBBB");
+        String two = createGame("Two", "BBBBBB");
         update(two, """
                 {"joinCode": "AAAAAA"}
                 """).andExpect(status().isOk()).andExpect(jsonPath("$.joinCode").value("AAAAAA"));
@@ -272,7 +292,7 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void patchStatusOnlyToFinished() throws Exception {
-        UUID id = createGame("One", "AAAAAA");
+        String id = createGame("One", "AAAAAA");
         update(id, """
                 {"status": "ACTIVE"}
                 """)
@@ -282,7 +302,7 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void finishingSetsFinishedAtAndKeepsTheGameVisible() throws Exception {
-        UUID id = createGame("One", "AAAAAA");
+        String id = createGame("One", "AAAAAA");
         update(id, """
                 {"status": "FINISHED"}
                 """)
@@ -297,7 +317,7 @@ class AdminGameIT extends IntegrationTest {
 
     @Test
     void everyPatchOfAFinishedGameIsGameFinished() throws Exception {
-        UUID id = createGame("One", "AAAAAA");
+        String id = createGame("One", "AAAAAA");
         finish(id);
         for (String body : new String[] {
                 "{\"name\": \"x\"}",

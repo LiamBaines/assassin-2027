@@ -27,14 +27,14 @@ public class AdminRoundController {
 
     /** Every round of the game, newest first. */
     @GetMapping
-    public List<RoundHistoryService.AdminRound> list(@PathVariable UUID gameId) {
+    public List<RoundHistoryService.AdminRound> list(@PathVariable String gameId) {
         return history.adminRounds(gameId);
     }
 
     /** Closes the current round and starts the next one with the given players. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RingService.RingView start(@PathVariable UUID gameId, CurrentUser admin,
+    public RingService.RingView start(@PathVariable String gameId, CurrentUser admin,
             @RequestBody StartRoundRequest request) {
         return ringService.startRound(gameId, request.expectedRoundNo(), request.playerIds(), request.killMethods(), admin.email());
     }

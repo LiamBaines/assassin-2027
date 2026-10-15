@@ -9,5 +9,5 @@ export default async function LeaderboardRedirect(props: {
   const { round } = await props.searchParams;
   const qs = new URLSearchParams({ view: "leaderboard" });
   if (typeof round === "string") qs.set("round", round);
-  redirect(`/games/${encodeURIComponent(gameId)}?${qs}`);
+  redirect(`/${encodeURIComponent(gameId)}?${qs}`);
 }

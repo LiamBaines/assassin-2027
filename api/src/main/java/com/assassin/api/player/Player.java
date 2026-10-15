@@ -20,7 +20,7 @@ public class Player {
     private UUID id;
 
     @Column(name = "game_id", nullable = false)
-    private UUID gameId;
+    private String gameId;
 
     @Column(name = "auth_user_id", nullable = false)
     private UUID authUserId;
@@ -41,7 +41,7 @@ public class Player {
     protected Player() {
     }
 
-    public Player(UUID gameId, UUID authUserId, String email, String displayName) {
+    public Player(String gameId, UUID authUserId, String email, String displayName) {
         this.gameId = gameId;
         this.authUserId = authUserId;
         this.email = email;
@@ -58,7 +58,7 @@ public class Player {
         return id;
     }
 
-    public UUID getGameId() {
+    public String getGameId() {
         return gameId;
     }
 

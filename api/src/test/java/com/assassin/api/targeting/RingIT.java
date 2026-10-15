@@ -34,7 +34,7 @@ class RingIT extends IntegrationTest {
     @Autowired
     ObjectMapper json;
 
-    private UUID gameId;
+    private String gameId;
 
     @BeforeEach
     void createGame() {
@@ -45,7 +45,7 @@ class RingIT extends IntegrationTest {
         return addPlayers(gameId, "", n, status);
     }
 
-    private List<UUID> addPlayers(UUID game, String prefix, int n, String status) {
+    private List<UUID> addPlayers(String game, String prefix, int n, String status) {
         List<UUID> ids = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             String name = prefix + status.toLowerCase() + i;
@@ -58,13 +58,13 @@ class RingIT extends IntegrationTest {
         return shuffle(gameId, expected);
     }
 
-    private ResultActions shuffle(UUID game, Integer expected) throws Exception {
+    private ResultActions shuffle(String game, Integer expected) throws Exception {
         String body = "{\"expectedCurrentRoundNo\": " + expected + "}";
         return mvc.perform(asAdmin(post("/api/admin/games/" + game + "/rings")
                 .contentType(MediaType.APPLICATION_JSON).content(body)));
     }
 
-    private int countRounds(UUID game) {
+    private int countRounds(String game) {
         return jdbc.queryForObject("select count(*) from game.allocation where game_id = ?", Integer.class, game);
     }
 
@@ -192,7 +192,7 @@ class RingIT extends IntegrationTest {
 
     @Test
     void unknownGameIsNotFound() throws Exception {
-        UUID unknown = UUID.randomUUID();
+        String unknown = "no-such-game";
         shuffle(unknown, null).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
         mvc.perform(asAdmin(get("/api/admin/games/" + unknown + "/rings/current")))
                 .andExpect(status().isNotFound())
@@ -204,7 +204,7 @@ class RingIT extends IntegrationTest {
 
     @Test
     void twoLiveGamesAreShuffledIndependently() throws Exception {
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         List<UUID> mine = addPlayers(4, "ALIVE");
         List<UUID> theirs = addPlayers(other, "other", 3, "ALIVE");
 
@@ -248,7 +248,7 @@ class RingIT extends IntegrationTest {
 
     @Test
     void concurrentShufflesOfDifferentGamesBothSucceed() throws Exception {
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         List<UUID> mine = addPlayers(20, "ALIVE");
         List<UUID> theirs = addPlayers(other, "other", 20, "ALIVE");
         CountDownLatch go = new CountDownLatch(1);

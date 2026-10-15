@@ -55,7 +55,7 @@ The schema and architecture must not block the later features.
 ```
 
 ## Data model (`V1__init.sql` to `V4__kill_claim.sql`, schema `game`)
-- `game`: id uuid, name, join_code (uppercase `^[A-Z0-9]{6,16}$`), status (`SETUP|ACTIVE|FINISHED`), signups_open, created_at/started_at/finished_at, version. The partial unique index `game_join_code_live_uq` makes join_code unique among non-FINISHED games (V2 replaced V1's one-live-game index).
+- `game`: id text (the slug, see ADR 0003), name, join_code (uppercase `^[A-Z0-9]{6,16}$`), status (`SETUP|ACTIVE|FINISHED`), signups_open, created_at/started_at/finished_at, version. The partial unique index `game_join_code_live_uq` makes join_code unique among non-FINISHED games (V2 replaced V1's one-live-game index).
 - `player`: id, game_id FK, auth_user_id (JWT `sub`, no FK to auth.users), email, display_name, status (`ALIVE|DEAD|REMOVED`), joined_at. Unique on `(game_id, auth_user_id)` and `(game_id, lower(display_name))`, plus `(id, game_id)` as the target for composite FKs.
 - `game_round` (V5): id, game_id, round_no (unique per game), started_at, ended_at (null while open; one open round per game), winner_id, created_by. Round 1 is created by the first ring; later rounds by `POST /rounds`, which revives or removes players from a pick list and allocates a fresh ring. `kill.game_round_id` (V7) makes kills unique per victim per round.
 - `allocation` (was `assignment_round`; V5 renamed it): id, game_id, game_round_id, allocation_no (unique per game), reason (`INITIAL|SHAKEUP`), player_count, created_by, created_at.
@@ -123,7 +123,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
   - `/join`: a code form that goes to `/join/CODE`
   - `/join/[code]`: "Join <game>" with a display-name field
   - `/me`: the user's games
-  - `/games/[gameId]`: the user's status and target in that game, plus a Players card (everyone's name and status) once the game has started. Server-rendered on load, no polling Also a Register kill button (with confirm) and claim status for the killer, and an accept/contest banner for the victim.
+  - `/[gameId]` (the game's slug, e.g. `/work-assassin`): the user's status and target in that game, plus a Players card (everyone's name and status) once the game has started. Server-rendered on load, no polling Also a Register kill button (with confirm) and claim status for the killer, and an accept/contest banner for the victim.
 - **Admin (desktop):** `admin/layout.tsx` calls `/api/me` and returns `notFound()` unless `isAdmin`.
   - `/admin`: every game, plus a create form
   - `/admin/games/[gameId]`: details, the shareable join link, edit, toggle signups, finish

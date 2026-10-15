@@ -48,7 +48,7 @@ test("round 1 ends with a winner after the kills", async () => {
     await joinThroughLink(pages.get(p.displayName)!, joinPath, GAME.name, p.displayName);
   }
   await generateRing(admin, gameId);
-  await pages.get(victim)!.goto(`/games/${gameId}`);
+  await pages.get(victim)!.goto(`/${gameId}`);
   await expect(pages.get(victim)!.getByTestId("round-badge")).toHaveText("Round 1");
 
   // Kill the victim, then whoever is hunted by the next in line, until one player is left.
@@ -93,7 +93,7 @@ test("starting round 2 revives, removes the unticked and includes the late joine
 
 test("players see Round 2, and past round 1", async () => {
   const page = pages.get(victim)!;
-  await page.goto(`/games/${gameId}`);
+  await page.goto(`/${gameId}`);
   await expect(page.getByTestId("round-badge")).toHaveText("Round 2");
   await revealTarget(page);
   await expect(page.getByTestId("target-name")).not.toHaveText("No target yet");
@@ -103,7 +103,7 @@ test("players see Round 2, and past round 1", async () => {
   await expect(page.getByTestId("past-round")).toContainText("Round 1");
 
   const out = pages.get(dropped)!;
-  await out.goto(`/games/${gameId}`);
+  await out.goto(`/${gameId}`);
   await expect(out.getByTestId("round-badge")).toHaveText("Round 2");
   await expect(out.getByTestId("target-name")).toHaveText("No target yet");
 });
@@ -137,7 +137,7 @@ test("the leaderboard totals points across both rounds", async () => {
   await expect(playerRow(LATE)).toContainText("Dead");
 
   const adminPath = `/admin/games/${gameId}/leaderboard`;
-  const playerPath = `/games/${gameId}/leaderboard`;
+  const playerPath = `/${gameId}/leaderboard`;
 
   // Round 1: two kills and two deaths. The survivor killed the dropped player, so they lead.
   const r1 = await readLeaderboard(admin, adminPath, "Round 1");

@@ -22,12 +22,12 @@ public class AdminPlayerController {
     }
 
     @GetMapping
-    public List<AdminPlayerService.AdminPlayer> list(@PathVariable UUID gameId) {
+    public List<AdminPlayerService.AdminPlayer> list(@PathVariable String gameId) {
         return adminPlayerService.list(gameId);
     }
 
     @PatchMapping("/{playerId}")
-    public PlayerSummary update(@PathVariable UUID gameId, @PathVariable UUID playerId,
+    public PlayerSummary update(@PathVariable String gameId, @PathVariable UUID playerId,
             @Valid @RequestBody UpdatePlayerRequest request) {
         return PlayerSummary.from(adminPlayerService.updateStatus(gameId, playerId, request.status()));
     }

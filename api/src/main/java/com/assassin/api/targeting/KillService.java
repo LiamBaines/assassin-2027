@@ -52,7 +52,7 @@ public class KillService {
      * assassin is the last one standing: the open round ends with them as its winner. The game stays ACTIVE.
      */
     @Transactional
-    public KillResult register(UUID gameId, UUID victimId, Long killMethodId, String registeredBy) {
+    public KillResult register(String gameId, UUID victimId, Long killMethodId, String registeredBy) {
         // Lock the game so this cannot interleave with a shuffle or another kill.
         Game game = gameService.lockForChange(gameId);
         if (game.getStatus() != GameStatus.ACTIVE) {
@@ -65,7 +65,7 @@ public class KillService {
 
     /** Admin correction of the method a kill was made with; the killer's points are adjusted to the new method's. */
     @Transactional
-    public KillMethodChange changeMethod(UUID gameId, long killId, Long killMethodId, String adjustedBy) {
+    public KillMethodChange changeMethod(String gameId, long killId, Long killMethodId, String adjustedBy) {
         Game game = gameService.lockForChange(gameId);
         Kill kill = kills.findById(killId).filter(k -> k.getGameId().equals(game.getId()))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "KILL_NOT_FOUND", "No such kill in this game."));
@@ -120,7 +120,7 @@ public class KillService {
 
     /** Admin: the game's kills, newest first. */
     @Transactional(readOnly = true)
-    public List<KillView> list(UUID gameId) {
+    public List<KillView> list(String gameId) {
         gameService.find(gameId);
         Map<Long, KillMethod> methods = killMethods.all(gameId).stream()
                 .collect(Collectors.toMap(KillMethod::getId, Function.identity()));

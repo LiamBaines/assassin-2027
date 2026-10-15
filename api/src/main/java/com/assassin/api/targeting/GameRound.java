@@ -18,7 +18,7 @@ public class GameRound {
     private UUID id;
 
     @Column(name = "game_id", nullable = false)
-    private UUID gameId;
+    private String gameId;
 
     @Column(name = "round_no", nullable = false)
     private int roundNo;
@@ -38,7 +38,7 @@ public class GameRound {
     protected GameRound() {
     }
 
-    public GameRound(UUID gameId, int roundNo, String createdBy, Instant startedAt) {
+    public GameRound(String gameId, int roundNo, String createdBy, Instant startedAt) {
         this.gameId = gameId;
         this.roundNo = roundNo;
         this.createdBy = createdBy;
@@ -60,7 +60,7 @@ public class GameRound {
         return id;
     }
 
-    public UUID getGameId() {
+    public String getGameId() {
         return gameId;
     }
 

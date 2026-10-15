@@ -18,7 +18,7 @@ public class KillMethod {
     private Long id;
 
     @Column(name = "game_id", nullable = false)
-    private UUID gameId;
+    private String gameId;
 
     @Column(nullable = false)
     private String name;
@@ -35,11 +35,11 @@ public class KillMethod {
     protected KillMethod() {
     }
 
-    public KillMethod(UUID gameId, String name, int points, Instant createdAt) {
+    public KillMethod(String gameId, String name, int points, Instant createdAt) {
         this(gameId, name, points, true, createdAt);
     }
 
-    public KillMethod(UUID gameId, String name, int points, boolean enabled, Instant createdAt) {
+    public KillMethod(String gameId, String name, int points, boolean enabled, Instant createdAt) {
         this.gameId = gameId;
         this.name = name;
         this.points = points;
@@ -51,7 +51,7 @@ public class KillMethod {
         return id;
     }
 
-    public UUID getGameId() {
+    public String getGameId() {
         return gameId;
     }
 

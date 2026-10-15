@@ -26,7 +26,7 @@ public class LeaderboardController {
 
     /** The ranked leaderboard of any game; no {@code roundNo} means the game total. 404 GAME_NOT_FOUND, ROUND_NOT_FOUND. */
     @GetMapping("/api/admin/games/{gameId}/leaderboard")
-    public LeaderboardService.Leaderboard admin(@PathVariable UUID gameId,
+    public LeaderboardService.Leaderboard admin(@PathVariable String gameId,
             @RequestParam(required = false) Integer roundNo) {
         games.find(gameId);
         return leaderboards.leaderboard(gameId, roundNo);
@@ -34,7 +34,7 @@ public class LeaderboardController {
 
     /** The same leaderboard for a player of the game. 404 NOT_IN_GAME for non-members and unknown games. */
     @GetMapping("/api/me/games/{gameId}/leaderboard")
-    public LeaderboardService.Leaderboard player(CurrentUser user, @PathVariable UUID gameId,
+    public LeaderboardService.Leaderboard player(CurrentUser user, @PathVariable String gameId,
             @RequestParam(required = false) Integer roundNo) {
         if (!players.existsByGameIdAndAuthUserId(gameId, user.authUserId())) {
             throw new ApiException(HttpStatus.NOT_FOUND, "NOT_IN_GAME", "You aren't a player in this game.");

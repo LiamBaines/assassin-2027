@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KillRepository extends JpaRepository<Kill, Long> {
 
-    List<Kill> findByGameIdOrderByIdDesc(UUID gameId);
+    List<Kill> findByGameIdOrderByIdDesc(String gameId);
 }

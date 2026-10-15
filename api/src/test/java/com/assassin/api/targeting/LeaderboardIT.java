@@ -17,7 +17,7 @@ class LeaderboardIT extends IntegrationTest {
     @Autowired
     private LeaderboardService service;
 
-    private UUID gameId;
+    private String gameId;
     private UUID round1;
     private UUID round2;
     private UUID alice;

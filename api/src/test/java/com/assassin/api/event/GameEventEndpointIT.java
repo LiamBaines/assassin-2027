@@ -19,7 +19,7 @@ class GameEventEndpointIT extends IntegrationTest {
     @Autowired
     TransactionTemplate tx;
 
-    private UUID gameId;
+    private String gameId;
 
     @BeforeEach
     void seed() {
@@ -74,7 +74,7 @@ class GameEventEndpointIT extends IntegrationTest {
 
     @Test
     void unknownGameIsNotFoundForAdmin() throws Exception {
-        mvc.perform(asAdmin(get("/api/admin/games/" + UUID.randomUUID() + "/events")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + "no-such-game" + "/events")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
     }

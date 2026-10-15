@@ -3,7 +3,7 @@
 **Status:** accepted (2026-10-08). Replaces the "one live game at a time" rule.
 
 ## Decision
-- **Several games can be live at once.** V2 drops the `game_one_live_uq` index. Every game-scoped route takes the game id in its path (`/api/admin/games/{gameId}/…`, `/api/me/games/{gameId}/target`), and there is no "current game" any more.
+- **Several games can be live at once.** V2 drops the `game_one_live_uq` index. Every game-scoped route takes the game id (its slug, below) in its path (`/api/admin/games/{gameId}/…`, `/api/me/games/{gameId}/target`), and there is no "current game" any more.
 - **Join codes:**
   - The admin still types the code.
   - A code is unique among non-FINISHED games (`game_join_code_live_uq`), so it identifies the game a player is joining. A lost race returns 409 `JOIN_CODE_TAKEN`.
@@ -13,6 +13,13 @@
 - **Join links:**
   - `/join/CODE` previews the game (`GET /api/join/{code}`) and asks only for a display name.
   - Logged-out visitors go through `/login?next=…` and come back to the link. The magic-link template passes `{{ .RedirectTo }}` as `redirect_to`, and `/auth/confirm` reads `next` from it through `safeNextPath`.
+
+- **A game's id is a slug of its name** (V13), e.g. `work-assassin`, in place of a UUID:
+  - It is the primary key (`game.game.id text`) and every `game_id` column, and appears in API paths and JSON as `gameId`/`id`. Players, rounds and kills keep UUIDs.
+  - The first game of a name gets the plain slug; later ones get `-2`, `-3`, … (`GameSlugs`, `GameService.create`). Two simultaneous creates that pick the same slug give 409 `SLUG_TAKEN`.
+  - Fixed at creation: renaming a game doesn't change it.
+  - Names that would shadow a top-level web route (`admin`, `api`, `auth`, `games`, `join`, `login`, `me`) get a `-2` suffix. The player view is at `/{slug}`; admin stays at `/admin/games/{slug}`.
+  - V13 truncated all game data (it was test data); old `/games/<uuid>` URLs are gone.
 
 ## Why
 - Admins want to run several games and look back at past ones.

@@ -71,7 +71,7 @@ E2E details (serial specs, DB truncation, auth setup, stale-server gotcha, CI) a
 - `cacheComponents` is off on purpose, so `redirect()`/`notFound()` give real status codes.
 - All Spring calls go through `src/lib/api.ts` (server-only).
 - Admin pages must call `requireAdmin()` themselves. Layouts render concurrently with pages, so a layout-only gate does not stop the page's admin fetches.
-- Games are scoped by id in every route: `/api/admin/games/{gameId}/…` and `/api/me/games/{gameId}/target` (ADR 0003). There is no "current game".
+- Games are scoped by id (a name-derived slug, e.g. `work-assassin`; player view at `/{slug}`) in every route: `/api/admin/games/{gameId}/…` and `/api/me/games/{gameId}/target` (ADR 0003). There is no "current game".
 - No allocation yet means `expectedCurrentRoundNo: null`, and `GET /api/admin/games/{gameId}/rings/current` is 404 `NO_RING` (`getCurrentRing(gameId)` returns null).
 - Logged-out visitors go to `/login?next=…`. Every return path goes through `safeNextPath` (`lib/safe-next.ts`). It re-checks the path after dot segments resolve, because `/.//evil.com` turns into `//evil.com`.
 - The magic-link template passes `{{ .RedirectTo }}` as `redirect_to`. The prod dashboard template must match `supabase/templates/magic_link.html`.

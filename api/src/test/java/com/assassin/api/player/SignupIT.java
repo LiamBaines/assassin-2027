@@ -37,7 +37,7 @@ class SignupIT extends IntegrationTest {
 
     @Test
     void signupCopiesSubAndEmailAndMatchesJoinCodeCaseInsensitively() throws Exception {
-        UUID gameId = insertGame("ABC123", "SETUP", true);
+        String gameId = insertGame("ABC123", "SETUP", true);
 
         signup(ALICE, "  Alice ", " abc123 ")
                 .andExpect(status().isCreated())
@@ -69,8 +69,8 @@ class SignupIT extends IntegrationTest {
     @Test
     void theCodePicksTheGame() throws Exception {
         insertGame("Old", "ABC123", "FINISHED", true);
-        UUID one = insertGame("One", "ABC123", "ACTIVE", true);
-        UUID two = insertGame("Two", "XYZ789", "SETUP", true);
+        String one = insertGame("One", "ABC123", "ACTIVE", true);
+        String two = insertGame("Two", "XYZ789", "SETUP", true);
 
         signup(ALICE, "Alice", "xyz789").andExpect(status().isCreated())
                 .andExpect(jsonPath("$.game.id").value(two.toString()))
@@ -79,7 +79,7 @@ class SignupIT extends IntegrationTest {
         signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated())
                 .andExpect(jsonPath("$.game.id").value(one.toString()));
 
-        assertThat(jdbc.queryForList("select game_id from game.player", UUID.class))
+        assertThat(jdbc.queryForList("select game_id from game.player", String.class))
                 .containsExactlyInAnyOrder(one, two);
     }
 
@@ -191,7 +191,7 @@ class SignupIT extends IntegrationTest {
 
     @Test
     void signupWaitsForAConcurrentCloseAndThenSeesIt() throws Exception {
-        UUID gameId = insertGame("ABC123", "ACTIVE", true);
+        String gameId = insertGame("ABC123", "ACTIVE", true);
         int status = signupDuringConcurrentUpdate(gameId, "update game.game set signups_open = false where id = ?");
         assertThat(status).isEqualTo(409);
         assertThat(jdbc.queryForObject("select count(*) from game.player", Integer.class)).isZero();
@@ -199,7 +199,7 @@ class SignupIT extends IntegrationTest {
 
     @Test
     void signupWaitsForAConcurrentFinishAndThenSeesIt() throws Exception {
-        UUID gameId = insertGame("ABC123", "ACTIVE", true);
+        String gameId = insertGame("ABC123", "ACTIVE", true);
         int status = signupDuringConcurrentUpdate(gameId, "update game.game set status = 'FINISHED' where id = ?");
         assertThat(status).isEqualTo(400);
         assertThat(jdbc.queryForObject("select count(*) from game.player", Integer.class)).isZero();
@@ -209,7 +209,7 @@ class SignupIT extends IntegrationTest {
      * Holds the game's row lock in another transaction (as an admin PATCH does), starts a signup, checks that it
      * blocks, then applies {@code update} and commits. Returns the signup's HTTP status.
      */
-    private int signupDuringConcurrentUpdate(UUID gameId, String update) throws Exception {
+    private int signupDuringConcurrentUpdate(String gameId, String update) throws Exception {
         ExecutorService pool = Executors.newSingleThreadExecutor();
         try (Connection admin = dataSource.getConnection()) {
             admin.setAutoCommit(false);

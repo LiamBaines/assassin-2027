@@ -52,13 +52,13 @@ async function startGame(code: string): Promise<Setup> {
 
 /** The killer files a claim on their game page: open the form, pick a method, submit. */
 async function fileClaim(killer: Page, gameId: string): Promise<void> {
-  await killer.goto(`/games/${gameId}`);
+  await killer.goto(`/${gameId}`);
   await registerKill(killer, "Clamp");
   await expect(killer.getByTestId("claim-status")).toContainText("Waiting for your target");
 }
 
 async function respond(victim: Page, gameId: string, button: string, killer: string) {
-  await victim.goto(`/games/${gameId}`);
+  await victim.goto(`/${gameId}`);
   await expect(victim.getByTestId("incoming-claim")).toContainText(killer);
   await victim.getByRole("button", { name: button }).click();
 }
@@ -99,7 +99,7 @@ test("a contested claim stays open until the admin dismisses it", async () => {
   await fileClaim(killerPage, gameId);
   await respond(pages.get(VICTIM)!, gameId, "No, contest", killer);
 
-  await killerPage.goto(`/games/${gameId}`);
+  await killerPage.goto(`/${gameId}`);
   await expect(killerPage.getByTestId("claim-status")).toContainText("contested");
 
   const claim = await openAdminClaims(gameId);
@@ -108,7 +108,7 @@ test("a contested claim stays open until the admin dismisses it", async () => {
   await expect(admin.getByTestId("kill-claim")).toHaveCount(0);
   await expect(playerRow(VICTIM)).toContainText("Alive");
 
-  await killerPage.goto(`/games/${gameId}`);
+  await killerPage.goto(`/${gameId}`);
   await expect(killerPage.getByTestId("claim-status")).toContainText("dismissed");
   await expect(killerPage.getByRole("button", { name: "Register kill" })).toBeVisible();
 });

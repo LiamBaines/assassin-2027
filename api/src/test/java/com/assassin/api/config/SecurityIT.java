@@ -79,7 +79,7 @@ class SecurityIT extends IntegrationTest {
 
     @Test
     void nonAdminIsForbiddenOnAdminRoutes() throws Exception {
-        UUID gameId = insertGame("ABC123", "SETUP", true);
+        String gameId = insertGame("ABC123", "SETUP", true);
         UUID playerId = insertPlayer(gameId, USER, "Player", "ALIVE");
         String game = "/api/admin/games/" + gameId;
         String json = MediaType.APPLICATION_JSON_VALUE;
@@ -132,7 +132,7 @@ class SecurityIT extends IntegrationTest {
 
     @Test
     void allowlistedEmailInMixedCaseIsAdmin() throws Exception {
-        UUID gameId = insertGame("ABC123", "SETUP", true);
+        String gameId = insertGame("ABC123", "SETUP", true);
         mvc.perform(as("Admin@Example.COM", get("/api/admin/games"))).andExpect(status().isOk());
         mvc.perform(as("SECOND.admin@example.com", get("/api/admin/games/" + gameId + "/players")))
                 .andExpect(status().isOk());

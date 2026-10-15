@@ -8,22 +8,22 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface PlayerRepository extends JpaRepository<Player, UUID> {
 
-    Optional<Player> findByGameIdAndAuthUserId(UUID gameId, UUID authUserId);
+    Optional<Player> findByGameIdAndAuthUserId(String gameId, UUID authUserId);
 
-    Optional<Player> findByIdAndGameId(UUID id, UUID gameId);
+    Optional<Player> findByIdAndGameId(UUID id, String gameId);
 
-    boolean existsByGameIdAndAuthUserId(UUID gameId, UUID authUserId);
+    boolean existsByGameIdAndAuthUserId(String gameId, UUID authUserId);
 
-    boolean existsByGameIdAndDisplayNameIgnoreCase(UUID gameId, String displayName);
+    boolean existsByGameIdAndDisplayNameIgnoreCase(String gameId, String displayName);
 
-    List<Player> findByGameIdOrderByJoinedAtAsc(UUID gameId);
+    List<Player> findByGameIdOrderByJoinedAtAsc(String gameId);
 
-    List<Player> findByGameIdAndStatusOrderById(UUID gameId, PlayerStatus status);
+    List<Player> findByGameIdAndStatusOrderById(String gameId, PlayerStatus status);
 
     /** Every player row of one account, across games, most recently joined first. */
     List<Player> findByAuthUserIdOrderByJoinedAtDesc(UUID authUserId);
 
-    long countByGameId(UUID gameId);
+    long countByGameId(String gameId);
 
     /** Player counts (all statuses) per game. Games without players are absent. */
     @Query("select p.gameId as gameId, count(p) as count from Player p group by p.gameId")
@@ -43,7 +43,7 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
              where p.gameId = :gameId
              order by lower(p.displayName), p.displayName
             """)
-    List<RosterRow> findRoster(UUID gameId);
+    List<RosterRow> findRoster(String gameId);
 
     interface RosterRow {
 
@@ -56,7 +56,7 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
 
     interface GamePlayerCount {
 
-        UUID getGameId();
+        String getGameId();
 
         long getCount();
     }

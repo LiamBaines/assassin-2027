@@ -9,9 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 public interface AllocationRepository extends JpaRepository<Allocation, UUID> {
 
     @Query("select max(r.allocationNo) from Allocation r where r.gameId = :gameId")
-    Optional<Integer> findCurrentAllocationNo(UUID gameId);
+    Optional<Integer> findCurrentAllocationNo(String gameId);
 
-    Optional<Allocation> findFirstByGameIdOrderByAllocationNoDesc(UUID gameId);
+    Optional<Allocation> findFirstByGameIdOrderByAllocationNoDesc(String gameId);
 
-    List<Allocation> findByGameIdOrderByAllocationNoDesc(UUID gameId);
+    List<Allocation> findByGameIdOrderByAllocationNoDesc(String gameId);
 }

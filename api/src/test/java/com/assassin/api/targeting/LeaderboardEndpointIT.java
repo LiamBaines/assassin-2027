@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 class LeaderboardEndpointIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
 
     @BeforeEach
     void seed() {
@@ -62,7 +62,7 @@ class LeaderboardEndpointIT extends IntegrationTest {
 
     @Test
     void unknownGameIsNotInGameForPlayer() throws Exception {
-        mvc.perform(as("alice@example.com", get("/api/me/games/" + UUID.randomUUID() + "/leaderboard")))
+        mvc.perform(as("alice@example.com", get("/api/me/games/" + "no-such-game" + "/leaderboard")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_IN_GAME"));
     }
@@ -75,7 +75,7 @@ class LeaderboardEndpointIT extends IntegrationTest {
 
     @Test
     void unknownGameIsNotFoundForAdmin() throws Exception {
-        mvc.perform(asAdmin(get("/api/admin/games/" + UUID.randomUUID() + "/leaderboard")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + "no-such-game" + "/leaderboard")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
     }

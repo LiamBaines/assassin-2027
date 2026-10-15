@@ -29,7 +29,7 @@ public class RosterController {
      */
     @GetMapping("/api/me/games/{gameId}/players")
     @Transactional(readOnly = true)
-    public RosterResponse roster(CurrentUser user, @PathVariable UUID gameId) {
+    public RosterResponse roster(CurrentUser user, @PathVariable String gameId) {
         if (!players.existsByGameIdAndAuthUserId(gameId, user.authUserId())) {
             throw notInGame();
         }

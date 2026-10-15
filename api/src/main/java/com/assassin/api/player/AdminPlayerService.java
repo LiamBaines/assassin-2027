@@ -38,7 +38,7 @@ public class AdminPlayerService {
 
     /** Players of the game in join order, each with their current target (if any). */
     @Transactional(readOnly = true)
-    public List<AdminPlayer> list(UUID gameId) {
+    public List<AdminPlayer> list(String gameId) {
         Game game = gameService.find(gameId);
         List<Player> all = players.findByGameIdOrderByJoinedAtAsc(game.getId());
         Map<UUID, Player> byId = all.stream().collect(Collectors.toMap(Player::getId, Function.identity()));
@@ -57,7 +57,7 @@ public class AdminPlayerService {
      * their target. A restored player has no target until the next shakeup. A FINISHED game can't be changed.
      */
     @Transactional
-    public Player updateStatus(UUID gameId, UUID playerId, PlayerStatus status) {
+    public Player updateStatus(String gameId, UUID playerId, PlayerStatus status) {
         // Lock the game so this cannot interleave with a shuffle.
         Game game = gameService.lockForChange(gameId);
         Player player = players.findByIdAndGameId(playerId, game.getId())

@@ -33,9 +33,9 @@ public class MeController {
     @Transactional(readOnly = true)
     public MeResponse me(CurrentUser user) {
         List<Player> mine = players.findByAuthUserIdOrderByJoinedAtDesc(user.authUserId());
-        Map<UUID, Game> byId = games.findAllById(mine.stream().map(Player::getGameId).toList()).stream()
+        Map<String, Game> byId = games.findAllById(mine.stream().map(Player::getGameId).toList()).stream()
                 .collect(Collectors.toMap(Game::getId, Function.identity()));
-        Map<UUID, Integer> currentRound = rounds.findByGameIdIn(byId.keySet()).stream()
+        Map<String, Integer> currentRound = rounds.findByGameIdIn(byId.keySet()).stream()
                 .collect(Collectors.toMap(GameRound::getGameId, GameRound::getRoundNo, Math::max));
         List<PlayerGame> mineWithGames = mine.stream()
                 .map(p -> PlayerGame.from(byId.get(p.getGameId()), p, currentRound.get(p.getGameId())))

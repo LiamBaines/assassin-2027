@@ -38,7 +38,7 @@ public class KillMethodService {
     }
 
     @Transactional(readOnly = true)
-    public List<KillMethodView> list(UUID gameId, boolean enabledOnly) {
+    public List<KillMethodView> list(String gameId, boolean enabledOnly) {
         return methods.findByGameIdOrderById(gameId).stream()
                 .filter(m -> !enabledOnly || m.isEnabled())
                 .map(KillMethodView::from)
@@ -47,13 +47,13 @@ public class KillMethodService {
 
     /** Every method of the game, enabled or not. */
     @Transactional(readOnly = true)
-    public List<KillMethod> all(UUID gameId) {
+    public List<KillMethod> all(String gameId) {
         return methods.findByGameIdOrderById(gameId);
     }
 
     /** The method a new kill or claim is filed with: it must be given, belong to the game and be enabled. */
     @Transactional(readOnly = true)
-    public KillMethod requireEnabled(UUID gameId, Long methodId) {
+    public KillMethod requireEnabled(String gameId, Long methodId) {
         if (methodId == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_METHOD_REQUIRED", "Pick the kill method used.");
         }
@@ -66,7 +66,7 @@ public class KillMethodService {
 
     /** A method of this game, enabled or not. */
     @Transactional(readOnly = true)
-    public KillMethod require(UUID gameId, long methodId) {
+    public KillMethod require(String gameId, long methodId) {
         return methods.findById(methodId).filter(m -> m.getGameId().equals(gameId))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "KILL_METHOD_NOT_FOUND",
                         "There is no such kill method."));
@@ -74,10 +74,10 @@ public class KillMethodService {
 
     /**
      * Applies the edits (null = none; methods not mentioned stay as they are) and checks that at least one method is
-     * enabled. The caller must hold the game's lock ({@link GameService#lockForChange(UUID)}).
+     * enabled. The caller must hold the game's lock ({@link GameService#lockForChange(String)}).
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void applyForNewRound(UUID gameId, List<KillMethodInput> edits) {
+    public void applyForNewRound(String gameId, List<KillMethodInput> edits) {
         List<KillMethod> all = new ArrayList<>(methods.findByGameIdOrderById(gameId));
         Map<Long, KillMethod> byId = all.stream().collect(Collectors.toMap(KillMethod::getId, Function.identity()));
         Instant now = Instant.now();
