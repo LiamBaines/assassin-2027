@@ -26,7 +26,7 @@ class JoinPreviewIT extends IntegrationTest {
 
     @Test
     void previewShowsTheLiveGameForTheCode() throws Exception {
-        UUID gameId = insertGame("Spring 2027", "ABC123", "SETUP", true);
+        String gameId = insertGame("Spring 2027", "ABC123", "SETUP", true);
         insertGame("Other", "XYZ789", "ACTIVE", true);
 
         preview("viewer@example.com", "abc123")
@@ -41,7 +41,7 @@ class JoinPreviewIT extends IntegrationTest {
 
     @Test
     void alreadyJoinedIsTrueForAPlayerOfThatGameOnly() throws Exception {
-        UUID one = insertGame("One", "ABC123", "ACTIVE", true);
+        String one = insertGame("One", "ABC123", "ACTIVE", true);
         insertGame("Two", "XYZ789", "ACTIVE", true);
         insertPlayer(one, "joined@example.com", "Joined", "ALIVE");
 
@@ -77,7 +77,7 @@ class JoinPreviewIT extends IntegrationTest {
     @Test
     void finishedCodeReusedByANewGamePreviewsTheNewGame() throws Exception {
         insertGame("Old", "ABC123", "FINISHED", true);
-        UUID fresh = insertGame("New", "ABC123", "SETUP", true);
+        String fresh = insertGame("New", "ABC123", "SETUP", true);
         preview("reuse.viewer@example.com", "ABC123")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.gameId").value(fresh.toString()));

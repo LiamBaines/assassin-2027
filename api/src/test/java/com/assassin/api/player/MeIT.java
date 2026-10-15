@@ -29,7 +29,7 @@ class MeIT extends IntegrationTest {
 
     @Test
     void oneGame() throws Exception {
-        UUID gameId = insertGame("Spring", "ABC123", "SETUP", true);
+        String gameId = insertGame("Spring", "ABC123", "SETUP", true);
         UUID playerId = insertPlayer(gameId, "alice@example.com", "Alice", "ALIVE");
         insertPlayer(gameId, "bob@example.com", "Bob", "ALIVE");
         mvc.perform(as("alice@example.com", get("/api/me")))
@@ -49,7 +49,7 @@ class MeIT extends IntegrationTest {
 
     @Test
     void currentRoundNoIsTheLatestRound() throws Exception {
-        UUID gameId = insertGame("Rounds", "RRR111", "ACTIVE", true);
+        String gameId = insertGame("Rounds", "RRR111", "ACTIVE", true);
         insertPlayer(gameId, "alice@example.com", "Alice", "ALIVE");
         jdbc.update("insert into game.game_round (game_id, round_no, created_by, ended_at) values (?, 1, 'admin', now())", gameId);
         jdbc.update("insert into game.game_round (game_id, round_no, created_by) values (?, 2, 'admin')", gameId);
@@ -60,9 +60,9 @@ class MeIT extends IntegrationTest {
 
     @Test
     void everyGameIncludingFinishedOnesMostRecentlyJoinedFirst() throws Exception {
-        UUID finished = insertGame("Finished", "AAA111", "FINISHED", false);
-        UUID active = insertGame("Active", "BBB222", "ACTIVE", true);
-        UUID setup = insertGame("Setup", "CCC333", "SETUP", true);
+        String finished = insertGame("Finished", "AAA111", "FINISHED", false);
+        String active = insertGame("Active", "BBB222", "ACTIVE", true);
+        String setup = insertGame("Setup", "CCC333", "SETUP", true);
         insertGame("Not mine", "DDD444", "SETUP", true);
         UUID inFinished = insertPlayer(finished, "alice@example.com", "Alice", "DEAD");
         UUID inSetup = insertPlayer(setup, "alice@example.com", "Ally", "ALIVE");

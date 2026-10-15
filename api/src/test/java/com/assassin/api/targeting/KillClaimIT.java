@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 class KillClaimIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
     private UUID alice;
     private UUID bob;
     private UUID carol;
@@ -189,7 +189,7 @@ class KillClaimIT extends IntegrationTest {
                 .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
         mePost(alice, "").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         file(alice, "{\"killMethodId\": " + methodId(other, "Clamp") + "}").andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("KILL_METHOD_NOT_FOUND"));
         jdbc.update("update game.kill_method set enabled = false where id = ?", methodId(gameId, "Clamp"));

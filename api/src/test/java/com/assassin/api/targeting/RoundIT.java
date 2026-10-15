@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 class RoundIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
 
     @BeforeEach
     void createGame() {

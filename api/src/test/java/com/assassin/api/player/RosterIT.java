@@ -13,7 +13,7 @@ import org.springframework.http.MediaType;
 
 class RosterIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
 
     @BeforeEach
     void seed() {
@@ -31,7 +31,7 @@ class RosterIT extends IntegrationTest {
                 .andExpect(status().isCreated());
     }
 
-    private String roster(UUID game) {
+    private String roster(String game) {
         return "/api/me/games/" + game + "/players";
     }
 
@@ -103,7 +103,7 @@ class RosterIT extends IntegrationTest {
     @Test
     void unknownGameIsNotFound() throws Exception {
         startAndRing();
-        mvc.perform(as("alice@example.com", get(roster(UUID.randomUUID()))))
+        mvc.perform(as("alice@example.com", get(roster("no-such-game"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_IN_GAME"));
     }
@@ -127,7 +127,7 @@ class RosterIT extends IntegrationTest {
     @Test
     void playerInGameACannotSeeGameB() throws Exception {
         startAndRing();
-        UUID other = insertGame("XYZ789", "ACTIVE", true);
+        String other = insertGame("XYZ789", "ACTIVE", true);
         insertPlayer(other, "zed@example.com", "Zed", "ALIVE");
         mvc.perform(as("alice@example.com", get(roster(other))))
                 .andExpect(status().isNotFound())

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,27 +37,29 @@ public abstract class IntegrationTest {
         jdbc.execute("truncate game.game_event, game.point_event, game.kill_claim, game.kill, game.assignment, game.allocation, game.game_round, game.player, game.kill_method, game.game");
     }
 
+    private static final AtomicInteger NEXT_GAME = new AtomicInteger();
+
     /** Inserts a game directly; returns its id. */
-    protected UUID insertGame(String joinCode, String status, boolean signupsOpen) {
+    protected String insertGame(String joinCode, String status, boolean signupsOpen) {
         return insertGame("Test game", joinCode, status, signupsOpen);
     }
 
-    protected UUID insertGame(String name, String joinCode, String status, boolean signupsOpen) {
-        UUID id = jdbc.queryForObject(
-                "insert into game.game (name, join_code, status, signups_open) values (?, ?, ?, ?) returning id",
-                UUID.class, name, joinCode, status, signupsOpen);
+    protected String insertGame(String name, String joinCode, String status, boolean signupsOpen) {
+        String id = "game-" + NEXT_GAME.incrementAndGet();
+        jdbc.update("insert into game.game (id, name, join_code, status, signups_open) values (?, ?, ?, ?, ?)",
+                id, name, joinCode, status, signupsOpen);
         jdbc.update("insert into game.kill_method (game_id, name, points) values (?, 'Clamp', 10), (?, 'Duel', 15)", id, id);
         return id;
     }
 
     /** Id of the seeded method called {@code name} in the game. */
-    protected long methodId(UUID gameId, String name) {
+    protected long methodId(String gameId, String name) {
         return jdbc.queryForObject("select id from game.kill_method where game_id = ? and name = ?", Long.class,
                 gameId, name);
     }
 
     /** Inserts a player directly, with the {@code sub} test tokens use for {@code email}; returns its id. */
-    protected UUID insertPlayer(UUID gameId, String email, String displayName, String status) {
+    protected UUID insertPlayer(String gameId, String email, String displayName, String status) {
         return jdbc.queryForObject("""
                 insert into game.player (game_id, auth_user_id, email, display_name, status)
                 values (?, ?, ?, ?, ?) returning id
@@ -74,7 +77,7 @@ public abstract class IntegrationTest {
     }
 
     /** Same as {@link #assertActiveRingCovers(List)}, for the ACTIVE rows of one game only. */
-    protected Map<UUID, UUID> assertActiveRingCovers(UUID gameId, List<UUID> players) {
+    protected Map<UUID, UUID> assertActiveRingCovers(String gameId, List<UUID> players) {
         Map<UUID, UUID> next = new HashMap<>();
         jdbc.query("select assassin_id, target_id from game.assignment where status = 'ACTIVE' and game_id = ?",
                 rs -> {

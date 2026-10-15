@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 class KillIT extends IntegrationTest {
 
-    private UUID gameId;
+    private String gameId;
     private UUID alice;
     private UUID bob;
     private UUID carol;
@@ -38,13 +38,13 @@ class KillIT extends IntegrationTest {
                 .content("{\"expectedCurrentRoundNo\": null}"))).andExpect(status().isCreated());
     }
 
-    private ResultActions kill(UUID game, UUID victim, String methodJson) throws Exception {
+    private ResultActions kill(String game, UUID victim, String methodJson) throws Exception {
         return mvc.perform(asAdmin(post("/api/admin/games/" + game + "/kills")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"victimId\": \"" + victim + "\"" + methodJson + "}")));
     }
 
-    private ResultActions kill(UUID game, UUID victim) throws Exception {
+    private ResultActions kill(String game, UUID victim) throws Exception {
         return kill(game, victim, ", \"killMethodId\": " + methodId(game, "Clamp"));
     }
 
@@ -217,7 +217,7 @@ class KillIT extends IntegrationTest {
     @Test
     void victimFromAnotherGameIsNotFound() throws Exception {
         shuffle();
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         UUID stranger = insertPlayer(other, "eve@example.com", "Eve", "ALIVE");
         kill(stranger).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("PLAYER_NOT_FOUND"));
     }
@@ -253,7 +253,7 @@ class KillIT extends IntegrationTest {
     @Test
     void methodFromAnotherGameIsNotFound() throws Exception {
         shuffle();
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         kill(gameId, bob, ", \"killMethodId\": " + methodId(other, "Clamp")).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("KILL_METHOD_NOT_FOUND"));
     }
@@ -266,7 +266,7 @@ class KillIT extends IntegrationTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 
-    private ResultActions changeMethod(UUID game, long killId, String methodJson) throws Exception {
+    private ResultActions changeMethod(String game, long killId, String methodJson) throws Exception {
         return mvc.perform(asAdmin(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                 .patch("/api/admin/games/" + game + "/kills/" + killId)
                 .contentType(MediaType.APPLICATION_JSON).content("{" + methodJson + "}")));
@@ -328,7 +328,7 @@ class KillIT extends IntegrationTest {
         long killId = onlyKillId();
         changeMethod(gameId, killId, "").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("KILL_METHOD_REQUIRED"));
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         changeMethod(gameId, killId, "\"killMethodId\": " + methodId(other, "Clamp")).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("KILL_METHOD_NOT_FOUND"));
         jdbc.update("update game.kill_method set enabled = false where id = ?", methodId(gameId, "Duel"));

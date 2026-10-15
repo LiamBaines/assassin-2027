@@ -24,7 +24,7 @@ class AdminPlayersIT extends IntegrationTest {
     @Autowired
     ObjectMapper json;
 
-    private UUID gameId;
+    private String gameId;
     private UUID alice;
     private UUID bob;
     private UUID carol;
@@ -41,7 +41,7 @@ class AdminPlayersIT extends IntegrationTest {
         return setStatus(gameId, id, status);
     }
 
-    private ResultActions setStatus(UUID game, UUID id, String status) throws Exception {
+    private ResultActions setStatus(String game, UUID id, String status) throws Exception {
         return mvc.perform(asAdmin(patch("/api/admin/games/" + game + "/players/" + id)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"" + status + "\"}")));
     }
@@ -212,7 +212,7 @@ class AdminPlayersIT extends IntegrationTest {
 
     @Test
     void listOnlyShowsThatGamesPlayers() throws Exception {
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         insertPlayer(other, "alice@example.com", "Alice Elsewhere", "ALIVE");
         insertPlayer(other, "zed@example.com", "Zed", "ALIVE");
 
@@ -227,17 +227,17 @@ class AdminPlayersIT extends IntegrationTest {
 
     @Test
     void unknownGameIsNotFound() throws Exception {
-        mvc.perform(asAdmin(get("/api/admin/games/" + UUID.randomUUID() + "/players")))
+        mvc.perform(asAdmin(get("/api/admin/games/" + "no-such-game" + "/players")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
-        setStatus(UUID.randomUUID(), alice, "REMOVED")
+        setStatus("no-such-game", alice, "REMOVED")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"));
     }
 
     @Test
     void aPlayerOfAnotherGameIsNotFound() throws Exception {
-        UUID other = insertGame("XYZ789", "SETUP", true);
+        String other = insertGame("XYZ789", "SETUP", true);
         insertPlayer(other, "zed@example.com", "Zed", "ALIVE");
 
         setStatus(other, alice, "REMOVED")
