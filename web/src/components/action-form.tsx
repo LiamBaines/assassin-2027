@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { Dialog, DialogActions } from "@/components/overlay";
 import { Alert, iconLabelButtonClass } from "@/components/ui";
 
 export type ActionResult = { error?: string };
@@ -87,12 +88,13 @@ export function SubmitButton({
 }
 
 /**
- * Two-step submit: the first click asks for confirmation, the second submits
- * the enclosing form.
+ * Two-step submit: the trigger opens a confirmation dialog whose confirm
+ * button submits the enclosing form (the dialog sits inside the form in the DOM).
  */
 export function ConfirmSubmit({
   label,
   confirmLabel,
+  title,
   message,
   className,
   confirmClassName,
@@ -104,15 +106,18 @@ export function ConfirmSubmit({
   iconOnly?: boolean;
   label: string;
   confirmLabel: string;
+  /** Dialog heading; defaults to the trigger label. */
+  title?: string;
   message: string;
   className?: string;
   confirmClassName?: string;
 }) {
   const [confirming, setConfirming] = useState(false);
   const { pending } = useFormStatus();
+  const close = () => setConfirming(false);
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setConfirming(true)}
@@ -125,30 +130,22 @@ export function ConfirmSubmit({
           {pending ? "Working…" : label}
         </ButtonFace>
       </button>
-    );
-  }
-
-  return (
-    <span className="inline-flex flex-wrap items-center gap-2">
-      <span className="text-sm text-bone">{message}</span>
-      <button
-        type="submit"
-        disabled={pending}
-        // Collapse once the submit has been dispatched; the first button then
-        // shows the pending state.
-        onClick={() => setTimeout(() => setConfirming(false), 0)}
-        className={confirmClassName ?? className}
-      >
-        {pending ? "Working…" : confirmLabel}
-      </button>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => setConfirming(false)}
-        className="text-sm text-muted underline hover:text-bone"
-      >
-        Cancel
-      </button>
-    </span>
+      <Dialog open={confirming} onClose={close} title={title ?? label} description={message}>
+        <div className="whitespace-normal">
+          <DialogActions onCancel={close} disabled={pending}>
+            <button
+              type="submit"
+              disabled={pending}
+              // Close once the submit has been dispatched; the trigger then
+              // shows the pending state.
+              onClick={() => setTimeout(close, 0)}
+              className={confirmClassName ?? className}
+            >
+              {pending ? "Working…" : confirmLabel}
+            </button>
+          </DialogActions>
+        </div>
+      </Dialog>
+    </>
   );
 }
