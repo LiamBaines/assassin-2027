@@ -58,7 +58,7 @@ export function RegisterKill({
         </button>
       )}
       <Dialog open={open} onClose={close} title="Register kill" description={message}>
-        <ActionForm action={action} className="space-y-4 whitespace-normal">
+        <ActionForm action={action} className="space-y-4">
           {victimId && <input type="hidden" name="victimId" value={victimId} />}
           <KillMethodSelect methods={methods} />
           <DialogActions onCancel={close}>

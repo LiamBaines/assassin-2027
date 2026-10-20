@@ -131,20 +131,18 @@ export function ConfirmSubmit({
         </ButtonFace>
       </button>
       <Dialog open={confirming} onClose={close} title={title ?? label} description={message}>
-        <div className="whitespace-normal">
-          <DialogActions onCancel={close} disabled={pending}>
-            <button
-              type="submit"
-              disabled={pending}
-              // Close once the submit has been dispatched; the trigger then
-              // shows the pending state.
-              onClick={() => setTimeout(close, 0)}
-              className={confirmClassName ?? className}
-            >
-              {pending ? "Working…" : confirmLabel}
-            </button>
-          </DialogActions>
-        </div>
+        <DialogActions onCancel={close} disabled={pending}>
+          <button
+            type="submit"
+            disabled={pending}
+            // Close once the submit has been dispatched; the trigger then
+            // shows the pending state.
+            onClick={() => setTimeout(close, 0)}
+            className={confirmClassName ?? className}
+          >
+            {pending ? "Working…" : confirmLabel}
+          </button>
+        </DialogActions>
       </Dialog>
     </>
   );

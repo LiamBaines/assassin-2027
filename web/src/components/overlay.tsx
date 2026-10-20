@@ -70,7 +70,7 @@ export function Dialog({
     <dialog
       {...dialog}
       aria-label={title}
-      className="m-auto w-[min(28rem,92vw)] rounded-panel border border-line bg-surface p-0 text-bone backdrop:bg-black/60"
+      className="m-auto w-[min(28rem,92vw)] whitespace-normal text-left rounded-panel border border-line bg-surface p-0 text-bone backdrop:bg-black/60"
     >
       <div className="space-y-4 p-5">
         <div className="space-y-1.5">
