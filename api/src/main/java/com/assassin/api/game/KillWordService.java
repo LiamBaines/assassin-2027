@@ -1,0 +1,100 @@
+package com.assassin.api.game;
+
+import com.assassin.api.common.ApiException;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class KillWordService {
+
+    static final int MAX_LENGTH = 60;
+
+    private final KillWordRepository words;
+    private final GameService games;
+
+    public KillWordService(KillWordRepository words, GameService games) {
+        this.words = words;
+        this.games = games;
+    }
+
+    /** A word as the admin API returns it; {@code playerId} and {@code roundNo} are set once allocated. */
+    public record KillWordView(long id, String text, KillWord.State state, KillWord.Origin origin, UUID playerId,
+                               Integer roundNo, Instant usedAt) {
+
+        static KillWordView from(KillWord w) {
+            return new KillWordView(w.getId(), w.getText(), w.getState(), w.getOrigin(), w.getPlayerId(),
+                    w.getRoundNo(), w.getUsedAt());
+        }
+    }
+
+    /** Trims and collapses inner whitespace; null if nothing is left. */
+    static String normalise(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String text = raw.trim().replaceAll("\\s+", " ");
+        return text.isEmpty() ? null : text;
+    }
+
+    @Transactional(readOnly = true)
+    public List<KillWordView> list(String gameId) {
+        games.find(gameId);
+        return words.findByGameIdOrderById(gameId).stream().map(KillWordView::from).toList();
+    }
+
+    /**
+     * Adds the words to the game's list, all or nothing. Blank entries are skipped. Fails if none are left, one is too
+     * long, one repeats within the request (case-insensitive), or one is already in the game's list, burned or not.
+     */
+    @Transactional
+    public List<KillWordView> add(String gameId, List<String> raw) {
+        Game game = games.lockForChange(gameId);
+        Map<String, String> byLower = new LinkedHashMap<>();
+        for (String entry : raw == null ? List.<String>of() : raw) {
+            String text = normalise(entry);
+            if (text == null) {
+                continue;
+            }
+            if (text.length() > MAX_LENGTH) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_WORD_TOO_LONG",
+                        "A kill word can be at most " + MAX_LENGTH + " characters.");
+            }
+            if (byLower.putIfAbsent(text.toLowerCase(Locale.ROOT), text) != null) {
+                throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_TAKEN", "\"" + text + "\" is listed twice.");
+            }
+        }
+        if (byLower.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_WORD_REQUIRED", "Enter at least one kill word.");
+        }
+        List<KillWord> existing = words.findByGameIdAndLowerTextIn(game.getId(), byLower.keySet());
+        if (!existing.isEmpty()) {
+            throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_TAKEN",
+                    "\"" + existing.get(0).getText() + "\" is already in this game's word list.");
+        }
+        Instant now = Instant.now();
+        return words.saveAll(byLower.values().stream()
+                        .map(t -> new KillWord(game.getId(), t, KillWord.Origin.ADMIN, now)).toList())
+                .stream().map(KillWordView::from).toList();
+    }
+
+    /** Deletes a word that hasn't been allocated. Allocated and used words stay burned. */
+    @Transactional
+    public void delete(String gameId, long wordId) {
+        games.lockForChange(gameId);
+        KillWord word = words.findById(wordId).filter(w -> w.getGameId().equals(gameId))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "KILL_WORD_NOT_FOUND",
+                        "There is no such kill word."));
+        if (word.getState() != KillWord.State.UNUSED) {
+            throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_ALLOCATED",
+                    "That word has been allocated, so it can't be deleted.");
+        }
+        words.delete(word);
+    }
+}
