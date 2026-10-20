@@ -3,8 +3,8 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/action-form";
-import { Dialog } from "@/components/overlay";
-import { primaryButtonClass, secondaryButtonClass } from "@/components/ui";
+import { Dialog, DialogActions } from "@/components/overlay";
+import { primaryButtonClass } from "@/components/ui";
 import { createGameAction } from "./actions";
 import { GameFields } from "./game-fields";
 
@@ -25,14 +25,11 @@ export function NewGameDialog() {
               two games that haven&apos;t finished.
             </p>
             <GameFields />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={close} className={secondaryButtonClass}>
-                Cancel
-              </button>
+            <DialogActions onCancel={close}>
               <SubmitButton className={primaryButtonClass} pendingLabel="Creating…">
                 Create game
               </SubmitButton>
-            </div>
+            </DialogActions>
           </ActionForm>
         )}
       </Dialog>

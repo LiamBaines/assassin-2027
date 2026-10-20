@@ -4,7 +4,7 @@ import { ChevronDown, RotateCcw, Shuffle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { KillMethodsEditor } from "@/components/kill-methods-editor";
-import { Dialog } from "@/components/overlay";
+import { Dialog, DialogActions } from "@/components/overlay";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui";
 import type { AdminPlayer, KillMethod, RoundReason } from "@/lib/api-types";
 
@@ -139,14 +139,11 @@ export function RoundActions({
           </p>
           <input type="hidden" name="expectedCurrentRoundNo" value={ring?.roundNo ?? ""} />
           {!isShakeup && <KillMethodsEditor methods={killMethods} />}
-          <div className="flex items-center justify-end gap-3">
-            <button type="button" onClick={close} className="text-sm text-muted underline hover:text-bone">
-              Cancel
-            </button>
-            <SubmitButton pendingLabel="Working…" className={primaryButtonClass}>
+          <DialogActions onCancel={close}>
+<SubmitButton pendingLabel="Working…" className={primaryButtonClass}>
               {isShakeup ? "Yes, shake up" : "Yes, generate"}
             </SubmitButton>
-          </div>
+</DialogActions>
         </ActionForm>
       </Dialog>
 
@@ -173,14 +170,11 @@ export function RoundActions({
               ))}
             </ul>
             <KillMethodsEditor methods={killMethods} />
-            <div className="flex items-center justify-end gap-3">
-              <button type="button" onClick={close} className="text-sm text-muted underline hover:text-bone">
-                Cancel
-              </button>
-              <SubmitButton pendingLabel="Starting…" className={primaryButtonClass}>
+            <DialogActions onCancel={close}>
+<SubmitButton pendingLabel="Starting…" className={primaryButtonClass}>
                 Start round {latestRound.roundNo + 1}
               </SubmitButton>
-            </div>
+</DialogActions>
           </ActionForm>
         </Dialog>
       )}
