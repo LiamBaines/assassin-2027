@@ -23,8 +23,8 @@ Shared anatomy for all dialogs:
 2. [x] `register-kill.tsx`: drop the inline `labelled` branch; always use the dialog, keep `labelled` only for trigger styling. Use `DialogActions`.
 3. [x] `action-form.tsx` `ConfirmSubmit`: render a `Dialog` (inside the form, so the submit still posts it) instead of inline text. Add optional `title`; close on submit and on cancel. This also converts Confirm kill and Finish game.
 4. [x] `round-actions.tsx` and `new-game-dialog.tsx`: switch to `DialogActions` so every footer matches.
-5. [ ] Update callers for the new `ConfirmSubmit` title (players, kills and settings pages).
-6. [ ] Check e2e specs and unit tests for the inline flow (testids, "Cancel"/"Remove" click sequences) and adjust them; keep every `data-testid`.
+5. [x] (no change needed) Update callers for the new `ConfirmSubmit` title (players, kills and settings pages).
+6. [x] Check e2e specs and unit tests for the inline flow (testids, "Cancel"/"Remove" click sequences) and adjust them; keep every `data-testid`.
 
 One task at a time: I'll stop after each and wait.
 

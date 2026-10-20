@@ -58,7 +58,7 @@ test("a removal appears in the admin and player logs", async () => {
   await admin.goto(`/admin/games/${gameId}/players`);
   const row = admin.getByTestId("player-row").filter({ hasText: PLAYERS[1].email });
   await row.getByRole("button", { name: "Remove" }).click();
-  await row.getByRole("button", { name: "Remove" }).click();
+  await row.getByRole("button", { name: "Remove" }).last().click();
   await expect(row).toContainText("Removed");
 
   await admin.goto(`/admin/games/${gameId}/log`);
