@@ -174,7 +174,7 @@ test("removing a player splices them out of the ring", async () => {
   const row = admin.getByTestId("player-row").filter({ hasText: PLAYERS[1].email });
   await row.getByRole("button", { name: "Remove" }).click();
   await expect(row).toContainText(`Their assassin will inherit their target, ${victimsTarget}.`);
-  await row.getByRole("button", { name: "Remove" }).click();
+  await row.getByRole("button", { name: "Remove" }).last().click();
   await expect(row).toContainText("Removed");
   await expect(row.getByRole("button", { name: "Restore" })).toBeVisible();
 

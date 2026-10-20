@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
-import { IconButton } from "./ui";
+import { IconButton, secondaryButtonClass } from "./ui";
 
 /** Native <dialog> wrapper: focus trap, Esc to close, backdrop click to close. */
 function useDialog(open: boolean, onClose: () => void) {
@@ -55,11 +55,14 @@ export function Dialog({
   open,
   onClose,
   title,
+  description,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** One or two muted lines under the title explaining what the action does. */
+  description?: ReactNode;
   children: ReactNode;
 }) {
   const dialog = useDialog(open, onClose);
@@ -67,12 +70,38 @@ export function Dialog({
     <dialog
       {...dialog}
       aria-label={title}
-      className="m-auto w-[min(28rem,92vw)] rounded-panel border border-line bg-surface p-0 text-bone backdrop:bg-black/60"
+      className="m-auto w-[min(28rem,92vw)] whitespace-normal text-left rounded-panel border border-line bg-surface p-0 text-bone backdrop:bg-black/60"
     >
       <div className="space-y-4 p-5">
-        <h2 className="font-display text-xl font-semibold">{title}</h2>
+        <div className="space-y-1.5">
+          <h2 className="font-display text-xl font-semibold">{title}</h2>
+          {description && <p className="text-sm text-muted">{description}</p>}
+        </div>
         {children}
       </div>
     </dialog>
+  );
+}
+
+/**
+ * Dialog footer: divider, then Cancel and the confirming action. Pass the
+ * submit button as children (primary or danger) so every dialog reads alike.
+ */
+export function DialogActions({
+  onCancel,
+  disabled,
+  children,
+}: {
+  onCancel: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="-mx-5 flex flex-col-reverse gap-2 border-t border-line px-5 pt-4 sm:flex-row sm:justify-end [&>button]:w-full sm:[&>button]:w-auto">
+      <button type="button" onClick={onCancel} disabled={disabled} className={secondaryButtonClass}>
+        Cancel
+      </button>
+      {children}
+    </div>
   );
 }
