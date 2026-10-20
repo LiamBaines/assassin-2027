@@ -14,6 +14,8 @@ public interface KillWordRepository extends JpaRepository<KillWord, Long> {
 
     Optional<KillWord> findByGameIdAndPlayerIdAndRoundNoAndState(String gameId, UUID playerId, int roundNo, KillWord.State state);
 
+    Optional<KillWord> findByGameIdAndPlayerIdAndRoundNo(String gameId, UUID playerId, int roundNo);
+
     /** Words of the game whose lower-cased text is in {@code lowered} (which must already be lower-case). */
     @Query("select w from KillWord w where w.gameId = :gameId and lower(w.text) in :lowered")
     List<KillWord> findByGameIdAndLowerTextIn(@Param("gameId") String gameId, @Param("lowered") Collection<String> lowered);

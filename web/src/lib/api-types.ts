@@ -50,9 +50,13 @@ export type MyRound = {
   killedBy: string | null;
 };
 
+/** The assassin's word this round; `text` is null once used. Absent when Death Sentence is off. */
+export type MyKillWord = { used: boolean; text: string | null };
+
 export type MyTarget = {
   target: { displayName: string };
   assignedAt: string;
+  killWord: MyKillWord | null;
 };
 
 /** PlayerStatus plus WAITING: alive but without a target yet (computed by the API). */

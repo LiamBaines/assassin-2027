@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import java.util.function.Function;
@@ -183,5 +184,11 @@ public class KillWordService {
         return words.findByGameIdAndPlayerIdAndRoundNoAndState(gameId, assassinId, roundNo, KillWord.State.ALLOCATED)
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "KILL_WORD_NOT_AVAILABLE",
                         "The assassin has no live kill word this round, so a Death Sentence kill isn't possible."));
+    }
+
+    /** The assassin's word for the round, spent or not; empty if none was allocated. */
+    @Transactional(readOnly = true)
+    public Optional<KillWord> find(String gameId, UUID assassinId, int roundNo) {
+        return words.findByGameIdAndPlayerIdAndRoundNo(gameId, assassinId, roundNo);
     }
 }

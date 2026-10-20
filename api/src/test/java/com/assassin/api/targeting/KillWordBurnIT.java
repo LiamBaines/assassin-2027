@@ -2,6 +2,7 @@ package com.assassin.api.targeting;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,5 +107,31 @@ class KillWordBurnIT extends IntegrationTest {
                 .andExpect(status().isOk());
 
         assertThat(stateOf(killer)).isEqualTo("USED");
+    }
+
+    private ResultActions myTarget(UUID player) throws Exception {
+        String email = jdbc.queryForObject("select email from game.player where id = ?", String.class, player);
+        return mvc.perform(as(email, get("/api/me/games/" + gameId + "/target")));
+    }
+
+    @Test
+    void targetResponseCarriesTheLiveWordThenOnlyUsed() throws Exception {
+        UUID killer = assassinOf(b);
+        String word = jdbc.queryForObject("select text from game.kill_word where player_id = ?", String.class, killer);
+
+        myTarget(killer).andExpect(status().isOk()).andExpect(jsonPath("$.killWord.used", is(false)))
+                .andExpect(jsonPath("$.killWord.text", is(word)));
+
+        register(b, deathSentence).andExpect(status().isCreated());
+
+        myTarget(killer).andExpect(status().isOk()).andExpect(jsonPath("$.killWord.used", is(true)))
+                .andExpect(jsonPath("$.killWord.text").doesNotExist());
+    }
+
+    @Test
+    void targetResponseHasNoWordWhenDeathSentenceIsDisabled() throws Exception {
+        jdbc.update("update game.kill_method set enabled = false where id = ?", deathSentence);
+
+        myTarget(assassinOf(b)).andExpect(status().isOk()).andExpect(jsonPath("$.killWord").doesNotExist());
     }
 }

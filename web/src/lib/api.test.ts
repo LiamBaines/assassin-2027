@@ -180,6 +180,14 @@ describe("player contracts", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/me/games/g%2F1/target");
   });
 
+  it("passes the kill word through, used or live", async () => {
+    const body = { target: { displayName: "B" }, assignedAt: "t" };
+    fetchMock.mockResolvedValueOnce(Response.json({ ...body, killWord: { used: false, text: "plum" } }));
+    await expect(getMyTarget("g1")).resolves.toMatchObject({ killWord: { used: false, text: "plum" } });
+    fetchMock.mockResolvedValueOnce(Response.json({ ...body, killWord: { used: true, text: null } }));
+    await expect(getMyTarget("g1")).resolves.toMatchObject({ killWord: { used: true, text: null } });
+  });
+
   it("scopes past rounds to a game and encodes the id", async () => {
     fetchMock.mockResolvedValue(Response.json([]));
     await expect(getMyRounds("g/1")).resolves.toEqual([]);
