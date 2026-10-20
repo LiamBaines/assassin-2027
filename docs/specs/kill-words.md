@@ -20,7 +20,7 @@ The assassin gets a word each round. If they make their target say it aloud, tha
 4. [x] Burn on kill: Death Sentence claim and admin register check the assassin has a live word, and mark it used on kill. Error code. ITs.
 5. [x] Player API and home UI: word in the `/api/me/games/{gameId}/target` response (or a sibling), plus the eye-reveal component, reusing the target's reveal behaviour. Vitest and e2e testids.
 6. [x] Admin UI: Kill words tab (list, add, delete) plus the words step in the start-round dialogs (per-player pick/random, fill remaining). Admin player table shows the word. Empty, loading and error states.
-7. [ ] E2E spec for the full flow. Full test suite, update `docs/progress.md`.
+7. [x] E2E spec for the full flow. Full test suite, update `docs/progress.md`.
 
 ## Open assumptions
 - Kill-method matching is by name ("Death Sentence"), since methods are admin-editable rows. If the admin renames it, the feature turns off.
