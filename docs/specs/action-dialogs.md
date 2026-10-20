@@ -20,7 +20,7 @@ Shared anatomy for all dialogs:
 
 ## Tasks
 1. [x] `overlay.tsx`: add `description` prop to `Dialog` and a `DialogActions` footer component.
-2. [ ] `register-kill.tsx`: drop the inline `labelled` branch; always use the dialog, keep `labelled` only for trigger styling. Use `DialogActions`.
+2. [x] `register-kill.tsx`: drop the inline `labelled` branch; always use the dialog, keep `labelled` only for trigger styling. Use `DialogActions`.
 3. [ ] `action-form.tsx` `ConfirmSubmit`: render a `Dialog` (inside the form, so the submit still posts it) instead of inline text. Add optional `title`; close on submit and on cancel. This also converts Confirm kill and Finish game.
 4. [ ] `round-actions.tsx` and `new-game-dialog.tsx`: switch to `DialogActions` so every footer matches.
 5. [ ] Update callers for the new `ConfirmSubmit` title (players, kills and settings pages).
