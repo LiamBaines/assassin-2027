@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,13 +16,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class KillWordService {
 
     static final int MAX_LENGTH = 60;
+    static final int MAX_SUGGESTIONS = 200;
 
     private final KillWordRepository words;
     private final GameService games;
+    private final KillWordGenerator generator;
 
-    public KillWordService(KillWordRepository words, GameService games) {
+    public KillWordService(KillWordRepository words, GameService games, KillWordGenerator generator) {
         this.words = words;
         this.games = games;
+        this.generator = generator;
     }
 
     /** A word as the admin API returns it; {@code playerId} and {@code roundNo} are set once allocated. */
@@ -96,5 +100,26 @@ public class KillWordService {
                     "That word has been allocated, so it can't be deleted.");
         }
         words.delete(word);
+    }
+
+    /**
+     * Random words from the bundled list that are not in the game's list (so none are burned or collide with the admin's
+     * words). Nothing is persisted. Fails if the bundled list can't supply {@code count} more words.
+     */
+    @Transactional(readOnly = true)
+    public List<String> generate(String gameId, int count) {
+        games.find(gameId);
+        if (count < 1 || count > MAX_SUGGESTIONS) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_WORD_COUNT_INVALID",
+                    "Ask for between 1 and " + MAX_SUGGESTIONS + " words.");
+        }
+        List<String> taken = words.findByGameIdOrderById(gameId).stream()
+                .map(w -> w.getText().toLowerCase(Locale.ROOT)).toList();
+        List<String> picked = generator.generate(taken, count, new Random());
+        if (picked.size() < count) {
+            throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_POOL_EXHAUSTED",
+                    "There aren't enough unused random words left. Add some of your own.");
+        }
+        return picked;
     }
 }

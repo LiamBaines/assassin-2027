@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +27,12 @@ public class KillWordController {
     @GetMapping("/api/admin/games/{gameId}/kill-words")
     public List<KillWordService.KillWordView> list(@PathVariable String gameId) {
         return service.list(gameId);
+    }
+
+    /** Random word suggestions that aren't in the game's list. Nothing is saved. */
+    @GetMapping("/api/admin/games/{gameId}/kill-words/suggestions")
+    public List<String> suggestions(@PathVariable String gameId, @RequestParam(defaultValue = "1") int count) {
+        return service.generate(gameId, count);
     }
 
     /** Adds one or several words, all or nothing. */
