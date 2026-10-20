@@ -114,8 +114,9 @@ test("players see Round 2, and past round 1", async () => {
 async function readLeaderboard(page: Page, path: string, view: string) {
   await page.goto(path);
   const select = page.getByTestId("leaderboard-view");
-  await select.selectOption({ label: view });
-  await expect(select.locator("option:checked")).toHaveText(view);
+  await select.click();
+  await page.getByRole("option", { name: view, exact: true }).click();
+  await expect(select).toHaveText(view);
   const rows = await page.getByTestId("leaderboard-row").evaluateAll((els) =>
     els.map((el) => {
       const text = (id: string) => el.querySelector(`[data-testid="${id}"]`)!.textContent!.trim();

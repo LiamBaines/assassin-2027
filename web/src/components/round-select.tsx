@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Select } from "@/components/ui";
+import { Select } from "@/components/select";
 import { leaderboardHref } from "@/lib/leaderboard";
 import { roundLabel } from "./leaderboard";
 
@@ -19,15 +19,13 @@ export function RoundSelect({
     <Select
       aria-label="Leaderboard view"
       data-testid="leaderboard-view"
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-    >
-      {[null, ...rounds].map((r) => (
-        <option key={r ?? "total"} value={r ?? ""}>
-          {roundLabel(r)}
-        </option>
-      ))}
-    </Select>
+      value={value === null ? "" : String(value)}
+      onChange={(v) => onChange(v === "" ? null : Number(v))}
+      options={[null, ...rounds].map((r) => ({
+        value: r === null ? "" : String(r),
+        label: roundLabel(r),
+      }))}
+    />
   );
 }
 

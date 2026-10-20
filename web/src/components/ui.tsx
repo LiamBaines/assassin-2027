@@ -1,6 +1,6 @@
-import { AlertTriangle, ChevronDown, Info, ShieldCheck, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Info, ShieldCheck, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { formatDateTime, formatRelative } from "@/lib/format";
 
 /** Mobile-first single-column page used by the player views. */
@@ -193,28 +193,6 @@ export function RelativeTime({ iso, className = "" }: { iso: string | null | und
     <time dateTime={iso} title={formatDateTime(iso)} className={className}>
       {formatRelative(iso)}
     </time>
-  );
-}
-
-/** Styled native select: keyboard and screen-reader accessible for free. */
-export function Select({
-  className = "",
-  children,
-  ...rest
-}: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <span className="relative inline-flex">
-      <select
-        {...rest}
-        className={`w-full appearance-none rounded-control border border-line bg-raised py-2 pr-8 pl-3 text-sm text-bone hover:border-muted disabled:opacity-60 ${className}`}
-      >
-        {children}
-      </select>
-      <ChevronDown
-        aria-hidden
-        className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted"
-      />
-    </span>
   );
 }
 

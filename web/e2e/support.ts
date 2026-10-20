@@ -127,7 +127,8 @@ export async function generateRing(admin: Page, gameId: string): Promise<void> {
 /** Asserts the target a player sees on their page for one game. */
 /** Picks a kill method in the "Kill method" select inside `scope`. */
 export async function selectMethod(scope: Page | Locator, name = "Clamp", points = 10): Promise<void> {
-  await scope.getByLabel("Kill method").selectOption({ label: `${name} (${points} pts)` });
+  await scope.getByRole("combobox", { name: "Kill method" }).click();
+  await scope.getByRole("option", { name: `${name} (${points} pts)` }).click();
 }
 
 /** Registers a kill from a row or player page: open the form, pick a method, confirm. */
