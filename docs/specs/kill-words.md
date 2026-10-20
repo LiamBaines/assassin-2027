@@ -17,7 +17,7 @@ The assassin gets a word each round. If they make their target say it aloud, tha
 1. [x] Flyway migration: `kill_word` table (game_id, text, normalised unique per game, state, origin admin/random, allocated assignment/player + round, used_at, created_at), with RLS and grants as in V9. Entity, repository and service for word list CRUD with validation. Admin endpoints: list, add, delete-unallocated. ITs.
 2. [x] Random generator: bundled word list resource, `generate(gameId, n)` skipping burned words. Admin endpoint for suggestions. Unit test.
 3. [x] Allocation in `shuffle` and `startRound`: accept and validate `words` map, persist atomically, ignore when Death Sentence is disabled. Error codes. ITs (round 1, round 2, missing word, duplicate word, burned word, disabled method).
-4. [ ] Burn on kill: Death Sentence claim and admin register check the assassin has a live word, and mark it used on kill. Error code. ITs.
+4. [x] Burn on kill: Death Sentence claim and admin register check the assassin has a live word, and mark it used on kill. Error code. ITs.
 5. [ ] Player API and home UI: word in the `/api/me/games/{gameId}/target` response (or a sibling), plus the eye-reveal component, reusing the target's reveal behaviour. Vitest and e2e testids.
 6. [ ] Admin UI: Kill words tab (list, add, delete) plus the words step in the start-round dialogs (per-player pick/random, fill remaining). Admin player table shows the word. Empty, loading and error states.
 7. [ ] E2E spec for the full flow. Full test suite, update `docs/progress.md`.

@@ -7,6 +7,7 @@ import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
 import com.assassin.api.game.KillMethod;
 import com.assassin.api.game.KillMethodService;
+import com.assassin.api.game.KillWordService;
 import com.assassin.api.player.Player;
 import com.assassin.api.player.PlayerRef;
 import com.assassin.api.player.PlayerRepository;
@@ -32,10 +33,11 @@ public class KillService {
     private final PointService pointService;
     private final KillMethodService killMethods;
     private final GameEventService events;
+    private final KillWordService killWords;
 
     public KillService(GameService gameService, PlayerRepository players, RingService ringService,
             KillRepository kills, GameRoundRepository rounds, PointService pointService,
-            KillMethodService killMethods, GameEventService events) {
+            KillMethodService killMethods, GameEventService events, KillWordService killWords) {
         this.gameService = gameService;
         this.players = players;
         this.ringService = ringService;
@@ -44,6 +46,7 @@ public class KillService {
         this.pointService = pointService;
         this.killMethods = killMethods;
         this.events = events;
+        this.killWords = killWords;
     }
 
     /**
@@ -101,6 +104,9 @@ public class KillService {
         // The splice found the victim in the ring, so a round is open.
         GameRound openRound = rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow();
         Instant now = Instant.now();
+        if (method.getName().equalsIgnoreCase(KillMethodService.DEATH_SENTENCE)) {
+            killWords.requireLive(game.getId(), splice.assassinId(), openRound.getRoundNo()).markUsed(now);
+        }
         victim.setStatus(PlayerStatus.DEAD);
         Kill kill = kills.save(new Kill(game.getId(), openRound.getId(), splice.incomingAssignmentId(), splice.assassinId(),
                 victim.getId(), method.getId(), registeredBy, now));

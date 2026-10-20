@@ -4,7 +4,9 @@ import com.assassin.api.common.ApiException;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
+import com.assassin.api.game.KillMethod;
 import com.assassin.api.game.KillMethodService;
+import com.assassin.api.game.KillWordService;
 import com.assassin.api.player.Player;
 import com.assassin.api.player.PlayerRepository;
 import java.time.Instant;
@@ -25,16 +27,20 @@ public class KillClaimService {
     private final KillClaimRepository claims;
     private final KillService killService;
     private final KillMethodService killMethods;
+    private final KillWordService killWords;
+    private final GameRoundRepository rounds;
 
     public KillClaimService(GameService gameService, PlayerRepository players, AssignmentRepository assignments,
             KillClaimRepository claims, KillService killService,
-            KillMethodService killMethods) {
+            KillMethodService killMethods, KillWordService killWords, GameRoundRepository rounds) {
         this.gameService = gameService;
         this.players = players;
         this.assignments = assignments;
         this.claims = claims;
         this.killService = killService;
         this.killMethods = killMethods;
+        this.killWords = killWords;
+        this.rounds = rounds;
     }
 
     /** The caller claims a kill on their ACTIVE target. */
@@ -43,9 +49,14 @@ public class KillClaimService {
         Player killer = requirePlayer(gameId, authUserId);
         Game game = gameService.lockForChange(gameId);
         requireActive(game);
-        long methodId = killMethods.requireEnabled(game.getId(), killMethodId).getId();
+        KillMethod method = killMethods.requireEnabled(game.getId(), killMethodId);
+        long methodId = method.getId();
         Assignment assignment = assignments.findByAssassinIdAndStatus(killer.getId(), AssignmentStatus.ACTIVE)
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "NO_TARGET", "You have no target right now."));
+        if (method.getName().equalsIgnoreCase(KillMethodService.DEATH_SENTENCE)) {
+            GameRound round = rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow();
+            killWords.requireLive(game.getId(), killer.getId(), round.getRoundNo());
+        }
         if (claims.existsByVictimIdAndStatusIn(assignment.getTargetId(), OPEN)) {
             throw new ApiException(HttpStatus.CONFLICT, "CLAIM_ALREADY_OPEN",
                     "There is already an open kill claim against your target.");

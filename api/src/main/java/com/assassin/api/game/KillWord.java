@@ -67,6 +67,12 @@ public class KillWord {
         this.roundNo = roundNo;
     }
 
+    /** Marks the word as spoken in a kill. */
+    public void markUsed(Instant at) {
+        this.state = State.USED;
+        this.usedAt = at;
+    }
+
     public Long getId() {
         return id;
     }

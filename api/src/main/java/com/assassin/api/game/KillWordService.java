@@ -176,4 +176,12 @@ public class KillWordService {
         });
         words.saveAllAndFlush(toSave);
     }
+
+    /** The assassin's unspent word for the round, or KILL_WORD_NOT_AVAILABLE if they have none. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public KillWord requireLive(String gameId, UUID assassinId, int roundNo) {
+        return words.findByGameIdAndPlayerIdAndRoundNoAndState(gameId, assassinId, roundNo, KillWord.State.ALLOCATED)
+                .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "KILL_WORD_NOT_AVAILABLE",
+                        "The assassin has no live kill word this round, so a Death Sentence kill isn't possible."));
+    }
 }
