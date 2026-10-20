@@ -91,13 +91,13 @@ describe("admin action error messages", () => {
     shuffleRing.mockImplementation(() => fail(409, "GAME_FINISHED"));
     const result = await shuffleRingAction(GAME, {}, form({ expectedCurrentRoundNo: "1" }));
     expect(result.error).toMatch(/finished/);
-    expect(shuffleRing).toHaveBeenCalledWith(GAME, 1, undefined);
+    expect(shuffleRing).toHaveBeenCalledWith(GAME, 1, undefined, undefined);
   });
 
   it("sends null before the first round", async () => {
     shuffleRing.mockResolvedValue({});
     await shuffleRingAction(GAME, {}, form({ expectedCurrentRoundNo: "" }));
-    expect(shuffleRing).toHaveBeenCalledWith(GAME, null, undefined);
+    expect(shuffleRing).toHaveBeenCalledWith(GAME, null, undefined, undefined);
   });
 
   it("passes the edited kill methods when generating the first ring", async () => {
@@ -115,7 +115,7 @@ describe("admin action error messages", () => {
     );
     expect(shuffleRing).toHaveBeenCalledWith(GAME, null, [
       { id: 2, name: "Clamp", points: 12, enabled: true },
-    ]);
+    ], undefined);
   });
 
   it("rejects an invalid kill method row without calling the API", async () => {

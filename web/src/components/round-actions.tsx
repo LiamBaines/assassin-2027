@@ -4,6 +4,7 @@ import { ChevronDown, RotateCcw, Shuffle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { KillMethodsEditor } from "@/components/kill-methods-editor";
+import { KillWordsStep } from "@/components/kill-words-step";
 import { Dialog, DialogActions } from "@/components/overlay";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui";
 import type { AdminPlayer, KillMethod, RoundReason } from "@/lib/api-types";
@@ -34,6 +35,9 @@ export function RoundActions({
   ring,
   players,
   killMethods,
+  deathSentence,
+  unusedWords,
+  suggestWords,
   shuffleAction,
   startRoundAction,
 }: {
@@ -43,11 +47,19 @@ export function RoundActions({
   ring: { roundNo: number; gameRoundNo: number; reason: RoundReason } | null;
   players: Pick<AdminPlayer, "id" | "displayName" | "status">[];
   killMethods: KillMethod[];
+  /** Death Sentence is enabled, so each player needs a kill word. */
+  deathSentence: boolean;
+  /** Words on the game's list that nobody has been given. */
+  unusedWords: string[];
+  suggestWords: (count: number) => Promise<{ words: string[] } | { error: string }>;
   shuffleAction: Action;
   startRoundAction: Action;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState<Dlg>(null);
+  const [included, setIncluded] = useState(
+    () => new Set(players.filter((p) => p.status !== "REMOVED").map((p) => p.id)),
+  );
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,6 +151,13 @@ export function RoundActions({
           </p>
           <input type="hidden" name="expectedCurrentRoundNo" value={ring?.roundNo ?? ""} />
           {!isShakeup && <KillMethodsEditor methods={killMethods} />}
+          {!isShakeup && deathSentence && (
+            <KillWordsStep
+              players={players.filter((p) => p.status === "ALIVE")}
+              unusedWords={unusedWords}
+              suggest={suggestWords}
+            />
+          )}
           <DialogActions onCancel={close}>
 <SubmitButton pendingLabel="Working…" className={primaryButtonClass}>
               {isShakeup ? "Yes, shake up" : "Yes, generate"}
@@ -162,7 +181,20 @@ export function RoundActions({
               {players.map((p) => (
                 <li key={p.id}>
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" name="playerIds" value={p.id} defaultChecked={p.status !== "REMOVED"} />
+                    <input
+                      type="checkbox"
+                      name="playerIds"
+                      value={p.id}
+                      checked={included.has(p.id)}
+                      onChange={(e) =>
+                        setIncluded((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(p.id);
+                          else next.delete(p.id);
+                          return next;
+                        })
+                      }
+                    />
                     <span>{p.displayName}</span>
                     <span className="text-muted">({p.status.toLowerCase()})</span>
                   </label>
@@ -170,6 +202,13 @@ export function RoundActions({
               ))}
             </ul>
             <KillMethodsEditor methods={killMethods} />
+            {deathSentence && (
+              <KillWordsStep
+                players={players.filter((p) => included.has(p.id))}
+                unusedWords={unusedWords}
+                suggest={suggestWords}
+              />
+            )}
             <DialogActions onCancel={close}>
 <SubmitButton pendingLabel="Starting…" className={primaryButtonClass}>
                 Start round {latestRound.roundNo + 1}

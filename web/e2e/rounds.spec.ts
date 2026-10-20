@@ -6,6 +6,7 @@ import {
   joinThroughLink,
   pageFor,
   PLAYERS,
+  fillRandomWords,
   readJoinLinkPath,
   readRing,
   type Pair,
@@ -77,6 +78,7 @@ test("starting round 2 revives, removes the unticked and includes the late joine
   const list = admin.getByTestId("round-players");
   await expect(list.locator("input[type=checkbox]:checked")).toHaveCount(4);
   await list.getByLabel(new RegExp(`^${dropped}`)).uncheck();
+  await fillRandomWords(admin);
   await admin.getByRole("button", { name: "Start round 2" }).click();
   // The dialog closes on submit; poll until the new round's ring shows up.
   let ring: Pair[] = [];

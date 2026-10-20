@@ -89,6 +89,19 @@ export type AdminPlayer = {
   currentTarget: PlayerRef | null;
 };
 
+export type KillWordState = "UNUSED" | "ALLOCATED" | "USED";
+
+/** A word on the game's list; `playerId` and `roundNo` are set once allocated. */
+export type KillWord = {
+  id: number;
+  text: string;
+  state: KillWordState;
+  origin: "ADMIN" | "RANDOM";
+  playerId: string | null;
+  roundNo: number | null;
+  usedAt: string | null;
+};
+
 export type KillMethodRef = { id: number; name: string };
 
 export type KillMethod = KillMethodRef & { points: number; enabled: boolean };

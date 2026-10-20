@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/action-form";
 import {
+  addKillWords,
   changeKillMethod,
   confirmKillClaim,
   createGame,
+  deleteKillWord,
   dismissKillClaim,
+  getKillWordSuggestions,
   isApiError,
   registerKill,
   requireAdmin,
@@ -20,6 +23,7 @@ import {
 } from "@/lib/api";
 import { normalizeJoinCode } from "@/lib/join-code";
 import { parseKillMethods, readMethodId } from "@/lib/kill-methods";
+import { parseWords, splitWordLines } from "@/lib/kill-words";
 import { isUuid } from "@/lib/uuid";
 
 // Every action checks that the caller is an admin first: server actions are public endpoints, so the admin pages'
@@ -57,6 +61,17 @@ const MESSAGES: Record<string, string> = {
   INVALID_KILL_METHOD: "Each kill method needs a name and zero or more points.",
   NO_ENABLED_METHODS: "At least one kill method must stay enabled.",
   KILL_NOT_FOUND: "That kill no longer exists. The page has been refreshed.",
+  KILL_WORD_REQUIRED: "Enter at least one kill word.",
+  KILL_WORD_TOO_LONG: "A kill word can be at most 60 characters.",
+  KILL_WORD_TAKEN: "That word is already on the list or used twice. Each word must be unique.",
+  KILL_WORD_BURNED: "That word has been used in this game before and can't be used again.",
+  KILL_WORD_MISSING: "Every player needs a kill word.",
+  KILL_WORD_PLAYER_INVALID: "A word was given to someone who isn't in this round. Review the players and try again.",
+  KILL_WORD_NOT_AVAILABLE: "A picked word is no longer available. The page has been refreshed; pick again.",
+  KILL_WORD_NOT_FOUND: "That word no longer exists. The page has been refreshed.",
+  KILL_WORD_ALLOCATED: "That word has been given to a player, so it can't be deleted.",
+  KILL_WORD_COUNT_INVALID: "Ask for between 1 and 200 words.",
+  KILL_WORD_POOL_EXHAUSTED: "There aren't enough unused random words left. Add some yourself.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
@@ -172,7 +187,9 @@ export async function shuffleRingAction(
   }
   const killMethods = parseKillMethods(formData);
   if (killMethods === null) return { error: MESSAGES.INVALID_KILL_METHOD };
-  return run(() => shuffleRing(gameId, expected, killMethods));
+  const words = parseWords(formData);
+  if (words === null) return INVALID_REQUEST;
+  return run(() => shuffleRing(gameId, expected, killMethods, words));
 }
 
 export async function startRoundAction(
@@ -188,7 +205,9 @@ export async function startRoundAction(
   }
   const killMethods = parseKillMethods(formData);
   if (killMethods === null) return { error: MESSAGES.INVALID_KILL_METHOD };
-  return run(() => startRound(gameId, expected, playerIds, killMethods));
+  const words = parseWords(formData, playerIds);
+  if (words === null) return INVALID_REQUEST;
+  return run(() => startRound(gameId, expected, playerIds, killMethods, words));
 }
 
 export async function confirmClaimAction(
@@ -211,4 +230,43 @@ export async function dismissClaimAction(
   await requireAdmin();
   if (!Number.isInteger(claimId)) return INVALID_REQUEST;
   return run(() => dismissKillClaim(gameId, claimId));
+}
+
+export async function addKillWordsAction(
+  gameId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const words = splitWordLines(String(formData.get("words") ?? ""));
+  if (words.length === 0) return { error: MESSAGES.KILL_WORD_REQUIRED };
+  return run(() => addKillWords(gameId, words));
+}
+
+export async function deleteKillWordAction(
+  gameId: string,
+  wordId: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ActionForm passes (prev, formData) after the bound args
+  _prev: ActionResult,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!Number.isInteger(wordId)) return INVALID_REQUEST;
+  return run(() => deleteKillWord(gameId, wordId));
+}
+
+/** Random words for the start dialogs; nothing is saved until the round starts. */
+export async function suggestKillWordsAction(
+  gameId: string,
+  count: number,
+): Promise<{ words: string[] } | { error: string }> {
+  await requireAdmin();
+  if (!Number.isInteger(count) || count < 1 || count > 200) {
+    return { error: INVALID_REQUEST.error! };
+  }
+  try {
+    return { words: await getKillWordSuggestions(gameId, count) };
+  } catch (e) {
+    if (isApiError(e)) return { error: MESSAGES[e.code] ?? e.detail };
+    throw e;
+  }
 }

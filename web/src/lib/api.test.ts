@@ -28,7 +28,10 @@ vi.mock("next/navigation", () => ({
 
 const {
   ApiError,
+  addKillWords,
   createGame,
+  deleteKillWord,
+  getKillWordSuggestions,
   getAdminGame,
   getAdminPlayers,
   getCurrentRing,
@@ -369,3 +372,28 @@ describe("kill methods", () => {
   });
 });
 
+
+describe("kill words", () => {
+  it("adds, suggests and deletes admin words", async () => {
+    fetchMock.mockImplementation(async () => Response.json([]));
+    await addKillWords("g1", ["pineapple", "good grief"]);
+    await getKillWordSuggestions("g1", 3);
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    await deleteKillWord("g1", 7);
+    const [addUrl, addInit] = fetchMock.mock.calls[0];
+    expect(addUrl).toBe("http://api.test/api/admin/games/g1/kill-words");
+    expect(addInit?.body).toBe(JSON.stringify({ words: ["pineapple", "good grief"] }));
+    expect(fetchMock.mock.calls[1][0]).toBe("http://api.test/api/admin/games/g1/kill-words/suggestions?count=3");
+    const [delUrl, delInit] = fetchMock.mock.calls[2];
+    expect(delUrl).toBe("http://api.test/api/admin/games/g1/kill-words/7");
+    expect(delInit?.method).toBe("DELETE");
+  });
+
+  it("sends the words map when generating a ring", async () => {
+    fetchMock.mockResolvedValue(Response.json({}));
+    await shuffleRing("g1", null, undefined, { p1: "pineapple" });
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(
+      JSON.stringify({ expectedCurrentRoundNo: null, words: { p1: "pineapple" } }),
+    );
+  });
+});
