@@ -51,6 +51,16 @@ public class KillMethodService {
         return methods.findByGameIdOrderById(gameId);
     }
 
+    /** Name of the method that uses kill words; matched case-insensitively. */
+    public static final String DEATH_SENTENCE = "Death Sentence";
+
+    /** True if the game has an enabled kill method named "Death Sentence". */
+    @Transactional(readOnly = true)
+    public boolean deathSentenceEnabled(String gameId) {
+        return methods.findByGameIdOrderById(gameId).stream()
+                .anyMatch(m -> m.isEnabled() && m.getName().equalsIgnoreCase(DEATH_SENTENCE));
+    }
+
     /** The method a new kill or claim is filed with: it must be given, belong to the game and be enabled. */
     @Transactional(readOnly = true)
     public KillMethod requireEnabled(String gameId, Long methodId) {

@@ -60,6 +60,13 @@ public class KillWord {
         this.createdAt = createdAt;
     }
 
+    /** Burns the word for an assassin's round. */
+    public void allocate(UUID playerId, int roundNo) {
+        this.state = State.ALLOCATED;
+        this.playerId = playerId;
+        this.roundNo = roundNo;
+    }
+
     public Long getId() {
         return id;
     }

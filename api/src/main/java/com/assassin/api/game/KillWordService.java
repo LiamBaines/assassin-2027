@@ -2,14 +2,20 @@ package com.assassin.api.game;
 
 import com.assassin.api.common.ApiException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -121,5 +127,53 @@ public class KillWordService {
                     "There aren't enough unused random words left. Add some of your own.");
         }
         return picked;
+    }
+
+    /**
+     * Allocates one word to each assassin of a new round. A word already in the game's list must be UNUSED; any other
+     * text is added as a RANDOM word. Fails if a player has no word, a word repeats or is already burned, or a key is
+     * not one of {@code playerIds}. The caller must hold the game's lock and have flushed the round row.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void allocate(String gameId, int roundNo, Collection<UUID> playerIds, Map<UUID, String> requested) {
+        Map<UUID, String> given = requested == null ? Map.of() : requested;
+        if (!playerIds.containsAll(given.keySet())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_WORD_PLAYER_INVALID",
+                    "A kill word was given for a player who isn't in this round.");
+        }
+        Map<String, UUID> owners = new HashMap<>();
+        Map<UUID, String> texts = new LinkedHashMap<>();
+        for (UUID playerId : playerIds) {
+            String text = normalise(given.get(playerId));
+            if (text == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_WORD_MISSING",
+                        "Every player in the round needs a kill word.");
+            }
+            if (text.length() > MAX_LENGTH) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "KILL_WORD_TOO_LONG",
+                        "A kill word can be at most " + MAX_LENGTH + " characters.");
+            }
+            if (owners.putIfAbsent(text.toLowerCase(Locale.ROOT), playerId) != null) {
+                throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_TAKEN",
+                        "\"" + text + "\" is given to more than one player.");
+            }
+            texts.put(playerId, text);
+        }
+        Map<String, KillWord> existing = words.findByGameIdAndLowerTextIn(gameId, owners.keySet()).stream()
+                .collect(Collectors.toMap(w -> w.getText().toLowerCase(Locale.ROOT), Function.identity()));
+        Instant now = Instant.now();
+        List<KillWord> toSave = new ArrayList<>();
+        texts.forEach((playerId, text) -> {
+            KillWord word = existing.get(text.toLowerCase(Locale.ROOT));
+            if (word == null) {
+                word = new KillWord(gameId, text, KillWord.Origin.RANDOM, now);
+            } else if (word.getState() != KillWord.State.UNUSED) {
+                throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_BURNED",
+                        "\"" + word.getText() + "\" has already been used in this game.");
+            }
+            word.allocate(playerId, roundNo);
+            toSave.add(word);
+        });
+        words.saveAllAndFlush(toSave);
     }
 }
