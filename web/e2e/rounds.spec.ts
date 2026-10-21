@@ -19,7 +19,7 @@ import {
 test.describe.configure({ mode: "serial" });
 
 const GAME = { name: "Rounds Game", code: "ROUND01" };
-const LATE = "Late Larry";
+const LATE = ADMIN.displayName;
 const [victim, survivor, dropped] = PLAYERS.map((p) => p.displayName);
 
 let admin: Page;

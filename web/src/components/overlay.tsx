@@ -15,7 +15,11 @@ function useDialog(open: boolean, onClose: () => void) {
   }, [open]);
   return {
     ref,
-    onClose,
+    // React bubbles `close` through the component tree, so a dialog nested in another one would close its parent too.
+    onClose: (e: React.SyntheticEvent<HTMLDialogElement>) => {
+      e.stopPropagation();
+      onClose();
+    },
     onClick: (e: React.MouseEvent<HTMLDialogElement>) => {
       if (e.target === ref.current) onClose();
     },

@@ -11,9 +11,13 @@ export function env(name: string): string {
 
 export const JOIN_CODE = "TEST42";
 
-export type E2eUser = { key: string; email: string; displayName?: string };
+export type E2eUser = { key: string; email: string; displayName: string };
 
-export const ADMIN: E2eUser = { key: "admin", email: "admin@e2e.test" };
+export const ADMIN = {
+  key: "admin",
+  email: "admin@e2e.test",
+  displayName: "Admin E2E",
+} as const satisfies E2eUser;
 
 export const PLAYERS = [
   { key: "player1", email: "player1@e2e.test", displayName: "Alice E2E" },
@@ -176,6 +180,14 @@ export async function expectTarget(page: Page, gameId: string, name: string): Pr
   await releaseTarget(page);
 }
 
+/** Sets a new account's display name on /welcome, where first login lands, and waits for it to carry on. */
+export async function setProfileName(page: Page, displayName: string): Promise<void> {
+  await expect(page).toHaveURL(/\/welcome(\?|$)/);
+  await page.getByLabel("Display name").fill(displayName);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).not.toHaveURL(/\/welcome(\?|$)/);
+}
+
 /** Joins a game from its join page (`/join/CODE`), landing on the game page. */
 export async function joinThroughLink(
   page: Page,
@@ -185,7 +197,8 @@ export async function joinThroughLink(
 ): Promise<void> {
   await page.goto(joinPath);
   await expect(page.getByRole("heading", { name: `Join ${gameName}` })).toBeVisible();
-  await page.getByLabel("Display name").fill(displayName);
+  // The name comes from the profile, set once at first login.
+  await expect(page.getByText(`You'll play as ${displayName}`)).toBeVisible();
   await page.getByRole("button", { name: "Join the game" }).click();
   await page.waitForURL(/:\d+\/[a-z0-9]+(-[a-z0-9]+)*$/);
   await expect(page.getByRole("heading", { level: 1, name: gameName })).toBeVisible();

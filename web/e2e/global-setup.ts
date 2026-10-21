@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { chromium, type FullConfig } from "@playwright/test";
 import { Client } from "pg";
-import { ALL_USERS, confirmPathFor, env, storageStatePath } from "./support";
+import { ALL_USERS, confirmPathFor, env, setProfileName, storageStatePath } from "./support";
 
 /**
  * Empties every game table except Flyway's history. Talks to the local
@@ -27,7 +27,7 @@ async function resetGameData(): Promise<void> {
   }
 }
 
-/** Logs every e2e user in through /auth/confirm and saves their cookies. */
+/** Logs every e2e user in through /auth/confirm, sets their display name and saves their cookies. */
 async function createSessions(baseURL: string): Promise<void> {
   await mkdir(path.dirname(storageStatePath(ALL_USERS[0])), { recursive: true });
   const browser = await chromium.launch();
@@ -36,7 +36,9 @@ async function createSessions(baseURL: string): Promise<void> {
       const context = await browser.newContext({ baseURL });
       const page = await context.newPage();
       await page.goto(await confirmPathFor(user.email));
-      // `/` shows admins a menu and sends players without a game entry to /join.
+      // First login asks for a display name, then `/` shows admins a menu and sends players without a game to /join.
+      await page.waitForURL((url) => url.pathname === "/welcome");
+      await setProfileName(page, user.displayName);
       await page.waitForURL((url) => url.pathname === "/" || url.pathname === "/join");
       await context.storageState({ path: storageStatePath(user) });
       await context.close();

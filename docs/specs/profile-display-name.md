@@ -17,7 +17,7 @@ Display name is currently typed on every game join and stored on `game.player` (
 3. [x] API: admin rename via PATCH + `DUPLICATE_NAMES` check on round start/allocation. ITs.
 4. [x] Web: `/welcome` page + action, redirect when `me.profile` is null (guard in the player/admin entry points that call `getMe`), join form/action/error map without name, `api-types.ts`, `api.ts`, unit tests.
 5. [x] Web: admin players page inline rename (`InlineEdit`); start-round form shows duplicate-name dialog (`Dialog`) with rename inputs, then retries. Error map in `admin/actions.ts`.
-6. [ ] E2E: update `web/e2e` helpers (`pageFor`, `joinThroughLink`) to set the name at first login; keep all `data-testid`s. Append to `docs/progress.md`; note the decision in `docs/architecture.md`.
+6. [x] E2E: update `web/e2e` helpers (`pageFor`, `joinThroughLink`) to set the name at first login; keep all `data-testid`s. Append to `docs/progress.md`; note the decision in `docs/architecture.md`.
 
 Each task is done one at a time, with the narrowest test, then stop.
 

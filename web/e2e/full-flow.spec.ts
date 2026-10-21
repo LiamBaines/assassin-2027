@@ -86,7 +86,6 @@ test("a player joins by typing the code on /join", async () => {
 
   await expect(page).toHaveURL(new RegExp(`/join/${JOIN_CODE}$`));
   await expect(page.getByRole("heading", { name: `Join ${GAME_NAME}` })).toBeVisible();
-  await page.getByLabel("Display name").fill(p.displayName);
   await page.getByRole("button", { name: "Join the game" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/${gameId}$`));

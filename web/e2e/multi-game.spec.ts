@@ -41,8 +41,8 @@ test("game A starts with Alice and Bob", async () => {
   gameA = await createGame(admin, A.name, A.code);
   expect(gameA).toBe("multi-game-a");
   const joinA = await readJoinLinkPath(admin, gameA);
-  await joinThroughLink(alicePage, joinA, A.name, "Alice A");
-  await joinThroughLink(bobPage, joinA, A.name, "Bob A");
+  await joinThroughLink(alicePage, joinA, A.name, alice.displayName);
+  await joinThroughLink(bobPage, joinA, A.name, bob.displayName);
   await generateRing(admin, gameA);
   await expect(admin.getByTestId("game-status")).toHaveText("Active");
 });
@@ -52,10 +52,10 @@ test("admin creates game B while game A is active", async () => {
   expect(gameB).toBe("multi-game-b");
   await expect(admin.getByTestId("game-status")).toHaveText("Setup");
 
-  // Alice plays in both games, under a different name in each.
+  // Alice plays in both games under her one profile name.
   const joinB = await readJoinLinkPath(admin, gameB);
-  await joinThroughLink(alicePage, joinB, B.name, "Alice B");
-  await joinThroughLink(carolPage, joinB, B.name, "Carol B");
+  await joinThroughLink(alicePage, joinB, B.name, alice.displayName);
+  await joinThroughLink(carolPage, joinB, B.name, carol.displayName);
   await generateRing(admin, gameB);
 
   await admin.goto("/admin");
@@ -71,22 +71,22 @@ test("a player in both games sees both on /me with the right target in each", as
   await alicePage.goto("/me");
   const cardA = alicePage.getByTestId("my-game").filter({ hasText: A.name });
   const cardB = alicePage.getByTestId("my-game").filter({ hasText: B.name });
-  await expect(cardA).toContainText("Playing as Alice A");
-  await expect(cardB).toContainText("Playing as Alice B");
+  await expect(cardA).toContainText(`Playing as ${alice.displayName}`);
+  await expect(cardB).toContainText(`Playing as ${alice.displayName}`);
   await expect(cardA.getByTestId("player-status")).toHaveText("Alive");
   await expect(cardB.getByTestId("player-status")).toHaveText("Alive");
 
   await cardB.getByRole("link").click();
   await expect(alicePage).toHaveURL(new RegExp(`/${gameB}$`));
-  await expect(alicePage.getByTestId("player-name")).toHaveText("Alice B");
+  await expect(alicePage.getByTestId("player-name")).toHaveText(alice.displayName);
   await revealTarget(alicePage);
-  await expect(alicePage.getByTestId("target-name")).toHaveText("Carol B");
+  await expect(alicePage.getByTestId("target-name")).toHaveText(carol.displayName);
   await releaseTarget(alicePage);
 
-  await expectTarget(alicePage, gameA, "Bob A");
-  await expect(alicePage.getByTestId("player-name")).toHaveText("Alice A");
-  await expectTarget(bobPage, gameA, "Alice A");
-  await expectTarget(carolPage, gameB, "Alice B");
+  await expectTarget(alicePage, gameA, bob.displayName);
+  await expect(alicePage.getByTestId("player-name")).toHaveText(alice.displayName);
+  await expectTarget(bobPage, gameA, alice.displayName);
+  await expectTarget(carolPage, gameB, alice.displayName);
 });
 
 test("closing signups on game B leaves game A open", async () => {
@@ -160,7 +160,7 @@ test("players see game A as finished, and game B carries on", async () => {
   const cardA = alicePage.getByTestId("my-game").filter({ hasText: A.name });
   await expect(cardA).toContainText("Finished");
   await expectTarget(alicePage, gameA, "This game has finished");
-  await expectTarget(alicePage, gameB, "Carol B");
+  await expectTarget(alicePage, gameB, carol.displayName);
 });
 
 test("a finished game's join link is no longer valid, and its code is free again", async () => {
