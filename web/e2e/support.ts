@@ -115,11 +115,20 @@ export async function readRing(admin: Page, gameId: string): Promise<Pair[]> {
   return pairs.filter((p) => p.target !== "—");
 }
 
+/** Fills every player's kill word in an open start dialog with random words. */
+export async function fillRandomWords(admin: Page): Promise<void> {
+  const dialog = admin.getByRole("dialog");
+  await dialog.getByTestId("fill-random-words").click();
+  const inputs = dialog.getByTestId("kill-word-assignment").getByRole("textbox");
+  for (const input of await inputs.all()) await expect(input).not.toHaveValue("");
+}
+
 /** Generates the first ring of a game from the Round actions menu on the leaderboard tab. */
 export async function generateRing(admin: Page, gameId: string): Promise<void> {
   await admin.goto(`/admin/games/${gameId}/leaderboard`);
   await admin.getByRole("button", { name: "Round actions" }).click();
   await admin.getByRole("menuitem", { name: "Generate ring" }).click();
+  await fillRandomWords(admin);
   await admin.getByRole("button", { name: "Yes, generate" }).click();
   await expect(admin.getByTestId("game-status")).toHaveText("Active");
 }

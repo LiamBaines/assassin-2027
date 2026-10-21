@@ -16,9 +16,11 @@ import { rosterStatusView } from "@/lib/player-status";
 import {
   getAdminKillMethods,
   getAdminPlayers,
+  listKillWords,
   type AdminPlayer,
   type KillMethod,
 } from "@/lib/api";
+import { deathSentenceEnabled } from "@/lib/kill-words";
 import { registerKillMessage, removePlayerMessage } from "@/lib/format";
 import {
   registerKillAction,
@@ -36,6 +38,18 @@ export default async function AdminPlayersPage(props: {
     getAdminPlayers(game.id),
     getAdminKillMethods(game.id),
   ]);
+  const showWords = deathSentenceEnabled(allMethods);
+  // Each player's word for the latest round they were given one in.
+  const wordOf = new Map<string, { text: string; roundNo: number; used: boolean }>();
+  if (showWords) {
+    for (const w of await listKillWords(game.id)) {
+      if (!w.playerId || w.roundNo === null) continue;
+      const seen = wordOf.get(w.playerId);
+      if (!seen || w.roundNo > seen.roundNo) {
+        wordOf.set(w.playerId, { text: w.text, roundNo: w.roundNo, used: w.state === "USED" });
+      }
+    }
+  }
   const enabledMethods = allMethods.filter((m) => m.enabled);
   const editable = game.status !== "FINISHED";
   const alive = players.filter((p) => p.status === "ALIVE").length;
@@ -66,6 +80,7 @@ export default async function AdminPlayersPage(props: {
                 <th className="px-3 py-2 font-medium">Email</th>
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium">Current target</th>
+                {showWords && <th className="px-3 py-2 font-medium">Kill word</th>}
                 <th className="px-3 py-2 font-medium">Joined</th>
                 {editable && (
                   <th className="px-3 py-2 font-medium">
@@ -87,6 +102,11 @@ export default async function AdminPlayersPage(props: {
                       <span className="text-muted">—</span>
                     )}
                   </td>
+                  {showWords && (
+                    <td data-testid="player-kill-word" className="px-3 py-2">
+                      <KillWordCell word={wordOf.get(p.id)} />
+                    </td>
+                  )}
                   <td className="px-3 py-2 whitespace-nowrap text-muted">
                     <RelativeTime iso={p.joinedAt} />
                   </td>
@@ -108,6 +128,19 @@ export default async function AdminPlayersPage(props: {
         )}
       </Panel>
     </div>
+  );
+}
+
+function KillWordCell({
+  word,
+}: {
+  word: { text: string; used: boolean } | undefined;
+}) {
+  if (!word) return <span className="text-muted">—</span>;
+  return word.used ? (
+    <span className="text-muted line-through">{word.text} (used)</span>
+  ) : (
+    word.text
   );
 }
 

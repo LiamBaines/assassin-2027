@@ -8,6 +8,7 @@ import { LastViewRecorder } from "@/components/last-view-recorder";
 import { PlayerLeaderboard } from "@/components/player-leaderboard";
 import { RegisterKill } from "@/components/register-kill";
 import { SignOutButton } from "@/components/sign-out-button";
+import { KillWordReveal } from "@/components/kill-word-reveal";
 import { TargetReveal } from "@/components/target-reveal";
 import {
   Alert,
@@ -131,6 +132,13 @@ export default async function GamePage(props: {
           </p>
         )}
       </section>
+
+      {active && assignment?.killWord && player.status === "ALIVE" && (
+        <section data-testid="kill-word-section" className="space-y-3 border-t border-line pt-6">
+          <h2 className="text-sm text-muted">Your kill word</h2>
+          <KillWordReveal killWord={assignment.killWord} />
+        </section>
+      )}
 
       {active && assignment && (
         <section className="space-y-3 border-t border-line pt-6">

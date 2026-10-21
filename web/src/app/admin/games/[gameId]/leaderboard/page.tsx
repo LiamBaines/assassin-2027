@@ -9,9 +9,15 @@ import {
   getAdminRounds,
   getCurrentRing,
   isApiError,
+  listKillWords,
 } from "@/lib/api";
+import { deathSentenceEnabled } from "@/lib/kill-words";
 import { parseRoundParam } from "@/lib/leaderboard";
-import { shuffleRingAction, startRoundAction } from "../../../actions";
+import {
+  shuffleRingAction,
+  startRoundAction,
+  suggestKillWordsAction,
+} from "../../../actions";
 import { loadAdminGame } from "../load-game";
 
 export default async function AdminLeaderboardPage(props: {
@@ -28,11 +34,12 @@ export default async function AdminLeaderboardPage(props: {
     if (isApiError(e, "ROUND_NOT_FOUND")) notFound();
     throw e;
   }
-  const [currentRing, rounds, players, killMethods] = await Promise.all([
+  const [currentRing, rounds, players, killMethods, killWords] = await Promise.all([
     getCurrentRing(game.id),
     getAdminRounds(game.id),
     getAdminPlayers(game.id),
     getAdminKillMethods(game.id),
+    listKillWords(game.id),
   ]);
 
   const latestRound = rounds[0] ?? null;
@@ -56,6 +63,9 @@ export default async function AdminLeaderboardPage(props: {
             ring={ring}
             players={players}
             killMethods={killMethods}
+            deathSentence={deathSentenceEnabled(killMethods)}
+            unusedWords={killWords.filter((w) => w.state === "UNUSED").map((w) => w.text)}
+            suggestWords={suggestKillWordsAction.bind(null, game.id)}
             shuffleAction={shuffleRingAction.bind(null, game.id)}
             startRoundAction={startRoundAction.bind(null, game.id)}
           />

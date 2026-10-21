@@ -7,6 +7,7 @@ import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
 import com.assassin.api.game.KillMethodService;
 import com.assassin.api.game.KillMethodService.KillMethodInput;
+import com.assassin.api.game.KillWordService;
 import com.assassin.api.player.Player;
 import com.assassin.api.player.PlayerRef;
 import com.assassin.api.player.PlayerRepository;
@@ -48,12 +49,13 @@ public class RingService {
     private final AssignmentRepository assignments;
     private final KillClaimRepository claims;
     private final KillMethodService killMethods;
+    private final KillWordService killWords;
     private final JdbcTemplate jdbc;
     private final RandomGenerator random;
     private final GameEventService events;
 
     public RingService(GameService gameService, PlayerRepository players, GameRoundRepository rounds,
-            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, KillMethodService killMethods, JdbcTemplate jdbc,
+            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, KillMethodService killMethods, KillWordService killWords, JdbcTemplate jdbc,
             RandomGenerator random, GameEventService events) {
         this.gameService = gameService;
         this.players = players;
@@ -62,6 +64,7 @@ public class RingService {
         this.assignments = assignments;
         this.claims = claims;
         this.killMethods = killMethods;
+        this.killWords = killWords;
         this.jdbc = jdbc;
         this.random = random;
         this.events = events;
@@ -74,11 +77,13 @@ public class RingService {
      * @param gameId the game
      * @param expectedCurrentRoundNo the allocation number the caller last saw, or null if it saw no allocations
      * @param methodEdits kill method changes, applied with the first ring only (null = unchanged)
+     * @param words playerId to kill word for every player, required with the first ring when Death Sentence is enabled
+     *         (ignored otherwise, and for shakeups, which keep their words)
      * @param createdBy the admin's email
      */
     @Transactional
     public RingView shuffle(String gameId, Integer expectedCurrentRoundNo, List<KillMethodInput> methodEdits,
-            String createdBy) {
+            Map<UUID, String> words, String createdBy) {
         // 1. Lock the game row; concurrent shuffles (and admin edits) of this game queue behind this.
         Game game = gameService.lockForChange(gameId);
 
@@ -126,6 +131,9 @@ public class RingService {
 
         // 7. Batch-insert the ring.
         insertRing(allocation, alive, now);
+        if (initial && killMethods.deathSentenceEnabled(game.getId())) {
+            killWords.allocate(game.getId(), 1, alive, words);
+        }
         events.record(game.getId(), initial ? "ROUND_STARTED" : "SHAKEUP", initial
                 ? Map.of("roundNo", 1, "playerCount", alive.size()) : Map.of("roundNo", round.getRoundNo()));
 
@@ -143,10 +151,11 @@ public class RingService {
      * @param expectedRoundNo the round number the caller last saw
      * @param playerIds the players taking part
      * @param methodEdits kill method changes (null = unchanged)
+     * @param words playerId to kill word for every player, required when Death Sentence is enabled (else ignored)
      */
     @Transactional
     public RingView startRound(String gameId, Integer expectedRoundNo, Collection<UUID> playerIds,
-            List<KillMethodInput> methodEdits, String createdBy) {
+            List<KillMethodInput> methodEdits, Map<UUID, String> words, String createdBy) {
         Game game = gameService.lockForChange(gameId);
 
         GameRound previous = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId()).orElseThrow(() -> new ApiException(
@@ -185,6 +194,9 @@ public class RingService {
         Allocation allocation = allocations.saveAndFlush(new Allocation(game.getId(), round.getId(), allocationNo,
                 AllocationReason.INITIAL, picked.size(), createdBy, now));
         insertRing(allocation, new ArrayList<>(picked), now);
+        if (killMethods.deathSentenceEnabled(game.getId())) {
+            killWords.allocate(game.getId(), round.getRoundNo(), picked, words);
+        }
         events.record(game.getId(), "ROUND_STARTED",
                 Map.of("roundNo", round.getRoundNo(), "playerCount", picked.size()));
         return view(game, allocation, round);

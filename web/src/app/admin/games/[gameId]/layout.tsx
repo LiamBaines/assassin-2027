@@ -1,7 +1,8 @@
 import { ArrowLeft, Gamepad2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { listOpenKillClaims } from "@/lib/api";
+import { getAdminKillMethods, listOpenKillClaims } from "@/lib/api";
+import { deathSentenceEnabled } from "@/lib/kill-words";
 import { GameStatusBadge } from "../../game-fields";
 import { GameNav } from "./game-nav";
 import { GameTitle } from "./game-title";
@@ -15,7 +16,11 @@ export default async function AdminGameLayout({
   params: Promise<{ gameId: string }>;
 }) {
   const game = await loadAdminGame(params);
-  const openClaims = (await listOpenKillClaims(game.id)).length;
+  const [claims, methods] = await Promise.all([
+    listOpenKillClaims(game.id),
+    getAdminKillMethods(game.id),
+  ]);
+  const openClaims = claims.length;
 
   return (
     <div className="space-y-6">
@@ -34,7 +39,11 @@ export default async function AdminGameLayout({
           <GameTitle name={game.name} joinCode={game.joinCode} />
           <GameStatusBadge game={game} />
         </div>
-        <GameNav gameId={game.id} openClaims={openClaims} />
+        <GameNav
+          gameId={game.id}
+          openClaims={openClaims}
+          killWords={deathSentenceEnabled(methods)}
+        />
       </div>
       {children}
     </div>

@@ -4,6 +4,7 @@ import com.assassin.api.common.CurrentUser;
 import com.assassin.api.game.KillMethodService;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +30,7 @@ public class AdminRingController {
     @ResponseStatus(HttpStatus.CREATED)
     public RingService.RingView shuffle(@PathVariable String gameId, CurrentUser admin,
             @RequestBody ShuffleRequest request) {
-        return ringService.shuffle(gameId, request.expectedCurrentRoundNo(), request.killMethods(), admin.email());
+        return ringService.shuffle(gameId, request.expectedCurrentRoundNo(), request.killMethods(), request.words(), admin.email());
     }
 
     @GetMapping("/current")
@@ -42,8 +43,10 @@ public class AdminRingController {
         return ringService.history(gameId).stream().map(RoundResponse::from).toList();
     }
 
-    /** @param expectedCurrentRoundNo the current allocation number the admin saw, or null if there were none (wire name kept until the rounds API lands) */
-    public record ShuffleRequest(Integer expectedCurrentRoundNo, List<KillMethodService.KillMethodInput> killMethods) {
+    /** @param words kill word per player id, for the first ring when Death Sentence is enabled
+     * @param expectedCurrentRoundNo the current allocation number the admin saw, or null if there were none (wire name kept until the rounds API lands) */
+    public record ShuffleRequest(Integer expectedCurrentRoundNo, List<KillMethodService.KillMethodInput> killMethods,
+            Map<UUID, String> words) {
     }
 
     public record RoundResponse(UUID roundId, int roundNo, int gameRoundNo, AllocationReason reason, int playerCount,

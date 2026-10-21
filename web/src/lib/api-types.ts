@@ -50,9 +50,13 @@ export type MyRound = {
   killedBy: string | null;
 };
 
+/** The assassin's word this round; `text` is null once used. Absent when Death Sentence is off. */
+export type MyKillWord = { used: boolean; text: string | null };
+
 export type MyTarget = {
   target: { displayName: string };
   assignedAt: string;
+  killWord: MyKillWord | null;
 };
 
 /** PlayerStatus plus WAITING: alive but without a target yet (computed by the API). */
@@ -83,6 +87,19 @@ export type AdminPlayer = {
   status: PlayerStatus;
   joinedAt: string;
   currentTarget: PlayerRef | null;
+};
+
+export type KillWordState = "UNUSED" | "ALLOCATED" | "USED";
+
+/** A word on the game's list; `playerId` and `roundNo` are set once allocated. */
+export type KillWord = {
+  id: number;
+  text: string;
+  state: KillWordState;
+  origin: "ADMIN" | "RANDOM";
+  playerId: string | null;
+  roundNo: number | null;
+  usedAt: string | null;
 };
 
 export type KillMethodRef = { id: number; name: string };

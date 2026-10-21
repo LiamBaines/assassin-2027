@@ -14,6 +14,7 @@ import type {
   JoinPreview,
   KillMethod,
   KillMethodInput,
+  KillWord,
   GameEventPage,
   JoinRequest,
   Leaderboard,
@@ -79,7 +80,7 @@ async function accessToken(): Promise<string> {
 }
 
 async function request<T>(
-  method: "GET" | "POST" | "PATCH",
+  method: "GET" | "POST" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
 ): Promise<T> {
@@ -278,10 +279,12 @@ export const shuffleRing = (
   gameId: string,
   expectedCurrentRoundNo: number | null,
   killMethods?: KillMethodInput[],
+  words?: Record<string, string>,
 ) =>
   request<Ring>("POST", `${gamePath(gameId)}/rings`, {
     expectedCurrentRoundNo,
     killMethods,
+    words,
   });
 
 /** Closes the open round and starts the next with the given players. */
@@ -290,12 +293,33 @@ export const startRound = (
   expectedRoundNo: number,
   playerIds: string[],
   killMethods?: KillMethodInput[],
+  words?: Record<string, string>,
 ) =>
   request<Ring>("POST", `${gamePath(gameId)}/rounds`, {
     expectedRoundNo,
     playerIds,
     killMethods,
+    words,
   });
+
+/** The game's kill words: unused, allocated and used. */
+export const listKillWords = (gameId: string) =>
+  request<KillWord[]>("GET", `${gamePath(gameId)}/kill-words`);
+
+/** Adds words to the list, all or nothing. */
+export const addKillWords = (gameId: string, words: string[]) =>
+  request<KillWord[]>("POST", `${gamePath(gameId)}/kill-words`, { words });
+
+/** Deletes a word that hasn't been allocated. */
+export const deleteKillWord = (gameId: string, wordId: number) =>
+  request<void>("DELETE", `${gamePath(gameId)}/kill-words/${wordId}`);
+
+/** Random words not yet in the game's list. Nothing is saved. */
+export const getKillWordSuggestions = (gameId: string, count: number) =>
+  request<string[]>(
+    "GET",
+    `${gamePath(gameId)}/kill-words/suggestions?count=${count}`,
+  );
 
 /** Game rounds, newest first. */
 export const getAdminRounds = (gameId: string) =>

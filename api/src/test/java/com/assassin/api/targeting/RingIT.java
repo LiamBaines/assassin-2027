@@ -256,11 +256,11 @@ class RingIT extends IntegrationTest {
         try {
             Future<RingService.RingView> a = pool.submit(() -> {
                 go.await();
-                return ringService.shuffle(gameId, null, null, JwtTestSupport.ADMIN_EMAIL);
+                return ringService.shuffle(gameId, null, null, null, JwtTestSupport.ADMIN_EMAIL);
             });
             Future<RingService.RingView> b = pool.submit(() -> {
                 go.await();
-                return ringService.shuffle(other, null, null, JwtTestSupport.ADMIN_EMAIL);
+                return ringService.shuffle(other, null, null, null, JwtTestSupport.ADMIN_EMAIL);
             });
             go.countDown();
             assertThat(a.get().roundNo()).isEqualTo(1);
@@ -280,7 +280,7 @@ class RingIT extends IntegrationTest {
         Callable<Object> task = () -> {
             go.await();
             try {
-                return ringService.shuffle(gameId, null, null, JwtTestSupport.ADMIN_EMAIL);
+                return ringService.shuffle(gameId, null, null, null, JwtTestSupport.ADMIN_EMAIL);
             } catch (ApiException e) {
                 return e;
             }

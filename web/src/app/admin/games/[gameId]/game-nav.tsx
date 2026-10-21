@@ -7,9 +7,12 @@ import { usePathname } from "next/navigation";
 export function GameNav({
   gameId,
   openClaims = 0,
+  killWords = false,
 }: {
   gameId: string;
   openClaims?: number;
+  /** Show the Kill words tab (Death Sentence is enabled). */
+  killWords?: boolean;
 }) {
   const pathname = usePathname();
   const base = `/admin/games/${encodeURIComponent(gameId)}`;
@@ -17,6 +20,9 @@ export function GameNav({
     { href: `${base}/leaderboard`, label: "Leaderboard", badge: 0 },
     { href: `${base}/players`, label: "Players", badge: 0 },
     { href: `${base}/kills`, label: "Kills", badge: openClaims },
+    ...(killWords
+      ? [{ href: `${base}/kill-words`, label: "Kill words", badge: 0 }]
+      : []),
     { href: `${base}/settings`, label: "Settings", badge: 0 },
     { href: `${base}/log`, label: "Log", badge: 0 },
   ];

@@ -3,6 +3,7 @@ package com.assassin.api.targeting;
 import com.assassin.api.common.CurrentUser;
 import com.assassin.api.game.KillMethodService;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,11 +37,11 @@ public class AdminRoundController {
     @ResponseStatus(HttpStatus.CREATED)
     public RingService.RingView start(@PathVariable String gameId, CurrentUser admin,
             @RequestBody StartRoundRequest request) {
-        return ringService.startRound(gameId, request.expectedRoundNo(), request.playerIds(), request.killMethods(), admin.email());
+        return ringService.startRound(gameId, request.expectedRoundNo(), request.playerIds(), request.killMethods(), request.words(), admin.email());
     }
 
     public record StartRoundRequest(Integer expectedRoundNo, List<UUID> playerIds,
-            List<KillMethodService.KillMethodInput> killMethods) {
+            List<KillMethodService.KillMethodInput> killMethods, Map<UUID, String> words) {
 
         public StartRoundRequest {
             playerIds = playerIds == null ? List.of() : playerIds;
