@@ -2,34 +2,24 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { Alert, inputClass, primaryButtonClass } from "@/components/ui";
+import { Alert, primaryButtonClass } from "@/components/ui";
 import type { JoinState } from "../actions";
 
 /** `action` is `joinAction` with the join code bound by the page. */
 export function JoinForm({
   action,
+  displayName,
 }: {
-  action: (prev: JoinState, formData: FormData) => Promise<JoinState>;
+  action: (prev: JoinState) => Promise<JoinState>;
+  displayName: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
   return (
     <form action={formAction} className="space-y-4">
-      <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Display name</span>
-        <input
-          name="displayName"
-          defaultValue={state.displayName}
-          minLength={2}
-          maxLength={32}
-          required
-          autoComplete="nickname"
-          className={inputClass}
-        />
-        <span className="block text-xs text-muted">
-          Other players see this name. 2–32 characters.
-        </span>
-      </label>
+      <p className="text-sm text-muted">
+        You&apos;ll play as <span className="font-medium text-bone">{displayName}</span>.
+      </p>
       {state.error && (
         <Alert>
           {state.error}

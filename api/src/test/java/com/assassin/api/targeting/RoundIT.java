@@ -45,6 +45,24 @@ class RoundIT extends IntegrationTest {
     }
 
     @Test
+    void startingARoundNeedsDistinctNamesAmongThePickedPlayers() throws Exception {
+        UUID a = player("a", "ALIVE");
+        UUID b = player("b", "ALIVE");
+        UUID c = player("c", "ALIVE");
+        ring(null).andExpect(status().isCreated());
+        jdbc.update("update game.player set display_name = 'Sam' where id in (?, ?)", a, b);
+
+        startRound(1, List.of(a, b, c))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_NAMES"))
+                .andExpect(jsonPath("$.players.length()").value(2));
+        assertThat(jdbc.queryForObject("select count(*) from game.game_round", Integer.class)).isEqualTo(1);
+
+        // Leaving one of them out, or renaming one, resolves it.
+        startRound(1, List.of(a, c)).andExpect(status().isCreated());
+    }
+
+    @Test
     void startsRoundTwoMidRoundWithLateJoinerAndRevivedPlayer() throws Exception {
         UUID a = player("a", "ALIVE");
         UUID b = player("b", "ALIVE");

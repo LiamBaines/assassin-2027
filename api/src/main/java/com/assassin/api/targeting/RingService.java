@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -100,13 +101,14 @@ public class RingService {
                 () -> new ApiException(HttpStatus.CONFLICT, "ROUND_ENDED", "The round has ended. Start a new round."));
 
         // 4. Load ALIVE players.
-        List<UUID> alive = players.findByGameIdAndStatusOrderById(game.getId(), PlayerStatus.ALIVE).stream()
-                .map(Player::getId)
-                .toList();
+        List<Player> alivePlayers = players.findByGameIdAndStatusOrderById(game.getId(), PlayerStatus.ALIVE);
+        List<UUID> alive = alivePlayers.stream().map(Player::getId).toList();
         if (alive.size() < 2) {
             throw new ApiException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS",
                     "At least 2 alive players are needed to make a ring.");
         }
+
+        requireDistinctNames(alivePlayers);
 
         // 4b. Methods can only change as part of starting a round.
         if (!initial && methodEdits != null) {
@@ -175,6 +177,8 @@ public class RingService {
             throw new ApiException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS", "At least 2 players are needed to start a round.");
         }
 
+        requireDistinctNames(all.stream().filter(p -> picked.contains(p.getId())).toList());
+
         killMethods.applyForNewRound(game.getId(), methodEdits);
 
         Instant now = Instant.now();
@@ -200,6 +204,25 @@ public class RingService {
         events.record(game.getId(), "ROUND_STARTED",
                 Map.of("roundNo", round.getRoundNo(), "playerCount", picked.size()));
         return view(game, allocation, round);
+    }
+
+    /**
+     * Two players in one ring can't share a display name (compared ignoring case). The admin renames one or both
+     * (a per-game change) and retries; the error lists every player in a clashing group.
+     */
+    private static void requireDistinctNames(List<Player> inRing) {
+        Map<String, List<Player>> byName = inRing.stream()
+                .collect(Collectors.groupingBy(p -> p.getDisplayName().toLowerCase(Locale.ROOT)));
+        List<PlayerRef> clashing = byName.values().stream()
+                .filter(group -> group.size() > 1)
+                .flatMap(List::stream)
+                .map(PlayerRef::from)
+                .toList();
+        if (!clashing.isEmpty()) {
+            throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_NAMES",
+                    "Some players have the same display name. Rename them and try again.",
+                    Map.of("players", clashing));
+        }
     }
 
     private void insertRing(Allocation allocation, List<UUID> playerIds, Instant now) {

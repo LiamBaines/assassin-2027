@@ -4,9 +4,15 @@ import { Loader2 } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Dialog, DialogActions } from "@/components/overlay";
+import { DuplicateNamesDialog } from "@/components/duplicate-names-dialog";
 import { Alert, iconLabelButtonClass } from "@/components/ui";
+import type { PlayerRef } from "@/lib/api-types";
 
-export type ActionResult = { error?: string };
+export type ActionResult = {
+  error?: string;
+  /** Players sharing a name that blocked the action; shown in a dialog where the admin can rename them. */
+  duplicates?: PlayerRef[];
+};
 
 type FormAction = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
 
@@ -15,21 +21,36 @@ export function ActionForm({
   action,
   children,
   className,
+  renameAction,
 }: {
   action: FormAction;
   children: ReactNode;
   className?: string;
+  /** Lets the admin fix a DUPLICATE_NAMES error on the spot. */
+  renameAction?: (playerId: string, displayName: string) => Promise<string | null>;
 }) {
   const [state, formAction] = useActionState(action, {});
+  const [dismissed, setDismissed] = useState<ActionResult | null>(null);
   return (
-    <form action={formAction} className={className}>
-      {children}
-      {state.error && (
-        <div className="basis-full">
-          <Alert>{state.error}</Alert>
-        </div>
+    <>
+      <form action={formAction} className={className}>
+        {children}
+        {state.error && (
+          <div className="basis-full">
+            <Alert>{state.error}</Alert>
+          </div>
+        )}
+      </form>
+      {renameAction && state.duplicates && (
+        <DuplicateNamesDialog
+          key={state.duplicates.map((p) => p.id + p.displayName).join()}
+          open={dismissed !== state}
+          onClose={() => setDismissed(state)}
+          players={state.duplicates}
+          rename={renameAction}
+        />
       )}
-    </form>
+    </>
   );
 }
 

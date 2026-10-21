@@ -78,6 +78,49 @@ class AdminPlayersIT extends IntegrationTest {
         return mvc.perform(as(column("email", playerId), get("/api/me/games/" + gameId + "/target")));
     }
 
+    private ResultActions patchBody(UUID id, String body) throws Exception {
+        return mvc.perform(asAdmin(patch("/api/admin/games/" + gameId + "/players/" + id)
+                .contentType(MediaType.APPLICATION_JSON).content(body)));
+    }
+
+    @Test
+    void renameChangesTheGameNameOnly() throws Exception {
+        jdbc.update("insert into game.profile (auth_user_id, display_name) values (?, 'Alice')",
+                com.assassin.api.JwtTestSupport.subFor("alice@example.com"));
+        patchBody(alice, "{\"displayName\": \"  Alice B \"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Alice B"))
+                .andExpect(jsonPath("$.status").value("ALIVE"));
+        assertThat(column("display_name", alice)).isEqualTo("Alice B");
+        assertThat(jdbc.queryForObject("select display_name from game.profile", String.class)).isEqualTo("Alice");
+    }
+
+    @Test
+    void renameAndStatusCanBeSentTogether() throws Exception {
+        patchBody(bob, "{\"displayName\": \"Bobby\", \"status\": \"REMOVED\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Bobby"))
+                .andExpect(jsonPath("$.status").value("REMOVED"));
+    }
+
+    @Test
+    void renameRejectsInvalidNamesAndEmptyPatches() throws Exception {
+        patchBody(alice, "{\"displayName\": \"A\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_DISPLAY_NAME"));
+        patchBody(alice, "{}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        assertThat(column("display_name", alice)).isEqualTo("Alice");
+    }
+
+    @Test
+    void renameUnknownPlayerIsNotFound() throws Exception {
+        patchBody(UUID.randomUUID(), "{\"displayName\": \"Nobody\"}")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PLAYER_NOT_FOUND"));
+    }
+
     @Test
     void listsPlayersWithoutTargetsBeforeRing() throws Exception {
         mvc.perform(asAdmin(get("/api/admin/games/" + gameId + "/players")))

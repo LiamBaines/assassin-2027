@@ -7,12 +7,13 @@ import {
   pageFor,
   readJoinLinkPath,
   requestLoginEmail,
+  setProfileName,
   uniqueEmail,
 } from "./support";
 
 // A logged-out visitor opens a join link, logs in with a real login email
 // (requested through the login form, read from Mailpit), lands back on the
-// link and joins without typing the code.
+// link, sets their display name (once, at first login) and joins without typing the code.
 
 const GAME_NAME = "Link Game";
 const JOIN_CODE = "LINK2027";
@@ -35,7 +36,7 @@ async function openJoinLinkLoggedOut(page: Page): Promise<void> {
 
 async function joinAndExpectGamePage(page: Page, displayName: string): Promise<void> {
   await expect(page.getByRole("heading", { name: `Join ${GAME_NAME}` })).toBeVisible();
-  await page.getByLabel("Display name").fill(displayName);
+  await expect(page.getByText(`You'll play as ${displayName}`)).toBeVisible();
   await page.getByRole("button", { name: "Join the game" }).click();
   await expect(page).toHaveURL(/:\d+\/[a-z0-9]+(-[a-z0-9]+)*$/);
   await expect(page.getByRole("heading", { level: 1, name: GAME_NAME })).toBeVisible();
@@ -54,6 +55,8 @@ test("the magic link from the email returns to the join link", async ({ page }) 
   expect(redirectTo.searchParams.get("next")).toBe(joinPath);
 
   await page.goto(link.pathname + link.search);
+  // A new account sets its name first, then lands back on the join link.
+  await setProfileName(page, "Link Joiner");
   await expect(page).toHaveURL(new RegExp(`${joinPath}$`));
   await joinAndExpectGamePage(page, "Link Joiner");
 });
@@ -64,6 +67,7 @@ test("the 6-digit code login returns to the join link", async ({ page }) => {
 
   await page.getByLabel("6-digit code").fill(loginCodeFrom(mail));
   await page.getByRole("button", { name: "Log in" }).click();
+  await setProfileName(page, "Code Joiner");
   await expect(page).toHaveURL(new RegExp(`${joinPath}$`));
   await joinAndExpectGamePage(page, "Code Joiner");
 });

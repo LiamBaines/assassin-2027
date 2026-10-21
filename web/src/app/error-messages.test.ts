@@ -5,6 +5,7 @@ class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly detail: string,
+    readonly problem: Record<string, unknown> = {},
   ) {
     super(code);
   }
@@ -12,9 +13,11 @@ class ApiError extends Error {
 
 const createGame = vi.fn();
 const setPlayerStatus = vi.fn();
+const renamePlayer = vi.fn();
 const shuffleRing = vi.fn();
 const updateGame = vi.fn();
 const joinGame = vi.fn();
+const createProfile = vi.fn();
 const registerKill = vi.fn();
 const requireAdmin = vi.fn();
 
@@ -22,13 +25,16 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const redirect = vi.fn();
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/lib/api", () => ({
-  isApiError: (e: unknown) => e instanceof ApiError,
+  isApiError: (e: unknown, code?: string) =>
+    e instanceof ApiError && (code === undefined || e.code === code),
   requireAdmin,
   createGame,
   setPlayerStatus,
+  renamePlayer,
   shuffleRing,
   updateGame,
   joinGame,
+  createProfile,
   registerKill,
 }));
 
@@ -36,10 +42,12 @@ const {
   createGameAction,
   finishGameAction,
   registerKillAction,
+  renamePlayerAction,
   setPlayerStatusAction,
   shuffleRingAction,
 } = await import("./admin/actions");
 const { goToJoinCodeAction, joinAction } = await import("./join/actions");
+const { setProfileAction } = await import("./welcome/actions");
 
 function form(fields: Record<string, string>) {
   const fd = new FormData();
@@ -203,8 +211,8 @@ describe("join actions", () => {
 
   it("joins with the bound code and opens the game page", async () => {
     joinGame.mockResolvedValue({ game: { id: "g1" }, player: { id: "p1" } });
-    await joinAction("abc123", {}, form({ displayName: " Alice " }));
-    expect(joinGame).toHaveBeenCalledWith({ displayName: "Alice", joinCode: "ABC123" });
+    await joinAction("abc123");
+    expect(joinGame).toHaveBeenCalledWith({ joinCode: "ABC123" });
     expect(redirect).toHaveBeenCalledWith("/g1");
   });
 
@@ -212,19 +220,82 @@ describe("join actions", () => {
     ["EMAIL_REQUIRED", 400, /no email address/],
     ["TOO_MANY_ATTEMPTS", 429, /Too many/],
     ["SIGNUPS_CLOSED", 409, /closed/],
-    ["NAME_TAKEN", 409, /already has that name/],
+    ["PROFILE_REQUIRED", 400, /Set your display name/],
     ["BAD_JOIN_CODE", 400, /isn't valid/],
   ])("maps %s", async (code, status, message) => {
     joinGame.mockImplementation(() => fail(status, code));
-    const result = await joinAction("ABC123", {}, form({ displayName: "Alice" }));
-    expect(result).toMatchObject({ code, displayName: "Alice" });
+    const result = await joinAction("ABC123");
+    expect(result).toMatchObject({ code });
     expect(result.error).toMatch(message);
     expect(redirect).not.toHaveBeenCalled();
   });
+});
+
+describe("duplicate names and renaming", () => {
+  it("returns the clashing players with DUPLICATE_NAMES", async () => {
+    const players = [
+      { id: "p1", displayName: "Sam" },
+      { id: "p2", displayName: "sam" },
+    ];
+    shuffleRing.mockImplementation(() =>
+      Promise.reject(new ApiError(409, "DUPLICATE_NAMES", "raw", { players })),
+    );
+    const result = await shuffleRingAction(GAME, {}, form({ expectedCurrentRoundNo: "" }));
+    expect(result.error).toMatch(/same display name/);
+    expect(result.duplicates).toEqual(players);
+  });
+
+  it("renames a player in the game with the trimmed name", async () => {
+    renamePlayer.mockResolvedValue({});
+    await expect(renamePlayerAction(GAME, PLAYER, " Sam T ")).resolves.toBeNull();
+    expect(renamePlayer).toHaveBeenCalledWith(GAME, PLAYER, "Sam T");
+  });
+
+  it("rejects a bad name or id without calling the API", async () => {
+    await expect(renamePlayerAction(GAME, PLAYER, "S")).resolves.toMatch(/2–32/);
+    await expect(renamePlayerAction(GAME, "nope", "Sam T")).resolves.toMatch(/2–32/);
+    expect(renamePlayer).not.toHaveBeenCalled();
+  });
+
+  it("maps an API error to a message", async () => {
+    renamePlayer.mockImplementation(() => fail(404, "PLAYER_NOT_FOUND"));
+    await expect(renamePlayerAction(GAME, PLAYER, "Sam T")).resolves.toMatch(/no longer in the game/);
+  });
+});
+
+describe("setProfileAction", () => {
+  it("saves the trimmed name and continues to the bound path", async () => {
+    createProfile.mockResolvedValue({ displayName: "Alice" });
+    await setProfileAction("/join/ABC123", {}, form({ displayName: " Alice " }));
+    expect(createProfile).toHaveBeenCalledWith("Alice");
+    expect(redirect).toHaveBeenCalledWith("/join/ABC123");
+  });
+
+  it("never redirects off-site", async () => {
+    createProfile.mockResolvedValue({ displayName: "Alice" });
+    await setProfileAction("//evil.com", {}, form({ displayName: "Alice" }));
+    expect(redirect).toHaveBeenCalledWith("/");
+  });
+
+  it("carries on when the name was already set", async () => {
+    createProfile.mockImplementation(() => fail(409, "PROFILE_EXISTS"));
+    await setProfileAction("/me", {}, form({ displayName: "Alice" }));
+    expect(redirect).toHaveBeenCalledWith("/me");
+  });
 
   it("checks the name length in code points", async () => {
-    const result = await joinAction("ABC123", {}, form({ displayName: "A" }));
-    expect(result.code).toBe("VALIDATION_FAILED");
-    expect(joinGame).not.toHaveBeenCalled();
+    const short = await setProfileAction("/", {}, form({ displayName: "A" }));
+    expect(short).toMatchObject({ displayName: "A" });
+    expect(short.error).toMatch(/2–32/);
+    await setProfileAction("/", {}, form({ displayName: "\u{1F52A}\u{1F52A}" }));
+    expect(createProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it("explains an invalid name from the API and keeps it in the field", async () => {
+    createProfile.mockImplementation(() => fail(400, "INVALID_DISPLAY_NAME"));
+    const result = await setProfileAction("/", {}, form({ displayName: "Al\u200Bice" }));
+    expect(result.error).toMatch(/visible characters/);
+    expect(result.displayName).toBe("Al\u200Bice");
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

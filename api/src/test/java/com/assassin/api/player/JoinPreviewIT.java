@@ -95,7 +95,7 @@ class JoinPreviewIT extends IntegrationTest {
                 .andExpect(jsonPath("$.code").value("TOO_MANY_ATTEMPTS"));
         // The limit is shared with signup.
         mvc.perform(as(guesser, post("/api/players").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"displayName\": \"Guesser\", \"joinCode\": \"ABC123\"}")))
+                        .content("{\"joinCode\": \"ABC123\"}")))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value("TOO_MANY_ATTEMPTS"));
         // Other accounts are unaffected.

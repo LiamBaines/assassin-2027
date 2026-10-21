@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { loginPathWithNext } from "@/lib/login-next";
 
+export const REQUEST_PATH_HEADER = "x-request-path";
+
 /** Paths reachable without a session. */
 export function isPublicPath(pathname: string): boolean {
   return (
@@ -16,6 +18,11 @@ export function isPublicPath(pathname: string): boolean {
  * redirects unauthenticated users on protected routes to /login?next=<path>.
  */
 export async function updateSession(request: NextRequest) {
+  // Server Components can't see the URL, so pass it on for the redirect to /welcome (see getMe).
+  request.headers.set(
+    REQUEST_PATH_HEADER,
+    request.nextUrl.pathname + request.nextUrl.search,
+  );
   let response = NextResponse.next({ request });
   let cacheHeaders: Record<string, string> = {};
 

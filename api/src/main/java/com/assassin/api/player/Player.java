@@ -54,6 +54,10 @@ public class Player {
         this.status = status;
     }
 
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
     public UUID getId() {
         return id;
     }

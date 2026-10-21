@@ -14,7 +14,7 @@ import {
 test.describe.configure({ mode: "serial" });
 
 const GAME = { name: "Roster Game", code: "ROSTER1" };
-const LATE = "Dave Late";
+const LATE = ADMIN.displayName;
 const [alice, bob, carol] = PLAYERS;
 
 let admin: Page;
@@ -92,11 +92,12 @@ test("a player who joins after the start shows as waiting", async () => {
   await joinThroughLink(admin, joinPath, GAME.name, LATE);
 
   const page = pages.get(carol.displayName)!;
+  // The roster is sorted by name.
   expect(await readRoster(page)).toEqual([
+    [LATE, "Waiting"],
     [alice.displayName, "Alive"],
     [bob.displayName, "Dead"],
     [carol.displayName, "Alive"],
-    [LATE, "Waiting"],
   ]);
 
   // The late joiner sees the same roster, including themself.

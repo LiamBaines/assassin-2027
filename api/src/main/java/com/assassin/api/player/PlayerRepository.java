@@ -14,8 +14,6 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
 
     boolean existsByGameIdAndAuthUserId(String gameId, UUID authUserId);
 
-    boolean existsByGameIdAndDisplayNameIgnoreCase(String gameId, String displayName);
-
     List<Player> findByGameIdOrderByJoinedAtAsc(String gameId);
 
     List<Player> findByGameIdAndStatusOrderById(String gameId, PlayerStatus status);

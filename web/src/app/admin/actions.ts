@@ -13,12 +13,14 @@ import {
   getKillWordSuggestions,
   isApiError,
   registerKill,
+  renamePlayer,
   requireAdmin,
   setPlayerStatus,
   shuffleRing,
   startRound,
   updateGame,
   type AdminGame,
+  type PlayerRef,
   type UpdateGameRequest,
 } from "@/lib/api";
 import { normalizeJoinCode } from "@/lib/join-code";
@@ -47,6 +49,10 @@ const MESSAGES: Record<string, string> = {
   CONCURRENT_UPDATE:
     "Someone else changed this at the same time. The page has been refreshed; try again.",
   INVALID_STATUS: "That status change isn't allowed.",
+  INVALID_DISPLAY_NAME:
+    "A name must be 2–32 visible characters (an emoji counts as one).",
+  DUPLICATE_NAMES:
+    "Some players have the same display name. Rename them, then try again.",
   PLAYER_NOT_FOUND: "That player is no longer in the game. The page has been refreshed.",
   GAME_NOT_STARTED: "The game hasn't started yet. Generate a ring first.",
   PLAYER_NOT_ALIVE: "That player is already dead or removed. The page has been refreshed.",
@@ -83,7 +89,11 @@ async function run(fn: () => Promise<unknown>): Promise<ActionResult> {
     if (isApiError(e)) {
       // Refresh anyway so a stale view (for example after STALE_ROUND) updates.
       revalidatePath("/", "layout");
-      return { error: MESSAGES[e.code] ?? e.detail };
+      const error = MESSAGES[e.code] ?? e.detail;
+      if (e.code === "DUPLICATE_NAMES" && Array.isArray(e.problem.players)) {
+        return { error, duplicates: e.problem.players as PlayerRef[] };
+      }
+      return { error };
     }
     throw e;
   }
@@ -145,6 +155,21 @@ export async function setPlayerStatusAction(
     return INVALID_REQUEST;
   }
   return run(() => setPlayerStatus(gameId, playerId, status));
+}
+
+/** Renames a player for this game (the players page and the duplicate-names dialog). Resolves to an error or null. */
+export async function renamePlayerAction(
+  gameId: string,
+  playerId: string,
+  displayName: string,
+): Promise<string | null> {
+  await requireAdmin();
+  const name = displayName.trim();
+  const length = [...name].length;
+  if (!isUuid(playerId) || length < 2 || length > 32) {
+    return MESSAGES.INVALID_DISPLAY_NAME;
+  }
+  return (await run(() => renamePlayer(gameId, playerId, name))).error ?? null;
 }
 
 export async function registerKillAction(

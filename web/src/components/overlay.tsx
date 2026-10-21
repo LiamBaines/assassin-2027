@@ -15,7 +15,11 @@ function useDialog(open: boolean, onClose: () => void) {
   }, [open]);
   return {
     ref,
-    onClose,
+    // React bubbles `close` through the component tree, so a dialog nested in another one would close its parent too.
+    onClose: (e: React.SyntheticEvent<HTMLDialogElement>) => {
+      e.stopPropagation();
+      onClose();
+    },
     onClick: (e: React.MouseEvent<HTMLDialogElement>) => {
       if (e.target === ref.current) onClose();
     },
@@ -90,16 +94,18 @@ export function Dialog({
 export function DialogActions({
   onCancel,
   disabled,
+  cancelLabel = "Cancel",
   children,
 }: {
   onCancel: () => void;
   disabled?: boolean;
-  children: ReactNode;
+  cancelLabel?: string;
+  children?: ReactNode;
 }) {
   return (
     <div className="-mx-5 flex flex-col-reverse gap-2 border-t border-line px-5 pt-4 sm:flex-row sm:justify-end [&>button]:w-full sm:[&>button]:w-auto">
       <button type="button" onClick={onCancel} disabled={disabled} className={secondaryButtonClass}>
-        Cancel
+        {cancelLabel}
       </button>
       {children}
     </div>

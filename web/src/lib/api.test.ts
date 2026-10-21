@@ -7,6 +7,9 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ auth: { getSession } }),
 }));
 
+const requestHeaders = new Headers();
+vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
+
 class RedirectError extends Error {
   constructor(readonly url: string) {
     super(`NEXT_REDIRECT ${url}`);
@@ -39,6 +42,8 @@ const {
   getGamePlayers,
   getMyLeaderboard,
   getMe,
+  loadMe,
+  createProfile,
   getMyRounds,
   getMyTarget,
   getRingHistory,
@@ -81,7 +86,7 @@ afterEach(() => {
 
 describe("request plumbing", () => {
   it("sends the bearer token, no-store, and parses JSON", async () => {
-    const me = { email: "a@b.c", isAdmin: false, games: [] };
+    const me = { email: "a@b.c", isAdmin: false, profile: { displayName: "Abe" }, games: [] };
     fetchMock.mockResolvedValue(Response.json(me));
 
     await expect(getMe()).resolves.toEqual(me);
@@ -91,6 +96,26 @@ describe("request plumbing", () => {
     expect(init?.method).toBe("GET");
     expect(init?.cache).toBe("no-store");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
+  });
+
+  it("sends a user without a name to /welcome, returning to where they were", async () => {
+    fetchMock.mockImplementation(async () =>
+      Response.json({ email: "a@b.c", isAdmin: false, profile: null, games: [] }),
+    );
+    requestHeaders.set("x-request-path", "/join/ABC123");
+    await expect(getMe()).rejects.toMatchObject({ url: "/welcome?next=%2Fjoin%2FABC123" });
+    // /welcome itself still gets the user.
+    await expect(loadMe()).resolves.toMatchObject({ profile: null });
+    requestHeaders.delete("x-request-path");
+  });
+
+  it("PUTs the display name", async () => {
+    fetchMock.mockResolvedValue(Response.json({ displayName: "Abe" }, { status: 201 }));
+    await expect(createProfile("Abe")).resolves.toEqual({ displayName: "Abe" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/api/me/profile");
+    expect(init?.method).toBe("PUT");
+    expect(init?.body).toBe(JSON.stringify({ displayName: "Abe" }));
   });
 
   it("serialises the JSON body on POST", async () => {
@@ -127,7 +152,7 @@ describe("error mapping", () => {
         code: "NAME_TAKEN",
       }),
     );
-    const err = await joinGame({ displayName: "Bob", joinCode: "ABC123" }).catch((e) => e);
+    const err = await joinGame({ joinCode: "ABC123" }).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 409, code: "NAME_TAKEN", detail: "That name is taken" });
   });
@@ -245,10 +270,10 @@ describe("player contracts", () => {
       player: { id: "p1", displayName: "Bob", status: "ALIVE", joinedAt: "t" },
     };
     fetchMock.mockResolvedValue(Response.json(joined, { status: 201 }));
-    await expect(joinGame({ displayName: "Bob", joinCode: "ABC123" })).resolves.toEqual(joined);
+    await expect(joinGame({ joinCode: "ABC123" })).resolves.toEqual(joined);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("http://api.test/api/players");
-    expect(init?.body).toBe(JSON.stringify({ displayName: "Bob", joinCode: "ABC123" }));
+    expect(init?.body).toBe(JSON.stringify({ joinCode: "ABC123" }));
   });
 });
 
@@ -330,14 +355,14 @@ describe("admin contracts", () => {
 
 describe("requireAdmin", () => {
   it("returns the caller when they are an admin", async () => {
-    const me = { email: "admin@b.c", isAdmin: true, games: [] };
+    const me = { email: "admin@b.c", isAdmin: true, profile: { displayName: "Ada" }, games: [] };
     fetchMock.mockResolvedValue(Response.json(me));
     await expect(requireAdmin()).resolves.toEqual(me);
   });
 
   it("404s a non-admin before any admin endpoint is called", async () => {
     fetchMock.mockResolvedValue(
-      Response.json({ email: "a@b.c", isAdmin: false, games: [] }),
+      Response.json({ email: "a@b.c", isAdmin: false, profile: { displayName: "Abe" }, games: [] }),
     );
     await expect(requireAdmin()).rejects.toBeInstanceOf(NotFoundError);
     expect(fetchMock).toHaveBeenCalledTimes(1);

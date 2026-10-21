@@ -28,7 +28,7 @@ The schema and architecture must not block the later features.
   - Spring validates Supabase JWTs as an OAuth2 resource server. It uses ES256 via JWKS at `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`, with `jws-algorithms: ES256` set explicitly and custom validators for issuer and audience (`authenticated`).
 - **The front end never touches game tables.** Next.js calls Spring server-side only, from Server Components and Actions, with `Authorization: Bearer <access token>`. This means no CORS, and `API_BASE_URL` stays server-only.
 - **Admins** come from the `APP_ADMIN_EMAILS` env allowlist in Spring and get `ROLE_ADMIN`. The web app learns admin status only from `GET /api/me`. **An admin may also register as a player.**
-- **Signup** collects a display name (2–32 chars, unique per game, case-insensitive) and the **join code** set by the admin.
+- **Display name** (decided 2026-10-21; spec `docs/specs/profile-display-name.md`) is set once, at first login, on `/welcome` and stored in `game.profile` (2–32 visible chars, not unique, never editable by the user). **Signup** takes only the **join code** and copies the profile name into `player.display_name`, which is the name shown in that game. An admin may rename a player in one game (`PATCH` with `displayName`); it never touches the profile and players don't see it. Starting a round or generating a ring returns 409 `DUPLICATE_NAMES` (with the clashing players) while two players in the ring share a name (case-insensitive); the admin renames them and retries.
 - **Targeting:** **auto ring only**. One button shuffles all ALIVE players into a single cycle. The first run is the initial allocation. Every later run is a **shakeup**, which replaces the active assignments while keeping history. (A reshuffle and a shakeup are the same thing.)
 - **Terminology:** a player hunting someone is the **assassin**, and the player being hunted is the **target**. Use these names in the code, the schema and the UI.
 - **Signups are not auto-closed** when the ring is generated. The admin toggles them manually, and late joiners have no target until the next shakeup.
@@ -56,7 +56,8 @@ The schema and architecture must not block the later features.
 
 ## Data model (`V1__init.sql` to `V4__kill_claim.sql`, schema `game`)
 - `game`: id text (the slug, see ADR 0003), name, join_code (uppercase `^[A-Z0-9]{6,16}$`), status (`SETUP|ACTIVE|FINISHED`), signups_open, created_at/started_at/finished_at, version. The partial unique index `game_join_code_live_uq` makes join_code unique among non-FINISHED games (V2 replaced V1's one-live-game index).
-- `player`: id, game_id FK, auth_user_id (JWT `sub`, no FK to auth.users), email, display_name, status (`ALIVE|DEAD|REMOVED`), joined_at. Unique on `(game_id, auth_user_id)` and `(game_id, lower(display_name))`, plus `(id, game_id)` as the target for composite FKs.
+- `profile`: auth_user_id (JWT `sub`) PK, display_name, created_at. One per account, created once.
+- `player`: id, game_id FK, auth_user_id (JWT `sub`, no FK to auth.users), email, display_name (the in-game name, copied from the profile), status (`ALIVE|DEAD|REMOVED`), joined_at. Unique on `(game_id, auth_user_id)`, plus `(id, game_id)` as the target for composite FKs.
 - `game_round` (V5): id, game_id, round_no (unique per game), started_at, ended_at (null while open; one open round per game), winner_id, created_by. Round 1 is created by the first ring; later rounds by `POST /rounds`, which revives or removes players from a pick list and allocates a fresh ring. `kill.game_round_id` (V7) makes kills unique per victim per round.
 - `allocation` (was `assignment_round`; V5 renamed it): id, game_id, game_round_id, allocation_no (unique per game), reason (`INITIAL|SHAKEUP`), player_count, created_by, created_at.
 - `assignment`: id identity, game_id, round_id, assassin_id, target_id (composite FKs to player), source (`RING|KILL_INHERIT|SPLICE|MANUAL`; `SPLICE` is an assassin inheriting a removed player's target), status (`ACTIVE|COMPLETED|SUPERSEDED|VOIDED`), created_at, ended_at.
@@ -80,15 +81,16 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/actuator/health` | public | Fly health check |
-| GET | `/api/me` | user | `{email, isAdmin, games:[{game:{id,name,status,signupsOpen}, player:{id,displayName,status,joinedAt}}]}`: every game the caller plays in, FINISHED included, newest join first |
+| GET | `/api/me` | user | `{email, isAdmin, profile:{displayName}|null, games:[{game:{id,name,status,signupsOpen}, player:{id,displayName,status,joinedAt}}]}`: every game the caller plays in, FINISHED included, newest join first |
 | GET | `/api/join/{code}` | user | Join preview for the non-FINISHED game with that code: `{gameId, name, status, signupsOpen, alreadyJoined}`. 404 `BAD_JOIN_CODE` (counts as a wrong code) |
-| POST | `/api/players` | user | `{joinCode, displayName}`, 201 `{game, player}`. Errors: `BAD_JOIN_CODE`, `SIGNUPS_CLOSED`, `ALREADY_REGISTERED`, `NAME_TAKEN`, `INVALID_DISPLAY_NAME`, `EMAIL_REQUIRED`, `TOO_MANY_ATTEMPTS` |
+| PUT | `/api/me/profile` | user | `{displayName}`, 201 `{displayName}`. Once only. Errors: `PROFILE_EXISTS`, `INVALID_DISPLAY_NAME` |
+| POST | `/api/players` | user | `{joinCode}`, 201 `{game, player}`. Errors: `BAD_JOIN_CODE`, `SIGNUPS_CLOSED`, `ALREADY_REGISTERED`, `PROFILE_REQUIRED`, `EMAIL_REQUIRED`, `TOO_MANY_ATTEMPTS` |
 | GET | `/api/me/games/{gameId}/target` | user | `{target:{displayName}, assignedAt}` or 404 `NO_TARGET` |
 | GET | `/api/me/games/{gameId}/players` | user | Roster of a started game, sorted by display name: `{players:[{displayName, status}]}`, status `ALIVE`/`DEAD`/`REMOVED`/`WAITING` (`WAITING` = alive with no active assignment, computed). 404 `NOT_IN_GAME` (non-member or unknown game), 404 `GAME_NOT_STARTED` (SETUP) |
 | GET/POST | `/api/admin/games` | admin | List every game, newest first, as `{id, name, joinCode, status, signupsOpen, createdAt, startedAt, finishedAt, playerCount}`, or create one `{name, joinCode}` (`JOIN_CODE_TAKEN`) |
 | GET/PATCH | `/api/admin/games/{gameId}` | admin | Read, or edit signupsOpen or FINISHED (name and join code are fixed at creation; `JOIN_CODE_TAKEN` only on create) (`INVALID_STATUS` for any other status) |
 | GET | `/api/admin/games/{gameId}/players` | admin | Includes each player's current target |
-| PATCH | `/api/admin/games/{gameId}/players/{playerId}` | admin | `{status}`: REMOVED or ALIVE. Removing a player in the ring splices them out (see Decisions). Errors: `INVALID_STATUS`, `PLAYER_NOT_FOUND` |
+| PATCH | `/api/admin/games/{gameId}/players/{playerId}` | admin | `{status?, displayName?}` (at least one): status REMOVED or ALIVE (removing a player in the ring splices them out, see Decisions); displayName renames them in this game only. Errors: `INVALID_STATUS`, `INVALID_DISPLAY_NAME`, `PLAYER_NOT_FOUND` |
 | POST | `/api/admin/games/{gameId}/kills` | admin | `{victimId}`. 201 `{killId, killer, victim, newTarget, roundEnded}`; `newTarget` is null when the kill ended the round (the game stays ACTIVE). Errors: `GAME_NOT_STARTED`, `GAME_FINISHED`, `PLAYER_NOT_FOUND`, `PLAYER_NOT_ALIVE`, `NOT_IN_RING` |
 | POST | `/api/me/games/{gameId}/kill-claims` | user | No body. Files a claim on the caller's ACTIVE target: 201 `{id, status}`. Errors: `NOT_IN_GAME`, `GAME_NOT_STARTED`, `GAME_FINISHED`, `NO_TARGET`, `CLAIM_ALREADY_OPEN` |
 | POST | `/api/me/games/{gameId}/kill-claims/{id}/{action}` | user | `withdraw` (killer, open claims), `accept` (victim, `PENDING`; returns `{status, roundEnded}`), `contest` (victim, `PENDING`). Errors: `NOT_CLAIM_PARTICIPANT` 403, `CLAIM_NOT_OPEN`, `CLAIM_STALE` |
@@ -121,7 +123,7 @@ Any write can also fail with 409 `CONCURRENT_UPDATE` (optimistic lock) or 400 `V
   - `/auth/confirm`: route handler that calls `verifyOtp`
   - `/login?next=…`: the proxy sends logged-out visitors here, keeping where they were going. Both the code login and the magic link (whose template passes `{{ .RedirectTo }}` as `redirect_to`) return them there, through `safeNextPath`
   - `/join`: a code form that goes to `/join/CODE`
-  - `/join/[code]`: "Join <game>" with a display-name field
+  - `/welcome`: first login asks for a display name (any user without a profile is redirected here by `getMe`, then back to where they were going). `/join/[code]`: "Join <game>" showing the name the player will use
   - `/me`: the user's games
   - `/[gameId]` (the game's slug, e.g. `/work-assassin`): the user's status and target in that game, plus a Players card (everyone's name and status) once the game has started. Server-rendered on load, no polling Also a Register kill button (with confirm) and claim status for the killer, and an accept/contest banner for the victim.
 - **Admin (desktop):** `admin/layout.tsx` calls `/api/me` and returns `notFound()` unless `isAdmin`.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confirmRedirectUrl, loginPathWithNext, returnPathFromConfirm } from "./login-next";
+import { confirmRedirectUrl, loginPathWithNext, returnPathFromConfirm, welcomePathWithNext } from "./login-next";
 
 describe("loginPathWithNext", () => {
   it("keeps the original path and query as next", () => {
@@ -61,5 +61,16 @@ describe("returnPathFromConfirm", () => {
     expect(
       returnPathFromConfirm(params(`redirect_to=${encodeURIComponent("http://x/auth/confirm?next=%2F.%2F%2Fevil.com")}`)),
     ).toBe("/");
+  });
+});
+
+describe("welcomePathWithNext", () => {
+  it("keeps where the user was going", () => {
+    expect(welcomePathWithNext("/join/ABC123")).toBe("/welcome?next=%2Fjoin%2FABC123");
+  });
+
+  it("drops next for the home page and for unsafe paths", () => {
+    expect(welcomePathWithNext("/")).toBe("/welcome");
+    expect(welcomePathWithNext("//evil.com")).toBe("/welcome");
   });
 });

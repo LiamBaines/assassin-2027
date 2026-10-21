@@ -14,6 +14,7 @@ import {
 import { deathSentenceEnabled } from "@/lib/kill-words";
 import { parseRoundParam } from "@/lib/leaderboard";
 import {
+  renamePlayerAction,
   shuffleRingAction,
   startRoundAction,
   suggestKillWordsAction,
@@ -68,6 +69,7 @@ export default async function AdminLeaderboardPage(props: {
             suggestWords={suggestKillWordsAction.bind(null, game.id)}
             shuffleAction={shuffleRingAction.bind(null, game.id)}
             startRoundAction={startRoundAction.bind(null, game.id)}
+            renameAction={renamePlayerAction.bind(null, game.id)}
           />
         </div>
       </div>

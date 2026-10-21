@@ -10,6 +10,12 @@ export function loginPathWithNext(pathname: string, search: string): string {
   return next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
 }
 
+/** The set-your-name page for a user without a profile, keeping where they were going as `?next=`. */
+export function welcomePathWithNext(next: string): string {
+  const safe = safeNextPath(next);
+  return safe === "/" ? "/welcome" : `/welcome?next=${encodeURIComponent(safe)}`;
+}
+
 /** Where the magic link lands: `/auth/confirm`, carrying `next` unless it is "/". */
 export function confirmRedirectUrl(siteUrl: string, next: string): string {
   const base = `${siteUrl.replace(/\/+$/, "")}/auth/confirm`;

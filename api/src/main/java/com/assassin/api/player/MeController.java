@@ -21,14 +21,17 @@ public class MeController {
     private final GameRepository games;
     private final PlayerRepository players;
     private final GameRoundRepository rounds;
+    private final ProfileRepository profiles;
 
-    public MeController(GameRepository games, PlayerRepository players, GameRoundRepository rounds) {
+    public MeController(GameRepository games, PlayerRepository players, GameRoundRepository rounds,
+            ProfileRepository profiles) {
+        this.profiles = profiles;
         this.games = games;
         this.players = players;
         this.rounds = rounds;
     }
 
-    /** Who the caller is, plus every game they play in (FINISHED ones too), most recently joined first. */
+    /** Who the caller is ({@code profile} is null until they set a name), plus every game they play in (FINISHED ones too), most recently joined first. */
     @GetMapping("/api/me")
     @Transactional(readOnly = true)
     public MeResponse me(CurrentUser user) {
@@ -40,9 +43,11 @@ public class MeController {
         List<PlayerGame> mineWithGames = mine.stream()
                 .map(p -> PlayerGame.from(byId.get(p.getGameId()), p, currentRound.get(p.getGameId())))
                 .toList();
-        return new MeResponse(user.email(), user.admin(), mineWithGames);
+        ProfileView profile = profiles.findById(user.authUserId()).map(ProfileView::from).orElse(null);
+        return new MeResponse(user.email(), user.admin(), profile, mineWithGames);
     }
 
-    public record MeResponse(String email, @JsonProperty("isAdmin") boolean isAdmin, List<PlayerGame> games) {
+    public record MeResponse(String email, @JsonProperty("isAdmin") boolean isAdmin, ProfileView profile,
+            List<PlayerGame> games) {
     }
 }

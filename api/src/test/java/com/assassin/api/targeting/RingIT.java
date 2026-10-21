@@ -73,6 +73,31 @@ class RingIT extends IntegrationTest {
     }
 
     @Test
+    void sameNameCaseInsensitivelyBlocksTheRingAndListsTheClashingPlayers() throws Exception {
+        UUID one = insertPlayer(gameId, "one@example.com", "Sam", "ALIVE");
+        UUID two = insertPlayer(gameId, "two@example.com", "sam", "ALIVE");
+        insertPlayer(gameId, "three@example.com", "Other", "ALIVE");
+        shuffle(null)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_NAMES"))
+                .andExpect(jsonPath("$.players.length()").value(2))
+                .andExpect(jsonPath("$.players[?(@.id == '" + one + "')].displayName").value("Sam"))
+                .andExpect(jsonPath("$.players[?(@.id == '" + two + "')].displayName").value("sam"));
+        assertThat(countAssignments("ACTIVE")).isZero();
+
+        jdbc.update("update game.player set display_name = 'Sam T' where id = ?", two);
+        shuffle(null).andExpect(status().isCreated());
+    }
+
+    @Test
+    void aDuplicateNameAmongPlayersNotInTheRingIsFine() throws Exception {
+        addPlayers(3, "ALIVE");
+        insertPlayer(gameId, "x@example.com", "Sam", "DEAD");
+        insertPlayer(gameId, "y@example.com", "Sam", "REMOVED");
+        shuffle(null).andExpect(status().isCreated());
+    }
+
+    @Test
     void fewerThanTwoAlivePlayersIsRejected() throws Exception {
         shuffle(null).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("NOT_ENOUGH_PLAYERS"));
         addPlayers(1, "ALIVE");

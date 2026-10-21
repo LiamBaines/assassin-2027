@@ -1,6 +1,9 @@
 import "server-only";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
+import { welcomePathWithNext } from "@/lib/login-next";
+import { REQUEST_PATH_HEADER } from "@/lib/supabase/proxy";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AdminClaim,
@@ -24,6 +27,7 @@ import type {
   MyGame,
   MyRound,
   MyTarget,
+  Profile,
   PlayerSummary,
   Roster,
   Ring,
@@ -38,13 +42,21 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly detail: string;
+  /** The whole ProblemDetail body, for errors that carry extra data (DUPLICATE_NAMES lists `players`). */
+  readonly problem: Record<string, unknown>;
 
-  constructor(status: number, code: string, detail: string) {
+  constructor(
+    status: number,
+    code: string,
+    detail: string,
+    problem: Record<string, unknown> = {},
+  ) {
     super(`${status} ${code}: ${detail}`);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.detail = detail;
+    this.problem = problem;
   }
 }
 
@@ -68,6 +80,7 @@ export async function toApiError(res: Response): Promise<ApiError> {
     res.status,
     str(body.code) ?? `HTTP_${res.status}`,
     str(body.detail) ?? str(body.title) ?? (res.statusText || "Request failed"),
+    body,
   );
 }
 
@@ -80,7 +93,7 @@ async function accessToken(): Promise<string> {
 }
 
 async function request<T>(
-  method: "GET" | "POST" | "PATCH" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
 ): Promise<T> {
@@ -126,8 +139,24 @@ const leaderboardQuery = (roundNo?: number) =>
 
 // Player
 
-/** The signed-in user. Deduplicated per request, so layouts and pages can both call it. */
-export const getMe = cache(() => request<Me>("GET", "/api/me"));
+/** The signed-in user, even one who hasn't set a name yet. Only /welcome should use this. */
+export const loadMe = cache(() => request<Me>("GET", "/api/me"));
+
+/**
+ * The signed-in user. Deduplicated per request, so layouts and pages can both call it. Someone who hasn't set their
+ * display name yet is sent to /welcome first, and back to where they were going afterwards.
+ */
+export const getMe = cache(async (): Promise<Me & { profile: Profile }> => {
+  const me = await loadMe();
+  if (!me.profile) {
+    redirect(welcomePathWithNext((await headers()).get(REQUEST_PATH_HEADER) ?? "/"));
+  }
+  return me as Me & { profile: Profile };
+});
+
+/** Sets the caller's display name. It can only be set once (PROFILE_EXISTS). */
+export const createProfile = (displayName: string) =>
+  request<Profile>("PUT", "/api/me/profile", { displayName });
 
 /**
  * 404s unless the caller is an admin. Next renders a layout and its page
@@ -238,6 +267,18 @@ export const setPlayerStatus = (
     "PATCH",
     `${gamePath(gameId)}/players/${seg(playerId)}`,
     { status },
+  );
+
+/** Renames a player in this game only (their profile name is untouched). */
+export const renamePlayer = (
+  gameId: string,
+  playerId: string,
+  displayName: string,
+) =>
+  request<PlayerSummary>(
+    "PATCH",
+    `${gamePath(gameId)}/players/${seg(playerId)}`,
+    { displayName },
   );
 
 export const registerKill = (
