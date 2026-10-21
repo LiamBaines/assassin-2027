@@ -74,6 +74,20 @@ public class AdminPlayerService {
         return player;
     }
 
+    /**
+     * Renames a player in this game only (their profile is untouched), e.g. to tell two players with the same name
+     * apart, or to stop a name giving the target away.
+     */
+    @Transactional
+    public Player rename(String gameId, UUID playerId, String displayName) {
+        Game game = gameService.lockForChange(gameId);
+        Player player = players.findByIdAndGameId(playerId, game.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAYER_NOT_FOUND", "No such player in this game."));
+        ProfileService.validateDisplayName(displayName);
+        player.setDisplayName(displayName);
+        return player;
+    }
+
     public record AdminPlayer(UUID id, String displayName, String email, PlayerStatus status, Instant joinedAt,
             PlayerRef currentTarget) {
 

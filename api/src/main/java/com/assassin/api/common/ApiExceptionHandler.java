@@ -23,6 +23,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleApi(ApiException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
         problem.setProperty(CODE, ex.getCode());
+        ex.getProperties().forEach(problem::setProperty);
         return problem;
     }
 
