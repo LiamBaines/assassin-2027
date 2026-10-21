@@ -29,9 +29,15 @@ class SignupIT extends IntegrationTest {
     private DataSource dataSource;
 
     private ResultActions signup(String email, String displayName, String joinCode) throws Exception {
+        jdbc.update("insert into game.profile (auth_user_id, display_name) values (?, ?) on conflict do nothing",
+                JwtTestSupport.subFor(email), displayName);
+        return signupWithoutProfile(email, joinCode);
+    }
+
+    private ResultActions signupWithoutProfile(String email, String joinCode) throws Exception {
         String json = """
-                {"displayName": "%s", "joinCode": "%s"}
-                """.formatted(displayName, joinCode);
+                {"joinCode": "%s"}
+                """.formatted(joinCode);
         return mvc.perform(as(email, post("/api/players").contentType(MediaType.APPLICATION_JSON).content(json)));
     }
 
@@ -39,7 +45,7 @@ class SignupIT extends IntegrationTest {
     void signupCopiesSubAndEmailAndMatchesJoinCodeCaseInsensitively() throws Exception {
         String gameId = insertGame("ABC123", "SETUP", true);
 
-        signup(ALICE, "  Alice ", " abc123 ")
+        signup(ALICE, "Alice", " abc123 ")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.game.id").value(gameId.toString()))
                 .andExpect(jsonPath("$.game.name").value("Test game"))
@@ -121,18 +127,6 @@ class SignupIT extends IntegrationTest {
     }
 
     @Test
-    void displayNamesAreMeasuredInCodePointsAndMustBeVisible() throws Exception {
-        insertGame("ABC123", "SETUP", true);
-        signup(ALICE, "\uD83D\uDD2A", "ABC123")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_DISPLAY_NAME"));
-        signup(ALICE, "Ali\u200Bce", "ABC123")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_DISPLAY_NAME"));
-        signup(ALICE, "\uD83D\uDD2A\uD83D\uDD2A", "ABC123").andExpect(status().isCreated());
-    }
-
-    @Test
     void alreadyRegistered() throws Exception {
         insertGame("ABC123", "SETUP", true);
         signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated());
@@ -153,24 +147,25 @@ class SignupIT extends IntegrationTest {
     }
 
     @Test
-    void nameTakenCaseInsensitively() throws Exception {
+    void needsAProfile() throws Exception {
+        insertGame("ABC123", "SETUP", true);
+        signupWithoutProfile(ALICE, "ABC123")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PROFILE_REQUIRED"));
+        assertThat(jdbc.queryForObject("select count(*) from game.player", Integer.class)).isZero();
+    }
+
+    @Test
+    void playersMayShareADisplayName() throws Exception {
         insertGame("ABC123", "SETUP", true);
         signup(ALICE, "Alice", "ABC123").andExpect(status().isCreated());
-        signup("bob@example.com", "ALICE", "ABC123")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("NAME_TAKEN"));
+        signup("bob@example.com", "ALICE", "ABC123").andExpect(status().isCreated());
+        assertThat(jdbc.queryForObject("select count(*) from game.player", Integer.class)).isEqualTo(2);
     }
 
     @Test
     void validationFailed() throws Exception {
         insertGame("ABC123", "SETUP", true);
-        signup(ALICE, " A ", "ABC123")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.errors[0].field").value("displayName"));
-        signup(ALICE, "A".repeat(33), "ABC123")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
         signup(ALICE, "Alice", "")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));

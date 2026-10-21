@@ -25,7 +25,7 @@ public class PlayerController {
     @PostMapping("/api/players")
     @ResponseStatus(HttpStatus.CREATED)
     public PlayerGame signup(CurrentUser user, @Valid @RequestBody SignupRequest request) {
-        return playerService.signup(user, request.displayName(), request.joinCode());
+        return playerService.signup(user, request.joinCode());
     }
 
     /** Which game a join code leads to. Any logged-in user may ask; wrong codes count towards the attempt limit. */
@@ -34,12 +34,9 @@ public class PlayerController {
         return playerService.preview(user, code);
     }
 
-    public record SignupRequest(
-            @NotBlank @Size(min = 2, max = 32) String displayName,
-            @NotBlank @Size(max = 64) String joinCode) {
+    public record SignupRequest(@NotBlank @Size(max = 64) String joinCode) {
 
         public SignupRequest {
-            displayName = displayName == null ? null : displayName.strip();
             joinCode = Game.normalizeJoinCode(joinCode);
         }
     }

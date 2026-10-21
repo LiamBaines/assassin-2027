@@ -24,9 +24,12 @@ public class PlayerService {
     private final JoinCodeAttemptLimiter joinCodeLimiter;
     private final GameRoundRepository rounds;
     private final GameEventService events;
+    private final ProfileRepository profiles;
 
     public PlayerService(GameRepository games, PlayerRepository players, JoinCodeAttemptLimiter joinCodeLimiter,
-            GameRoundRepository rounds, GameEventService events) {
+            GameRoundRepository rounds, GameEventService events,
+            ProfileRepository profiles) {
+        this.profiles = profiles;
         this.events = events;
         this.rounds = rounds;
         this.games = games;
@@ -47,7 +50,7 @@ public class PlayerService {
 
     /** Registers the caller in the game with this join code. */
     @Transactional
-    public PlayerGame signup(CurrentUser user, String displayName, String joinCode) {
+    public PlayerGame signup(CurrentUser user, String joinCode) {
         // Locked, so a concurrent PATCH that finishes the game or closes signups either commits first (and is seen
         // here) or waits until this signup has committed.
         Game game = findByJoinCode(user, joinCode, HttpStatus.BAD_REQUEST, true);
@@ -60,25 +63,20 @@ public class PlayerService {
         if (user.email() == null || user.email().isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "Your account has no email address.");
         }
-        ProfileService.validateDisplayName(displayName);
+        Profile profile = profiles.findById(user.authUserId()).orElseThrow(() -> new ApiException(
+                HttpStatus.BAD_REQUEST, "PROFILE_REQUIRED", "Set your display name before joining a game."));
         if (players.existsByGameIdAndAuthUserId(game.getId(), user.authUserId())) {
             throw alreadyRegistered();
-        }
-        if (players.existsByGameIdAndDisplayNameIgnoreCase(game.getId(), displayName)) {
-            throw nameTaken();
         }
         try {
             Integer currentRoundNo = rounds.findFirstByGameIdOrderByRoundNoDesc(game.getId())
                     .map(GameRound::getRoundNo).orElse(null);
-            Player player = players.saveAndFlush(new Player(game.getId(), user.authUserId(), user.email(), displayName));
+            Player player = players.saveAndFlush(new Player(game.getId(), user.authUserId(), user.email(), profile.getDisplayName()));
             events.record(game.getId(), "PLAYER_JOINED", Map.of("player", PlayerRef.from(player)));
             return PlayerGame.from(game, player, currentRoundNo);
         } catch (DataIntegrityViolationException e) {
             // Lost a race with a concurrent signup.
             String message = String.valueOf(e.getMostSpecificCause().getMessage());
-            if (message.contains("player_game_display_name_uq")) {
-                throw nameTaken();
-            }
             if (message.contains("player_game_auth_user_uq")) {
                 throw alreadyRegistered();
             }
@@ -114,9 +112,5 @@ public class PlayerService {
 
     private static ApiException alreadyRegistered() {
         return new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "You are already registered in this game.");
-    }
-
-    private static ApiException nameTaken() {
-        return new ApiException(HttpStatus.CONFLICT, "NAME_TAKEN", "That display name is taken.");
     }
 }

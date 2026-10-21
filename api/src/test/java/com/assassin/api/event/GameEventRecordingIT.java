@@ -52,8 +52,10 @@ class GameEventRecordingIT extends IntegrationTest {
 
     @Test
     void signupRecordsPlayerJoined() throws Exception {
+        jdbc.update("insert into game.profile (auth_user_id, display_name) values (?, 'Dave')",
+                com.assassin.api.JwtTestSupport.subFor("dave@example.com"));
         mvc.perform(as("dave@example.com", post("/api/players").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"displayName\": \"Dave\", \"joinCode\": \"EVT456\"}"))).andExpect(status().isCreated());
+                .content("{\"joinCode\": \"EVT456\"}"))).andExpect(status().isCreated());
         JsonNode e = events().getLast();
         assertThat(e.get("type").asText()).isEqualTo("PLAYER_JOINED");
         assertThat(e.at("/data/player/displayName").asText()).isEqualTo("Dave");
