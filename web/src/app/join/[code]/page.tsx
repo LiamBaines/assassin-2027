@@ -69,7 +69,7 @@ export default async function JoinCodePage(props: {
     <PlayerShell title={`Join ${preview.name}`} isAdmin={me.isAdmin}>
       <Panel className="space-y-4">
         {preview.signupsOpen && code ? (
-          <JoinForm action={joinAction.bind(null, code)} />
+          <JoinForm action={joinAction.bind(null, code)} displayName={me.profile.displayName} />
         ) : (
           <Alert tone="info">Signups are closed. Ask the organiser to reopen them.</Alert>
         )}

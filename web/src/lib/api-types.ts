@@ -23,9 +23,14 @@ export type PlayerSummary = {
 /** One game the caller plays in, with their player in it. */
 export type MyGame = { game: GameSummary; player: PlayerSummary };
 
+/** The account's display name, chosen once at first login. */
+export type Profile = { displayName: string };
+
 export type Me = {
   email: string;
   isAdmin: boolean;
+  /** Null until the user sets their name; getMe sends such users to /welcome. */
+  profile: Profile | null;
   /** Every game the caller plays in, including finished ones, newest join first. */
   games: MyGame[];
 };
@@ -161,7 +166,7 @@ export type RoundSummary = {
   createdAt: string;
 };
 
-export type JoinRequest = { displayName: string; joinCode: string };
+export type JoinRequest = { joinCode: string };
 export type CreateGameRequest = { name: string; joinCode: string };
 export type UpdateGameRequest = {
   signupsOpen?: boolean;
