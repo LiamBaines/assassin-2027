@@ -42,13 +42,21 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly detail: string;
+  /** The whole ProblemDetail body, for errors that carry extra data (DUPLICATE_NAMES lists `players`). */
+  readonly problem: Record<string, unknown>;
 
-  constructor(status: number, code: string, detail: string) {
+  constructor(
+    status: number,
+    code: string,
+    detail: string,
+    problem: Record<string, unknown> = {},
+  ) {
     super(`${status} ${code}: ${detail}`);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.detail = detail;
+    this.problem = problem;
   }
 }
 
@@ -72,6 +80,7 @@ export async function toApiError(res: Response): Promise<ApiError> {
     res.status,
     str(body.code) ?? `HTTP_${res.status}`,
     str(body.detail) ?? str(body.title) ?? (res.statusText || "Request failed"),
+    body,
   );
 }
 
@@ -258,6 +267,18 @@ export const setPlayerStatus = (
     "PATCH",
     `${gamePath(gameId)}/players/${seg(playerId)}`,
     { status },
+  );
+
+/** Renames a player in this game only (their profile name is untouched). */
+export const renamePlayer = (
+  gameId: string,
+  playerId: string,
+  displayName: string,
+) =>
+  request<PlayerSummary>(
+    "PATCH",
+    `${gamePath(gameId)}/players/${seg(playerId)}`,
+    { displayName },
   );
 
 export const registerKill = (

@@ -5,6 +5,7 @@ class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly detail: string,
+    readonly problem: Record<string, unknown> = {},
   ) {
     super(code);
   }
@@ -12,6 +13,7 @@ class ApiError extends Error {
 
 const createGame = vi.fn();
 const setPlayerStatus = vi.fn();
+const renamePlayer = vi.fn();
 const shuffleRing = vi.fn();
 const updateGame = vi.fn();
 const joinGame = vi.fn();
@@ -28,6 +30,7 @@ vi.mock("@/lib/api", () => ({
   requireAdmin,
   createGame,
   setPlayerStatus,
+  renamePlayer,
   shuffleRing,
   updateGame,
   joinGame,
@@ -39,6 +42,7 @@ const {
   createGameAction,
   finishGameAction,
   registerKillAction,
+  renamePlayerAction,
   setPlayerStatusAction,
   shuffleRingAction,
 } = await import("./admin/actions");
@@ -224,6 +228,38 @@ describe("join actions", () => {
     expect(result).toMatchObject({ code });
     expect(result.error).toMatch(message);
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("duplicate names and renaming", () => {
+  it("returns the clashing players with DUPLICATE_NAMES", async () => {
+    const players = [
+      { id: "p1", displayName: "Sam" },
+      { id: "p2", displayName: "sam" },
+    ];
+    shuffleRing.mockImplementation(() =>
+      Promise.reject(new ApiError(409, "DUPLICATE_NAMES", "raw", { players })),
+    );
+    const result = await shuffleRingAction(GAME, {}, form({ expectedCurrentRoundNo: "" }));
+    expect(result.error).toMatch(/same display name/);
+    expect(result.duplicates).toEqual(players);
+  });
+
+  it("renames a player in the game with the trimmed name", async () => {
+    renamePlayer.mockResolvedValue({});
+    await expect(renamePlayerAction(GAME, PLAYER, " Sam T ")).resolves.toBeNull();
+    expect(renamePlayer).toHaveBeenCalledWith(GAME, PLAYER, "Sam T");
+  });
+
+  it("rejects a bad name or id without calling the API", async () => {
+    await expect(renamePlayerAction(GAME, PLAYER, "S")).resolves.toMatch(/2–32/);
+    await expect(renamePlayerAction(GAME, "nope", "Sam T")).resolves.toMatch(/2–32/);
+    expect(renamePlayer).not.toHaveBeenCalled();
+  });
+
+  it("maps an API error to a message", async () => {
+    renamePlayer.mockImplementation(() => fail(404, "PLAYER_NOT_FOUND"));
+    await expect(renamePlayerAction(GAME, PLAYER, "Sam T")).resolves.toMatch(/no longer in the game/);
   });
 });
 

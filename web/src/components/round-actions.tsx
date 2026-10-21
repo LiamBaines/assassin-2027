@@ -2,17 +2,14 @@
 
 import { ChevronDown, RotateCcw, Shuffle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ActionForm, SubmitButton } from "@/components/action-form";
+import { ActionForm, SubmitButton, type ActionResult } from "@/components/action-form";
 import { KillMethodsEditor } from "@/components/kill-methods-editor";
 import { KillWordsStep } from "@/components/kill-words-step";
 import { Dialog, DialogActions } from "@/components/overlay";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui";
 import type { AdminPlayer, KillMethod, RoundReason } from "@/lib/api-types";
 
-type Action = (
-  prev: { error?: string },
-  formData: FormData,
-) => Promise<{ error?: string }>;
+type Action = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
 
 const REASON_LABEL: Record<RoundReason, string> = {
   INITIAL: "initial allocation",
@@ -40,6 +37,7 @@ export function RoundActions({
   suggestWords,
   shuffleAction,
   startRoundAction,
+  renameAction,
 }: {
   gameActive: boolean;
   latestRound: { roundNo: number; endedAt: string | null } | null;
@@ -54,6 +52,8 @@ export function RoundActions({
   suggestWords: (count: number) => Promise<{ words: string[] } | { error: string }>;
   shuffleAction: Action;
   startRoundAction: Action;
+  /** Renames a player in this game, so a DUPLICATE_NAMES error can be fixed in place. */
+  renameAction: (playerId: string, displayName: string) => Promise<string | null>;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState<Dlg>(null);
@@ -143,7 +143,7 @@ export function RoundActions({
       )}
 
       <Dialog open={dialog === "ring"} onClose={close} title={shuffleLabel}>
-        <ActionForm action={shuffleAction} className="space-y-4">
+        <ActionForm action={shuffleAction} renameAction={renameAction} className="space-y-4">
           <p className="text-sm text-muted">
             {ring
               ? `Current: round ${ring.gameRoundNo}, allocation ${ring.roundNo} (${REASON_LABEL[ring.reason]}). A shakeup puts every alive player into a new ring. Current assignments are replaced and kept in history.`
@@ -168,7 +168,7 @@ export function RoundActions({
 
       {latestRound && (
         <Dialog open={dialog === "round"} onClose={close} title={`Start round ${latestRound.roundNo + 1}`}>
-          <ActionForm action={startRoundAction} className="space-y-4">
+          <ActionForm action={startRoundAction} renameAction={renameAction} className="space-y-4">
             <input type="hidden" name="expectedRoundNo" value={latestRound.roundNo} />
             <p className="text-sm text-muted">
               {ring

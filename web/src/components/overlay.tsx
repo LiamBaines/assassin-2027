@@ -90,16 +90,18 @@ export function Dialog({
 export function DialogActions({
   onCancel,
   disabled,
+  cancelLabel = "Cancel",
   children,
 }: {
   onCancel: () => void;
   disabled?: boolean;
-  children: ReactNode;
+  cancelLabel?: string;
+  children?: ReactNode;
 }) {
   return (
     <div className="-mx-5 flex flex-col-reverse gap-2 border-t border-line px-5 pt-4 sm:flex-row sm:justify-end [&>button]:w-full sm:[&>button]:w-auto">
       <button type="button" onClick={onCancel} disabled={disabled} className={secondaryButtonClass}>
-        Cancel
+        {cancelLabel}
       </button>
       {children}
     </div>

@@ -4,6 +4,7 @@ import {
   ConfirmSubmit,
   SubmitButton,
 } from "@/components/action-form";
+import { InlineEdit } from "@/components/inline-edit";
 import { RegisterKill } from "@/components/register-kill";
 import {
   EmptyState,
@@ -24,6 +25,7 @@ import { deathSentenceEnabled } from "@/lib/kill-words";
 import { registerKillMessage, removePlayerMessage } from "@/lib/format";
 import {
   registerKillAction,
+  renamePlayerAction,
   setPlayerStatusAction,
 } from "../../../actions";
 import { loadAdminGame } from "../load-game";
@@ -92,7 +94,18 @@ export default async function AdminPlayersPage(props: {
             <tbody className="divide-y divide-line">
               {players.map((p) => (
                 <tr key={p.id} data-testid="player-row" className="align-top whitespace-nowrap">
-                  <td className="px-3 py-2 font-medium">{p.displayName}</td>
+                  <td data-testid="admin-player-name" className="px-3 py-2 font-medium">
+                    {editable ? (
+                      <InlineEdit
+                        value={p.displayName}
+                        label={`name of ${p.displayName}`}
+                        maxLength={32}
+                        onSave={renamePlayerAction.bind(null, game.id, p.id)}
+                      />
+                    ) : (
+                      p.displayName
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-muted">{p.email}</td>
                   <td className="px-3 py-2">
                     <PlayerStatus status={p.status} />
