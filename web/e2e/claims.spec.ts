@@ -61,6 +61,8 @@ async function respond(victim: Page, gameId: string, button: string, killer: str
   await victim.goto(`/${gameId}`);
   await expect(victim.getByTestId("incoming-claim")).toContainText(killer);
   await victim.getByRole("button", { name: button }).click();
+  // Wait for the response to land before anyone else reloads.
+  await expect(victim.getByTestId("incoming-claim")).toHaveCount(0);
 }
 
 /** The admin players page row whose first (name) cell is exactly `name`. */
