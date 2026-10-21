@@ -60,7 +60,7 @@ public class PlayerService {
         if (user.email() == null || user.email().isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "Your account has no email address.");
         }
-        validateDisplayName(displayName);
+        ProfileService.validateDisplayName(displayName);
         if (players.existsByGameIdAndAuthUserId(game.getId(), user.authUserId())) {
             throw alreadyRegistered();
         }
@@ -83,20 +83,6 @@ public class PlayerService {
                 throw alreadyRegistered();
             }
             throw e;
-        }
-    }
-
-    /**
-     * Counts code points, as Postgres does, so an emoji is one character. Rejects invisible
-     * characters, so "Alice" plus a zero-width space can't sit next to "Alice".
-     */
-    private static void validateDisplayName(String displayName) {
-        int length = displayName.codePointCount(0, displayName.length());
-        boolean invisible = displayName.codePoints().anyMatch(c ->
-                Character.getType(c) == Character.CONTROL || Character.getType(c) == Character.FORMAT);
-        if (length < 2 || length > 32 || invisible) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DISPLAY_NAME",
-                    "Display names must be 2-32 visible characters.");
         }
     }
 
