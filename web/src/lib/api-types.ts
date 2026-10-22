@@ -101,7 +101,6 @@ export type KillWord = {
   id: number;
   text: string;
   state: KillWordState;
-  origin: "ADMIN" | "RANDOM";
   playerId: string | null;
   roundNo: number | null;
   usedAt: string | null;

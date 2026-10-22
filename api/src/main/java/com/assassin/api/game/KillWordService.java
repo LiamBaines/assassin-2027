@@ -36,11 +36,11 @@ public class KillWordService {
     }
 
     /** A word as the admin API returns it; {@code playerId} and {@code roundNo} are set once allocated. */
-    public record KillWordView(long id, String text, KillWord.State state, KillWord.Origin origin, UUID playerId,
+    public record KillWordView(long id, String text, KillWord.State state, UUID playerId,
                                Integer roundNo, Instant usedAt) {
 
         static KillWordView from(KillWord w) {
-            return new KillWordView(w.getId(), w.getText(), w.getState(), w.getOrigin(), w.getPlayerId(),
+            return new KillWordView(w.getId(), w.getText(), w.getState(), w.getPlayerId(),
                     w.getRoundNo(), w.getUsedAt());
         }
     }
@@ -91,7 +91,7 @@ public class KillWordService {
         }
         Instant now = Instant.now();
         return words.saveAll(byLower.values().stream()
-                        .map(t -> new KillWord(game.getId(), t, KillWord.Origin.ADMIN, now)).toList())
+                        .map(t -> new KillWord(game.getId(), t, now)).toList())
                 .stream().map(KillWordView::from).toList();
     }
 
@@ -132,7 +132,7 @@ public class KillWordService {
 
     /**
      * Allocates one word to each assassin of a new round. A word already in the game's list must be UNUSED; any other
-     * text is added as a RANDOM word. Fails if a player has no word, a word repeats or is already burned, or a key is
+     * text is added to the list. Fails if a player has no word, a word repeats or is already burned, or a key is
      * not one of {@code playerIds}. The caller must hold the game's lock and have flushed the round row.
      */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -167,7 +167,7 @@ public class KillWordService {
         texts.forEach((playerId, text) -> {
             KillWord word = existing.get(text.toLowerCase(Locale.ROOT));
             if (word == null) {
-                word = new KillWord(gameId, text, KillWord.Origin.RANDOM, now);
+                word = new KillWord(gameId, text, now);
             } else if (word.getState() != KillWord.State.UNUSED) {
                 throw new ApiException(HttpStatus.CONFLICT, "KILL_WORD_BURNED",
                         "\"" + word.getText() + "\" has already been used in this game.");

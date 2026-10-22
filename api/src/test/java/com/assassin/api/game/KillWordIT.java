@@ -33,8 +33,7 @@ class KillWordIT extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].text", is("banana split")))
-                .andExpect(jsonPath("$[0].state", is("UNUSED")))
-                .andExpect(jsonPath("$[0].origin", is("ADMIN")));
+                .andExpect(jsonPath("$[0].state", is("UNUSED")));
 
         list(game).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[1].text", is("giraffe")));

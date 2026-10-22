@@ -17,7 +17,6 @@ public class KillWord {
 
     public enum State { UNUSED, ALLOCATED, USED }
 
-    public enum Origin { ADMIN, RANDOM }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,10 +31,6 @@ public class KillWord {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private State state;
-
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private Origin origin;
 
     @Column(name = "player_id")
     private UUID playerId;
@@ -52,11 +47,10 @@ public class KillWord {
     protected KillWord() {
     }
 
-    public KillWord(String gameId, String text, Origin origin, Instant createdAt) {
+    public KillWord(String gameId, String text, Instant createdAt) {
         this.gameId = gameId;
         this.text = text;
         this.state = State.UNUSED;
-        this.origin = origin;
         this.createdAt = createdAt;
     }
 
@@ -87,10 +81,6 @@ public class KillWord {
 
     public State getState() {
         return state;
-    }
-
-    public Origin getOrigin() {
-        return origin;
     }
 
     public UUID getPlayerId() {

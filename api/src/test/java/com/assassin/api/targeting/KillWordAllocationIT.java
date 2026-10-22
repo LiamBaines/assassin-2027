@@ -50,14 +50,14 @@ class KillWordAllocationIT extends IntegrationTest {
 
     @Test
     void firstRingAllocatesWordsAndShakeupKeepsThem() throws Exception {
-        jdbc.update("insert into game.kill_word (game_id, text, origin) values (?, 'Giraffe', 'ADMIN')", gameId);
+        jdbc.update("insert into game.kill_word (game_id, text) values (?, 'Giraffe')", gameId);
 
         ring(null, words("\"giraffe\"", "\"Pelican\"")).andExpect(status().isCreated());
 
-        assertThat(jdbc.queryForObject("select state || ':' || round_no || ':' || origin from game.kill_word where player_id = ?",
-                String.class, a)).isEqualTo("ALLOCATED:1:ADMIN");
-        assertThat(jdbc.queryForObject("select state || ':' || origin from game.kill_word where player_id = ?",
-                String.class, b)).isEqualTo("ALLOCATED:RANDOM");
+        assertThat(jdbc.queryForObject("select state || ':' || round_no from game.kill_word where player_id = ?",
+                String.class, a)).isEqualTo("ALLOCATED:1");
+        assertThat(jdbc.queryForObject("select state from game.kill_word where player_id = ?",
+                String.class, b)).isEqualTo("ALLOCATED");
 
         ring(1, null).andExpect(status().isCreated());
         assertThat(wordCount()).isEqualTo(2);
