@@ -228,3 +228,37 @@ export type GameEvent = {
 
 /** A most-recent-first page; `nextBefore` is the `before` for the next page, null at the end. */
 export type GameEventPage = { events: GameEvent[]; nextBefore: number | null };
+
+/** Who a player is talking to. Messages never carry a name, only this role. */
+export type MessageCounterpart = "TARGET" | "ASSASSIN";
+
+export type Message = {
+  id: number;
+  mine: boolean;
+  body: string;
+  createdAt: string;
+  read: boolean;
+};
+
+/** One live conversation, oldest message first. */
+export type MessageThread = {
+  with: MessageCounterpart;
+  messages: Message[];
+  unread: number;
+};
+
+export type AssignmentStatus = "ACTIVE" | "COMPLETED" | "SUPERSEDED" | "VOIDED";
+
+/** A message as an admin sees it, with real names; ended threads are included. */
+export type AdminMessage = {
+  id: number;
+  assignmentId: number;
+  assignmentStatus: AssignmentStatus;
+  senderId: string;
+  senderName: string;
+  recipientId: string;
+  recipientName: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+};
