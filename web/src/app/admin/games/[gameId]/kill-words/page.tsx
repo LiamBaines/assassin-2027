@@ -93,7 +93,6 @@ export default async function AdminKillWordsPage(props: {
                 <th className="px-3 py-2 font-medium">State</th>
                 <th className="px-3 py-2 font-medium">Assassin</th>
                 <th className="px-3 py-2 font-medium">Round</th>
-                <th className="px-3 py-2 font-medium">Source</th>
                 {editable && (
                   <th className="px-3 py-2 font-medium">
                     <span className="sr-only">Actions</span>
@@ -144,9 +143,6 @@ function WordRow({
       </td>
       <td className="tabular px-3 py-2">
         {word.roundNo ?? <span className="text-muted">—</span>}
-      </td>
-      <td className="px-3 py-2 text-muted">
-        {word.origin === "RANDOM" ? "Random" : "Admin"}
       </td>
       {editable && (
         <td className="px-3 py-2 text-right">
