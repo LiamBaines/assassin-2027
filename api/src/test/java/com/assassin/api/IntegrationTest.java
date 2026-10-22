@@ -34,7 +34,7 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     void truncateGameTables() {
-        jdbc.execute("truncate game.game_event, game.point_event, game.kill_claim, game.kill, game.assignment, game.allocation, game.kill_word, game.game_round, game.player, game.profile, game.kill_method, game.game");
+        jdbc.execute("truncate game.game_event, game.point_event, game.kill_claim, game.kill, game.assignment, game.allocation, game.kill_word, game.message, game.game_round, game.player, game.profile, game.kill_method, game.game");
     }
 
     private static final AtomicInteger NEXT_GAME = new AtomicInteger();

@@ -8,6 +8,7 @@ import {
   changeKillMethod,
   confirmKillClaim,
   createGame,
+  deleteAdminMessage,
   deleteKillWord,
   dismissKillClaim,
   getKillWordSuggestions,
@@ -78,6 +79,7 @@ const MESSAGES: Record<string, string> = {
   KILL_WORD_ALLOCATED: "That word has been given to a player, so it can't be deleted.",
   KILL_WORD_COUNT_INVALID: "Ask for between 1 and 200 words.",
   KILL_WORD_POOL_EXHAUSTED: "There aren't enough unused random words left. Add some yourself.",
+  MESSAGE_NOT_FOUND: "That message no longer exists. The page has been refreshed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
@@ -277,6 +279,17 @@ export async function deleteKillWordAction(
   await requireAdmin();
   if (!Number.isInteger(wordId)) return INVALID_REQUEST;
   return run(() => deleteKillWord(gameId, wordId));
+}
+
+export async function deleteMessageAction(
+  gameId: string,
+  messageId: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ActionForm passes (prev, formData) after the bound args
+  _prev: ActionResult,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!Number.isInteger(messageId)) return INVALID_REQUEST;
+  return run(() => deleteAdminMessage(gameId, messageId));
 }
 
 /** Random words for the start dialogs; nothing is saved until the round starts. */

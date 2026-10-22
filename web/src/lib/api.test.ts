@@ -56,6 +56,12 @@ const {
   changeKillMethod,
   listKills,
   getMyKillMethods,
+  getMyMessages,
+  sendMessage,
+  markMessagesRead,
+  getUnreadMessageCount,
+  listAdminMessages,
+  deleteAdminMessage,
   setPlayerStatus,
   shuffleRing,
   toApiError,
@@ -420,5 +426,46 @@ describe("kill words", () => {
     expect(fetchMock.mock.calls[0][1]?.body).toBe(
       JSON.stringify({ expectedCurrentRoundNo: null, words: { p1: "pineapple" } }),
     );
+  });
+});
+
+describe("messages", () => {
+  it("lists threads, sends, marks read and reads the unread count", async () => {
+    fetchMock.mockImplementation(async () => Response.json({}));
+    await getMyMessages("g 1");
+    await sendMessage("g 1", "TARGET", "hello");
+    fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
+    await markMessagesRead("g 1", "ASSASSIN");
+    fetchMock.mockImplementation(async () => Response.json({ unread: 3 }));
+    expect(await getUnreadMessageCount("g 1")).toEqual({ unread: 3 });
+    const base = "http://api.test/api/me/games/g%201/messages";
+    expect(fetchMock.mock.calls[0][0]).toBe(base);
+    const [sendUrl, sendInit] = fetchMock.mock.calls[1];
+    expect(sendUrl).toBe(base);
+    expect(sendInit?.method).toBe("POST");
+    expect(sendInit?.body).toBe(JSON.stringify({ with: "TARGET", body: "hello" }));
+    const [readUrl, readInit] = fetchMock.mock.calls[2];
+    expect(readUrl).toBe(`${base}/read`);
+    expect(readInit?.body).toBe(JSON.stringify({ with: "ASSASSIN" }));
+    expect(fetchMock.mock.calls[3][0]).toBe(`${base}/unread-count`);
+  });
+
+  it("maps a rate-limit response to an ApiError", async () => {
+    fetchMock.mockResolvedValue(problem(429, { code: "RATE_LIMITED", detail: "Slow down" }));
+    await expect(sendMessage("g1", "TARGET", "hi")).rejects.toMatchObject({
+      status: 429,
+      code: "RATE_LIMITED",
+    });
+  });
+
+  it("lists and deletes admin messages", async () => {
+    fetchMock.mockImplementation(async () => Response.json([]));
+    await listAdminMessages("g1");
+    fetchMock.mockImplementation(async () => new Response(null, { status: 204 }));
+    await deleteAdminMessage("g1", 7);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/admin/games/g1/messages");
+    const [delUrl, delInit] = fetchMock.mock.calls[1];
+    expect(delUrl).toBe("http://api.test/api/admin/games/g1/messages/7");
+    expect(delInit?.method).toBe("DELETE");
   });
 });

@@ -6,10 +6,14 @@ import {
   acceptKillClaim,
   contestKillClaim,
   fileKillClaim,
+  getUnreadMessageCount,
   isApiError,
+  markMessagesRead,
+  sendMessage,
   withdrawKillClaim,
 } from "@/lib/api";
 import { readMethodId } from "@/lib/kill-methods";
+import type { MessageCounterpart } from "@/lib/api-types";
 
 // The game id and claim id are bound by the page, so the client can change them. The API checks the caller is the
 // claim's killer or victim, so they need no check here.
@@ -26,6 +30,9 @@ const MESSAGES: Record<string, string> = {
   KILL_METHOD_NOT_FOUND: "That kill method no longer exists. The page has been refreshed.",
   KILL_METHOD_DISABLED: "That kill method is disabled. Pick another one.",
   NOT_CLAIM_PARTICIPANT: "You can't respond to that claim.",
+  INVALID_MESSAGE: "Messages must be 1 to 280 characters.",
+  NO_ACTIVE_PAIRING: "That conversation has ended, so you can't send messages in it.",
+  RATE_LIMITED: "You're sending too fast. Wait a minute and try again.",
 };
 
 /** Runs an API mutation, revalidates every page, and maps API errors. */
@@ -73,4 +80,29 @@ export async function contestClaimAction(
   claimId: number,
 ): Promise<ActionResult> {
   return run(() => contestKillClaim(gameId, claimId));
+}
+
+export async function sendMessageAction(
+  gameId: string,
+  to: MessageCounterpart,
+  body: string,
+): Promise<ActionResult> {
+  return run(() => sendMessage(gameId, to, body));
+}
+
+export async function markMessagesReadAction(
+  gameId: string,
+  thread: MessageCounterpart,
+): Promise<ActionResult> {
+  return run(() => markMessagesRead(gameId, thread));
+}
+
+/** Polled by the bottom bar. Read-only, so it doesn't revalidate; errors read as "no change". */
+export async function getUnreadCountAction(gameId: string): Promise<number | null> {
+  try {
+    return (await getUnreadMessageCount(gameId)).unread;
+  } catch (e) {
+    if (isApiError(e)) return null;
+    throw e;
+  }
 }

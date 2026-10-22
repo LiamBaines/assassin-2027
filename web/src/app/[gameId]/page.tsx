@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/action-form";
+import { Inbox } from "@/components/inbox";
 import { EventLog } from "@/components/event-log";
 import { LastViewRecorder } from "@/components/last-view-recorder";
 import { PlayerLeaderboard } from "@/components/player-leaderboard";
@@ -24,8 +25,10 @@ import {
   getMyKillClaims,
   getMyKillMethods,
   getMyLeaderboard,
+  getMyMessages,
   getMyRounds,
   getMyTarget,
+  getUnreadMessageCount,
 } from "@/lib/api";
 import type { Leaderboard } from "@/lib/api-types";
 import { isOpenClaim, outgoingClaimLabel } from "@/lib/claim-status";
@@ -43,7 +46,7 @@ import { GameShell, type GameView } from "./game-shell";
 
 export const metadata: Metadata = { title: "Game · Assassin 2027" };
 
-const VIEWS: GameView[] = ["target", "players", "leaderboard", "rounds", "log"];
+const VIEWS: GameView[] = ["target", "players", "leaderboard", "rounds", "log", "inbox"];
 
 export default async function GamePage(props: {
   params: Promise<{ gameId: string }>;
@@ -62,7 +65,7 @@ export default async function GamePage(props: {
   const active = game.status === "ACTIVE";
   const started = game.status !== "SETUP";
   const before = typeof search.before === "string" ? Number(search.before) : NaN;
-  const [assignment, roster, claims, pastRounds, killMethods, total, events] = await Promise.all([
+  const [assignment, roster, claims, pastRounds, killMethods, total, events, messages, unread] = await Promise.all([
     finished ? null : getMyTarget(gameId),
     started ? getGamePlayers(gameId) : null,
     active ? getMyKillClaims(gameId) : null,
@@ -72,6 +75,8 @@ export default async function GamePage(props: {
     getMyEvents(gameId, Number.isSafeInteger(before) && before > 0 ? before : undefined).catch(
       () => null,
     ),
+    active ? getMyMessages(gameId).catch(() => null) : [],
+    active ? getUnreadMessageCount(gameId).then((r) => r.unread, () => 0) : 0,
   ]);
   const perRound: Record<number, Leaderboard> = {};
   if (total) {
@@ -233,6 +238,8 @@ export default async function GamePage(props: {
     </section>
   );
 
+  const inboxView = <Inbox gameId={gameId} threads={messages ?? []} failed={messages === null} />;
+
   const requested = typeof search.view === "string" ? search.view : "";
   const initialView = VIEWS.find((v) => v === requested) ?? "target";
 
@@ -243,6 +250,8 @@ export default async function GamePage(props: {
       gameName={game.name}
       playerName={player.displayName}
       roundNo={game.currentRoundNo}
+      gameId={game.id}
+      initialUnread={unread}
       initialView={initialView}
       views={{
         target: targetView,
@@ -250,6 +259,7 @@ export default async function GamePage(props: {
         leaderboard: leaderboardView || undefined,
         rounds: started ? roundsView : undefined,
         log: logView,
+        inbox: active ? inboxView : undefined,
       }}
       menuLinks={
         <>

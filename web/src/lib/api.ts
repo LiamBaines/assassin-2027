@@ -9,6 +9,7 @@ import type {
   AdminClaim,
   AdminGame,
   AdminKill,
+  AdminMessage,
   AdminPlayer,
   AdminRound,
   ClaimAcceptResult,
@@ -23,6 +24,9 @@ import type {
   Leaderboard,
   KillResult,
   Me,
+  Message,
+  MessageCounterpart,
+  MessageThread,
   MyClaims,
   MyGame,
   MyRound,
@@ -235,6 +239,27 @@ export const contestKillClaim = (gameId: string, claimId: number) =>
 export const getMyKillClaims = (gameId: string) =>
   request<MyClaims>("GET", `${claimsPath(gameId)}/mine`);
 
+const messagesPath = (gameId: string) =>
+  `/api/me/games/${seg(gameId)}/messages`;
+
+/** The caller's live threads; empty when they have no active target or assassin. */
+export const getMyMessages = (gameId: string) =>
+  request<MessageThread[]>("GET", messagesPath(gameId));
+
+/** Sends a message to the caller's target or assassin. */
+export const sendMessage = (
+  gameId: string,
+  to: MessageCounterpart,
+  body: string,
+) => request<Message>("POST", messagesPath(gameId), { with: to, body });
+
+/** Marks the other side's messages in one thread as read. */
+export const markMessagesRead = (gameId: string, thread: MessageCounterpart) =>
+  request<void>("POST", `${messagesPath(gameId)}/read`, { with: thread });
+
+export const getUnreadMessageCount = (gameId: string) =>
+  request<{ unread: number }>("GET", `${messagesPath(gameId)}/unread-count`);
+
 // Admin
 
 /** Every game, newest first, including finished ones. */
@@ -391,3 +416,11 @@ export const confirmKillClaim = (gameId: string, claimId: number) =>
 
 export const dismissKillClaim = (gameId: string, claimId: number) =>
   request<ClaimStatus>("POST", `${gamePath(gameId)}/kill-claims/${claimId}/dismiss`);
+
+/** Every message in the game with real names, ended threads included. */
+export const listAdminMessages = (gameId: string) =>
+  request<AdminMessage[]>("GET", `${gamePath(gameId)}/messages`);
+
+/** Soft-deletes a message; it disappears for players too. */
+export const deleteAdminMessage = (gameId: string, messageId: number) =>
+  request<void>("DELETE", `${gamePath(gameId)}/messages/${messageId}`);
