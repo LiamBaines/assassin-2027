@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isValidBody, threadTitle, unreadBadge } from "./messages";
+import type { Message, MessageThread } from "@/lib/api-types";
+import { clusterMessages, isValidBody, sortThreads, threadTitle, unreadBadge } from "./messages";
 
 describe("unreadBadge", () => {
   it("shows no bubble at zero", () => {
@@ -27,5 +28,37 @@ describe("isValidBody", () => {
     expect(isValidBody(" hi ")).toBe(true);
     expect(isValidBody("a".repeat(280))).toBe(true);
     expect(isValidBody("a".repeat(281))).toBe(false);
+  });
+});
+
+const msg = (id: number, iso: string): Message => ({ id, mine: false, body: "x", createdAt: iso, read: true });
+
+describe("clusterMessages", () => {
+  it("returns no clusters for no messages", () => {
+    expect(clusterMessages([])).toEqual([]);
+  });
+  it("keeps messages within the gap together and splits after it", () => {
+    const a = msg(1, "2026-01-01T10:00:00Z");
+    const b = msg(2, "2026-01-01T10:10:00Z");
+    const c = msg(3, "2026-01-01T10:20:01Z");
+    expect(clusterMessages([a, b, c])).toEqual([[a, b], [c]]);
+  });
+  it("measures the gap from the previous message, not the cluster start", () => {
+    const ms = [msg(1, "2026-01-01T10:00:00Z"), msg(2, "2026-01-01T10:09:00Z"), msg(3, "2026-01-01T10:18:00Z")];
+    expect(clusterMessages(ms)).toHaveLength(1);
+  });
+});
+
+describe("sortThreads", () => {
+  const thread = (with_: MessageThread["with"], ...isos: string[]): MessageThread => ({
+    with: with_,
+    unread: 0,
+    messages: isos.map((iso, i) => msg(i, iso)),
+  });
+  it("puts the latest message first and empty threads last", () => {
+    const target = thread("TARGET", "2026-01-01T10:00:00Z");
+    const assassin = thread("ASSASSIN", "2026-01-01T09:00:00Z", "2026-01-01T11:00:00Z");
+    const empty = thread("TARGET");
+    expect(sortThreads([empty, target, assassin])).toEqual([assassin, target, empty]);
   });
 });
