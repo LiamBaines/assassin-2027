@@ -13,10 +13,10 @@ The inbox thread view is cluttered (per-message role label and timestamp), scrol
 
 ## Tasks
 1. [x] Pure helpers in `lib/messages.ts` with Vitest in `messages.test.ts`: `clusterMessages(messages, gapMs)` and `sortThreads(threads)`.
-2. [ ] `getMessagesAction` in `app/[gameId]/actions.ts`; `Inbox` state + polling; pass `targetName` from `page.tsx`.
-3. [ ] Thread view redesign in `components/inbox.tsx`: no per-message labels/timestamps, cluster headers, header with target name, pinned composer, auto-scroll.
-4. [ ] `game-shell.tsx`: when `view === "inbox"`, use a viewport-height layout (`h-dvh`, `min-h-0` main, room for the fixed bottom nav) so the inbox manages its own scrolling. Other views unchanged.
-5. [ ] Update `e2e/messages.spec.ts` where needed (keep `data-testid`s: `message`, `message-body`, `message-send`, `inbox-thread-*`, `thread-unread`); add a check that a new message shows up in the list without reload. Run `pnpm test`, `pnpm lint`, `pnpm typecheck`, then the messages e2e spec; check mobile viewport in Playwright.
+2. [x] `getMessagesAction` in `app/[gameId]/actions.ts`; `Inbox` state + polling; pass `targetName` from `page.tsx`.
+3. [x] Thread view redesign in `components/inbox.tsx`: no per-message labels/timestamps, cluster headers, header with target name, pinned composer, auto-scroll.
+4. [x] `game-shell.tsx`: when `view === "inbox"`, use a viewport-height layout (`h-dvh`, `min-h-0` main, room for the fixed bottom nav) so the inbox manages its own scrolling. Other views unchanged.
+5. [x] Update `e2e/messages.spec.ts` where needed (keep `data-testid`s: `message`, `message-body`, `message-send`, `inbox-thread-*`, `thread-unread`); add a check that a new message shows up in the list without reload. Run `pnpm test`, `pnpm lint`, `pnpm typecheck`, then the messages e2e spec; check mobile viewport in Playwright.
 
 Do one task at a time, stopping after each.
 

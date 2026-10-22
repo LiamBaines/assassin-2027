@@ -6,6 +6,7 @@ import {
   acceptKillClaim,
   contestKillClaim,
   fileKillClaim,
+  getMyMessages,
   getUnreadMessageCount,
   isApiError,
   markMessagesRead,
@@ -13,7 +14,7 @@ import {
   withdrawKillClaim,
 } from "@/lib/api";
 import { readMethodId } from "@/lib/kill-methods";
-import type { MessageCounterpart } from "@/lib/api-types";
+import type { MessageCounterpart, MessageThread } from "@/lib/api-types";
 
 // The game id and claim id are bound by the page, so the client can change them. The API checks the caller is the
 // claim's killer or victim, so they need no check here.
@@ -101,6 +102,16 @@ export async function markMessagesReadAction(
 export async function getUnreadCountAction(gameId: string): Promise<number | null> {
   try {
     return (await getUnreadMessageCount(gameId)).unread;
+  } catch (e) {
+    if (isApiError(e)) return null;
+    throw e;
+  }
+}
+
+/** Polled by the inbox so previews stay current. Read-only, so it doesn't revalidate; errors read as "no change". */
+export async function getMessagesAction(gameId: string): Promise<MessageThread[] | null> {
+  try {
+    return await getMyMessages(gameId);
   } catch (e) {
     if (isApiError(e)) return null;
     throw e;

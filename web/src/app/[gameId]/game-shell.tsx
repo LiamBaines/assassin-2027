@@ -90,7 +90,9 @@ export function GameShell({
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+    <div
+      className={`mx-auto flex w-full max-w-md flex-1 flex-col ${view === "inbox" ? "h-dvh" : ""}`}
+    >
       <header className="flex items-center gap-3 px-4 pt-4 pb-2">
         <div className="min-w-0 flex-1">
           <h1 className="font-display truncate text-2xl leading-tight font-semibold">
@@ -109,7 +111,15 @@ export function GameShell({
         <IconButton icon={Menu} label="Menu" onClick={() => setMenuOpen(true)} />
       </header>
 
-      <main className="flex-1 px-4 pt-4 pb-28">{views[view]}</main>
+      <main
+      className={
+        view === "inbox"
+          ? "flex min-h-0 flex-1 flex-col px-4 pt-2 pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
+          : "flex-1 px-4 pt-4 pb-28"
+      }
+    >
+      {views[view]}
+    </main>
 
       {barViews.length > 1 && (
         <nav
