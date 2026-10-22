@@ -45,12 +45,12 @@ public class KillWordService {
         }
     }
 
-    /** Trims and collapses inner whitespace; null if nothing is left. */
+    /** Trims, collapses inner whitespace and lower-cases; null if nothing is left. */
     static String normalise(String raw) {
         if (raw == null) {
             return null;
         }
-        String text = raw.trim().replaceAll("\\s+", " ");
+        String text = raw.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
         return text.isEmpty() ? null : text;
     }
 
