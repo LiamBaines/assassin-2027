@@ -238,7 +238,14 @@ export default async function GamePage(props: {
     </section>
   );
 
-  const inboxView = <Inbox gameId={gameId} threads={messages ?? []} failed={messages === null} />;
+  const inboxView = (
+    <Inbox
+      gameId={gameId}
+      threads={messages ?? []}
+      failed={messages === null}
+      targetName={assignment?.target.displayName ?? null}
+    />
+  );
 
   const requested = typeof search.view === "string" ? search.view : "";
   const initialView = VIEWS.find((v) => v === requested) ?? "target";

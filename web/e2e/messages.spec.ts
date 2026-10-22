@@ -87,6 +87,31 @@ test("the assassin sees the reply", async () => {
   await expect(page.getByTestId("message").last()).toContainText("You will have to find me");
 });
 
+test("a new message shows up in the open thread and the list without a reload", async () => {
+  const mine = pages.get(assassin)!;
+  const theirs = pages.get(target)!;
+  // The assassin's thread is still open from the previous test.
+  await expect(mine.getByTestId("inbox-thread")).toContainText(`Your target · ${target}`);
+  // Messages sent close together share one timestamp.
+  await expect(mine.locator("[data-testid=inbox-thread] time")).toHaveCount(1);
+
+  await openInbox(theirs);
+  await theirs.getByTestId("inbox-thread-assassin").click();
+  await theirs.getByTestId("message-body").fill("Still here");
+  await theirs.getByTestId("message-send").click();
+  await expect(theirs.getByTestId("message").filter({ hasText: "Still here" })).toBeVisible();
+
+  // The same refresh the 30 s poll runs.
+  await mine.evaluate(() => window.dispatchEvent(new Event("inbox:changed")));
+  await expect(mine.getByTestId("message")).toHaveCount(3);
+  // The composer stays pinned and the page itself doesn't scroll.
+  await expect(mine.getByTestId("message-body")).toBeInViewport();
+  await expect(mine.getByTestId("message-send")).toBeInViewport();
+  expect(await mine.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
+  await mine.getByRole("button", { name: "Back to inbox" }).click();
+  await expect(mine.getByTestId("inbox-thread-target")).toContainText("Still here");
+});
+
 test("the admin sees the messages with names", async () => {
   await admin.goto(`/admin/games/${gameId}/messages`);
   await expect(admin.getByText("I am coming for you")).toBeVisible();
@@ -107,6 +132,8 @@ test("a kill ends the thread for both players", async () => {
   await expect(killer.getByText("I am coming for you")).toHaveCount(0);
   await killer.getByTestId("inbox-thread-target").click();
   await expect(killer.getByTestId("message")).toHaveCount(0);
+  // The composer is pinned even with no messages.
+  await expect(killer.getByTestId("message-body")).toBeInViewport();
 
   // The dead target has no active assignment, so nothing to send.
   const dead = pages.get(target)!;
