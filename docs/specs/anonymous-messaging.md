@@ -16,7 +16,7 @@ An assassin and their target can message each other without revealing who they a
 ## Tasks
 1. [x] Flyway migration: `game.message` (id, game_id, assignment_id fk, sender_id, body with length check, created_at, read_at, deleted_at), RLS on and grants revoked as in V14. Entity, repository, `MessageService` (send with eligibility and rate limit, list threads, mark read, unread count). Unit tests and ITs (both directions, ended assignment, dead player, rate limit, length, ended threads hidden, new assignment starts empty after a kill).
 2. [x] Player endpoints under `/api/me/games/{gameId}/messages`: GET threads, POST send, POST read, GET unread-count. Error codes. ITs for auth and `NOT_IN_GAME`.
-3. [ ] Admin endpoints: GET `/api/admin/games/{gameId}/messages` (with names and assignment status) and DELETE a message. ITs for the admin check.
+3. [x] Admin endpoints: GET `/api/admin/games/{gameId}/messages` (with names and assignment status) and DELETE a message. ITs for the admin check.
 4. [ ] Web data layer: `api.ts` calls, `api-types.ts`, error-code messages in `src/app/[gameId]/actions.ts`, Vitest for the API client.
 5. [ ] Player UI: Inbox view in `game-shell.tsx` (fifth bar item with bubble), thread list, thread view with composer, polling of the unread count, empty/loading/error states. Vitest and `data-testid`s.
 6. [ ] Admin UI: Messages tab in the game nav (list, delete, empty and error states).

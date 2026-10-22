@@ -49,6 +49,10 @@ public class Message {
         this.createdAt = createdAt;
     }
 
+    public void markDeleted(Instant at) {
+        this.deletedAt = at;
+    }
+
     public Long getId() {
         return id;
     }
