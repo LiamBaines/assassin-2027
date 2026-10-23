@@ -36,7 +36,7 @@ The admin can award or dock bonus points (BP) for a player, with a required reas
 3. [x] Admin inbox thread in `MessageService` (list, unread count, mark read, send rejected). ITs: survives a shakeup, unread count, removed player.
 4. [x] Leaderboard `bonusPoints` in `LeaderboardService` and both endpoints, with a round filter. Unit tests and ITs.
 5. [x] Web data layer: `api.ts`, `api-types.ts`, error-code messages in `src/app/admin/actions.ts`, BP column in the shared `Leaderboard` component, `BONUS_AWARDED` rendering in `EventLog`. Vitest.
-6. [ ] Admin Bonuses tab (`requireAdmin()`, nav entry, list, award dialog with player select, amount, reason, optional kill select; empty, loading and error states).
+6. [x] Admin Bonuses tab (`requireAdmin()`, nav entry, list, award dialog with player select, amount, reason, optional kill select; empty, loading and error states).
 7. [ ] Player inbox: Admin conversation in the thread list (read-only, no composer).
 8. [ ] E2E spec: award an ad hoc and a kill-linked bonus, check the leaderboard BP column, the log and the inbox message. Update `docs/progress.md` and `docs/architecture.md`.
 

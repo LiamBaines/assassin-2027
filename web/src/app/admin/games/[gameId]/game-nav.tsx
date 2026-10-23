@@ -23,6 +23,7 @@ export function GameNav({
     ...(killWords
       ? [{ href: `${base}/kill-words`, label: "Kill words", badge: 0 }]
       : []),
+    { href: `${base}/bonuses`, label: "Bonuses", badge: 0 },
     { href: `${base}/messages`, label: "Messages", badge: 0 },
     { href: `${base}/settings`, label: "Settings", badge: 0 },
     { href: `${base}/log`, label: "Log", badge: 0 },

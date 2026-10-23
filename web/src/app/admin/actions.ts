@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/action-form";
 import {
   addKillWords,
+  awardBonus,
   changeKillMethod,
   confirmKillClaim,
   createGame,
@@ -188,6 +189,27 @@ export async function registerKillAction(
   if (!isUuid(victimId)) return INVALID_REQUEST;
   if (killMethodId === null) return { error: MESSAGES.KILL_METHOD_REQUIRED };
   return run(() => registerKill(gameId, victimId, killMethodId));
+}
+
+export async function awardBonusAction(
+  gameId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const playerId = String(formData.get("playerId") ?? "");
+  const rawPoints = String(formData.get("points") ?? "").trim();
+  const points = Number(rawPoints);
+  const reason = String(formData.get("reason") ?? "").trim();
+  const rawKill = String(formData.get("killId") ?? "");
+  const killId = rawKill === "" ? undefined : Number(rawKill);
+  if (!isUuid(playerId)) return INVALID_REQUEST;
+  if (rawKill !== "" && !Number.isInteger(killId)) return INVALID_REQUEST;
+  if (rawPoints === "" || !Number.isInteger(points) || points === 0 || Math.abs(points) > 100) {
+    return { error: MESSAGES.INVALID_BONUS_POINTS };
+  }
+  if (!reason || reason.length > 140) return { error: MESSAGES.REASON_REQUIRED };
+  return run(() => awardBonus(gameId, { playerId, points, reason, killId }));
 }
 
 export async function changeKillMethodAction(
