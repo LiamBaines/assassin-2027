@@ -19,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Anonymous messages along the current ring. A thread is one ACTIVE assignment; the other side is only ever "your
- * target" or "your assassin".
+ * target" or "your assassin". Each player also has a read-only Admin thread, which belongs to them rather than an
+ * assignment.
  */
 @Service
 public class MessageService {
@@ -29,7 +30,7 @@ public class MessageService {
     static final Duration RATE_WINDOW = Duration.ofMinutes(1);
 
     /** Who the caller is talking to. */
-    public enum Counterpart { TARGET, ASSASSIN }
+    public enum Counterpart { TARGET, ASSASSIN, ADMIN }
 
     public record MessageView(long id, boolean mine, String body, Instant createdAt, boolean read) {
     }
@@ -53,13 +54,20 @@ public class MessageService {
         Player me = player(gameId, authUserId);
         List<ThreadView> result = new ArrayList<>();
         for (Counterpart with : Counterpart.values()) {
-            activeAssignment(me, with).ifPresent(a -> result.add(thread(with, a, me)));
+            if (with == Counterpart.ADMIN) {
+                adminThread(me).ifPresent(result::add);
+            } else {
+                activeAssignment(me, with).ifPresent(a -> result.add(thread(with, a, me)));
+            }
         }
         return result;
     }
 
     @Transactional
     public MessageView send(String gameId, UUID authUserId, Counterpart with, String rawBody) {
+        if (with == Counterpart.ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "THREAD_READ_ONLY", "You can't reply to the admin.");
+        }
         String body = rawBody == null ? "" : rawBody.trim();
         if (body.isEmpty() || body.length() > MAX_LENGTH) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE",
@@ -83,6 +91,10 @@ public class MessageService {
     @Transactional
     public void markRead(String gameId, UUID authUserId, Counterpart with) {
         Player me = player(gameId, authUserId);
+        if (with == Counterpart.ADMIN) {
+            messages.markAdminRead(me.getId(), Instant.now());
+            return;
+        }
         activeAssignment(me, with).ifPresent(a -> messages.markRead(a.getId(), me.getId(), Instant.now()));
     }
 
@@ -91,10 +103,11 @@ public class MessageService {
     public long unreadCount(String gameId, UUID authUserId) {
         Player me = player(gameId, authUserId);
         List<Long> ids = new ArrayList<>();
-        for (Counterpart with : Counterpart.values()) {
+        for (Counterpart with : List.of(Counterpart.TARGET, Counterpart.ASSASSIN)) {
             activeAssignment(me, with).ifPresent(a -> ids.add(a.getId()));
         }
-        return ids.isEmpty() ? 0 : messages.countUnread(ids, me.getId());
+        long fromAdmin = messages.countAdminUnread(me.getId());
+        return fromAdmin + (ids.isEmpty() ? 0 : messages.countUnread(ids, me.getId()));
     }
 
     private ThreadView thread(Counterpart with, Assignment a, Player me) {
@@ -104,8 +117,18 @@ public class MessageService {
         return new ThreadView(with, views, unread);
     }
 
+    /** The Admin thread, present once the player has received at least one admin message. */
+    private Optional<ThreadView> adminThread(Player me) {
+        List<MessageView> views = messages.findByRecipientIdAndKindAndDeletedAtIsNullOrderById(me.getId(),
+                MessageKind.ADMIN).stream().map(m -> view(m, me.getId())).toList();
+        if (views.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new ThreadView(Counterpart.ADMIN, views, (int) views.stream().filter(v -> !v.read()).count()));
+    }
+
     private static MessageView view(Message m, UUID viewerId) {
-        return new MessageView(m.getId(), m.getSenderId().equals(viewerId), m.getBody(), m.getCreatedAt(),
+        return new MessageView(m.getId(), viewerId.equals(m.getSenderId()), m.getBody(), m.getCreatedAt(),
                 m.getReadAt() != null);
     }
 

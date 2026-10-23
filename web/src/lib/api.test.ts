@@ -55,6 +55,8 @@ const {
   fileKillClaim,
   changeKillMethod,
   listKills,
+  listBonuses,
+  awardBonus,
   getMyKillMethods,
   getMyMessages,
   sendMessage,
@@ -239,6 +241,17 @@ describe("player contracts", () => {
     expect(fetchMock.mock.calls[2][0]).toBe("http://api.test/api/admin/games/g1/leaderboard");
     await getAdminLeaderboard("g1", 1);
     expect(fetchMock.mock.calls[3][0]).toBe("http://api.test/api/admin/games/g1/leaderboard?roundNo=1");
+  });
+
+  it("lists and awards bonuses under the game's admin path", async () => {
+    fetchMock.mockImplementation(async () => Response.json([]));
+    await expect(listBonuses("g/1")).resolves.toEqual([]);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/admin/games/g%2F1/bonuses");
+    await awardBonus("g1", { playerId: "p1", points: -3, reason: "Late", killId: 7 });
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe("http://api.test/api/admin/games/g1/bonuses");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({ playerId: "p1", points: -3, reason: "Late", killId: 7 });
   });
 
   it("scopes the roster to a game, encodes the id and returns null before the game starts", async () => {

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/components/action-form";
 import {
   addKillWords,
+  awardBonus,
   changeKillMethod,
   confirmKillClaim,
   createGame,
@@ -79,6 +80,9 @@ const MESSAGES: Record<string, string> = {
   KILL_WORD_ALLOCATED: "That word has been given to a player, so it can't be deleted.",
   KILL_WORD_COUNT_INVALID: "Ask for between 1 and 200 words.",
   KILL_WORD_POOL_EXHAUSTED: "There aren't enough unused random words left. Add some yourself.",
+  INVALID_BONUS_POINTS: "Bonus points must be a whole number from -100 to 100, and not zero.",
+  REASON_REQUIRED: "Enter a reason of up to 140 characters.",
+  KILL_PLAYER_MISMATCH: "Bonuses tied to a kill go to the player who made it. Pick that player or another kill.",
   MESSAGE_NOT_FOUND: "That message no longer exists. The page has been refreshed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
@@ -185,6 +189,27 @@ export async function registerKillAction(
   if (!isUuid(victimId)) return INVALID_REQUEST;
   if (killMethodId === null) return { error: MESSAGES.KILL_METHOD_REQUIRED };
   return run(() => registerKill(gameId, victimId, killMethodId));
+}
+
+export async function awardBonusAction(
+  gameId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const playerId = String(formData.get("playerId") ?? "");
+  const rawPoints = String(formData.get("points") ?? "").trim();
+  const points = Number(rawPoints);
+  const reason = String(formData.get("reason") ?? "").trim();
+  const rawKill = String(formData.get("killId") ?? "");
+  const killId = rawKill === "" ? undefined : Number(rawKill);
+  if (!isUuid(playerId)) return INVALID_REQUEST;
+  if (rawKill !== "" && !Number.isInteger(killId)) return INVALID_REQUEST;
+  if (rawPoints === "" || !Number.isInteger(points) || points === 0 || Math.abs(points) > 100) {
+    return { error: MESSAGES.INVALID_BONUS_POINTS };
+  }
+  if (!reason || reason.length > 140) return { error: MESSAGES.REASON_REQUIRED };
+  return run(() => awardBonus(gameId, { playerId, points, reason, killId }));
 }
 
 export async function changeKillMethodAction(

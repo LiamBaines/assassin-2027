@@ -2,6 +2,8 @@ package com.assassin.api.message;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,11 +22,18 @@ public class Message {
     @Column(name = "game_id", nullable = false)
     private String gameId;
 
-    @Column(name = "assignment_id", nullable = false)
-    private long assignmentId;
+    @Column(name = "assignment_id")
+    private Long assignmentId;
 
-    @Column(name = "sender_id", nullable = false)
+    @Column(name = "sender_id")
     private UUID senderId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MessageKind kind = MessageKind.PLAYER;
+
+    @Column(name = "recipient_id")
+    private UUID recipientId;
 
     @Column(nullable = false)
     private String body;
@@ -41,12 +50,20 @@ public class Message {
     protected Message() {
     }
 
-    public Message(String gameId, long assignmentId, UUID senderId, String body, Instant createdAt) {
+    public Message(String gameId, Long assignmentId, UUID senderId, String body, Instant createdAt) {
         this.gameId = gameId;
         this.assignmentId = assignmentId;
         this.senderId = senderId;
         this.body = body;
         this.createdAt = createdAt;
+    }
+
+    /** A system message to one player, shown in their read-only Admin thread. */
+    public static Message fromAdmin(String gameId, UUID recipientId, String body, Instant createdAt) {
+        Message m = new Message(gameId, null, null, body, createdAt);
+        m.kind = MessageKind.ADMIN;
+        m.recipientId = recipientId;
+        return m;
     }
 
     public void markDeleted(Instant at) {
@@ -61,8 +78,16 @@ public class Message {
         return gameId;
     }
 
-    public long getAssignmentId() {
+    public Long getAssignmentId() {
         return assignmentId;
+    }
+
+    public MessageKind getKind() {
+        return kind;
+    }
+
+    public UUID getRecipientId() {
+        return recipientId;
     }
 
     public UUID getSenderId() {

@@ -18,6 +18,7 @@ public class LeaderboardService {
     private static final String TOTALS = """
             select p.id, p.display_name, p.status,
                    coalesce(sum(e.points), 0) as points,
+                   coalesce(sum(e.points) filter (where e.type = 'BONUS'), 0) as bonus_points,
                    count(e.id) filter (where e.type = 'KILL') as kills,
                    count(e.id) filter (where e.type = 'DEATH') as deaths
               from game.player p
@@ -66,21 +67,21 @@ public class LeaderboardService {
             if (i > 0 && r.points() == sorted.get(i - 1).points() && r.kills() == sorted.get(i - 1).kills()) {
                 rank = entries[i - 1].rank();
             }
-            entries[i] = new Entry(rank, r.player(), r.points(), r.kills(), r.deaths(), r.status());
+            entries[i] = new Entry(rank, r.player(), r.points(), r.bonusPoints(), r.kills(), r.deaths(), r.status());
         }
         return List.of(entries);
     }
 
     private static Row row(java.sql.ResultSet rs, int i) throws java.sql.SQLException {
         return new Row(new PlayerRef(rs.getObject("id", UUID.class), rs.getString("display_name")),
-                rs.getInt("points"), rs.getInt("kills"), rs.getInt("deaths"),
+                rs.getInt("points"), rs.getInt("bonus_points"), rs.getInt("kills"), rs.getInt("deaths"),
                 PlayerStatus.valueOf(rs.getString("status")));
     }
 
-    record Row(PlayerRef player, int points, int kills, int deaths, PlayerStatus status) {
+    record Row(PlayerRef player, int points, int bonusPoints, int kills, int deaths, PlayerStatus status) {
     }
 
-    public record Entry(int rank, PlayerRef player, int points, int kills, int deaths, PlayerStatus status) {
+    public record Entry(int rank, PlayerRef player, int points, int bonusPoints, int kills, int deaths, PlayerStatus status) {
     }
 
     public record Leaderboard(Integer roundNo, List<Integer> rounds, List<Entry> entries) {

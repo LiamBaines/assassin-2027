@@ -12,6 +12,8 @@ import type {
   AdminMessage,
   AdminPlayer,
   AdminRound,
+  AwardBonusRequest,
+  Bonus,
   ClaimAcceptResult,
   ClaimStatus,
   CreateGameRequest,
@@ -323,6 +325,14 @@ export const getAdminKillMethods = (gameId: string) =>
 /** The game's kills, newest first. */
 export const listKills = (gameId: string) =>
   request<AdminKill[]>("GET", `${gamePath(gameId)}/kills`);
+
+/** The game's bonuses, newest first (latest 200). */
+export const listBonuses = (gameId: string) =>
+  request<Bonus[]>("GET", `${gamePath(gameId)}/bonuses`);
+
+/** Awards or docks bonus points; negative `points` docks. */
+export const awardBonus = (gameId: string, body: AwardBonusRequest) =>
+  request<Bonus>("POST", `${gamePath(gameId)}/bonuses`, body);
 
 /** Corrects the method of a recorded kill; the API adjusts the killer's points. */
 export const changeKillMethod = (

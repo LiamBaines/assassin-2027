@@ -2,6 +2,7 @@ import {
   Crosshair,
   Dices,
   Flag,
+  Gift,
   ScrollText,
   Shuffle,
   UserMinus,
@@ -22,6 +23,7 @@ const ICONS: Record<EventKind, LucideIcon> = {
   round: Flag,
   shakeup: Shuffle,
   joined: UserPlus,
+  bonus: Gift,
   other: Dices,
 };
 

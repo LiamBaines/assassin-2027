@@ -197,10 +197,14 @@ function ThreadView({
 
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto border-t border-line py-3">
         {count === 0 ? (
+          role === "ADMIN" ? (
+            <p className="text-sm text-muted">No messages from the admin yet.</p>
+          ) : (
           <p className="text-sm text-muted">
             No messages yet. They won&apos;t see your name, only that it&apos;s from{" "}
             {role === "TARGET" ? "your assassin" : "their target"}.
           </p>
+          )
         ) : (
           <div className="flex flex-col gap-4">
             {clusterMessages(thread.messages).map((cluster) => (
@@ -228,6 +232,11 @@ function ThreadView({
         )}
       </div>
 
+      {role === "ADMIN" ? (
+        <p className="shrink-0 border-t border-line pt-3 text-sm text-muted">
+          You can&apos;t reply to the admin. Messages here are notices about your game.
+        </p>
+      ) : (
       <form onSubmit={send} className="shrink-0 space-y-2 border-t border-line pt-3">
         <label htmlFor="message-body" className="sr-only">
           Message to {threadTitle(role).toLowerCase()}
@@ -260,6 +269,7 @@ function ThreadView({
         </div>
         {error && <Alert>{error}</Alert>}
       </form>
+      )}
     </section>
   );
 }

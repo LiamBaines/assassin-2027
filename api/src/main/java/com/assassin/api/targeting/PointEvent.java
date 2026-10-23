@@ -38,6 +38,9 @@ public class PointEvent {
     @Column(name = "kill_id")
     private Long killId;
 
+    @Column
+    private String reason;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -57,6 +60,12 @@ public class PointEvent {
         this.killId = killId;
         this.createdAt = createdAt;
         this.createdBy = createdBy;
+    }
+
+    public PointEvent(String gameId, UUID gameRoundId, UUID playerId, int points, PointType type, Long killId,
+            String reason, Instant createdAt, String createdBy) {
+        this(gameId, gameRoundId, playerId, points, type, killId, createdAt, createdBy);
+        this.reason = reason;
     }
 
     public Long getId() {
@@ -85,6 +94,10 @@ public class PointEvent {
 
     public Long getKillId() {
         return killId;
+    }
+
+    public String getReason() {
+        return reason;
     }
 
     public Instant getCreatedAt() {

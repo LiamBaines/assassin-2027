@@ -43,7 +43,7 @@ public class AdminMessageService {
     @Transactional(readOnly = true)
     public List<AdminMessageView> list(String gameId) {
         games.find(gameId);
-        List<Message> all = messages.findByGameIdAndDeletedAtIsNullOrderById(gameId);
+        List<Message> all = messages.findByGameIdAndKindAndDeletedAtIsNullOrderById(gameId, MessageKind.PLAYER);
         Map<Long, Assignment> byAssignment = assignments.findAllById(
                 all.stream().map(Message::getAssignmentId).distinct().toList()).stream()
                 .collect(Collectors.toMap(Assignment::getId, Function.identity()));

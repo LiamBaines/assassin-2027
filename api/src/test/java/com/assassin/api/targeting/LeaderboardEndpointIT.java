@@ -46,6 +46,22 @@ class LeaderboardEndpointIT extends IntegrationTest {
     }
 
     @Test
+    void bothEndpointsExposeBonusPointsForTheSelectedView() throws Exception {
+        UUID alice = jdbc.queryForObject("select id from game.player where game_id = ? and display_name = 'alice'",
+                UUID.class, gameId);
+        jdbc.update("insert into game.point_event (game_id, game_round_id, player_id, points, type, reason) values (?, null, ?, 5, 'BONUS', 'Best costume')",
+                gameId, alice);
+
+        mvc.perform(as("bob@example.com", get(player())))
+                .andExpect(jsonPath("$.entries[0].points").value(15))
+                .andExpect(jsonPath("$.entries[0].bonusPoints").value(5))
+                .andExpect(jsonPath("$.entries[1].bonusPoints").value(0));
+        mvc.perform(asAdmin(get(admin()).param("roundNo", "1")))
+                .andExpect(jsonPath("$.entries[0].points").value(10))
+                .andExpect(jsonPath("$.entries[0].bonusPoints").value(0));
+    }
+
+    @Test
     void adminSeesRoundView() throws Exception {
         mvc.perform(asAdmin(get(admin()).param("roundNo", "1")))
                 .andExpect(status().isOk())
