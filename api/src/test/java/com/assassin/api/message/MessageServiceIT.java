@@ -194,4 +194,44 @@ class MessageServiceIT extends IntegrationTest {
         assertThat(thread(assassin, Counterpart.TARGET).messages()).isEmpty();
         assertThat(service.unreadCount(gameId, auth(targetOf(assassin)))).isZero();
     }
+
+    private void adminMessage(UUID playerId, String body) {
+        jdbc.update("insert into game.message (game_id, kind, recipient_id, body, created_at) "
+                + "values (?, 'ADMIN', ?, ?, now())", gameId, playerId, body);
+    }
+
+    @Test
+    void adminThreadSurvivesShakeupAndCountsUnread() throws Exception {
+        shuffle(null);
+        UUID p = players.getFirst();
+        assertThat(service.threads(gameId, auth(p))).noneMatch(t -> t.with() == Counterpart.ADMIN);
+        adminMessage(p, "You were awarded +5 bonus points: nice.");
+        adminMessage(p, "You lost 2 bonus points: rude.");
+        shuffle(1);
+        ThreadView admin = thread(p, Counterpart.ADMIN);
+        assertThat(admin.messages()).hasSize(2).allSatisfy(m -> assertThat(m.mine()).isFalse());
+        assertThat(admin.unread()).isEqualTo(2);
+        assertThat(service.unreadCount(gameId, auth(p))).isEqualTo(2);
+        assertThat(service.unreadCount(gameId, auth(players.get(1)))).isZero();
+
+        service.markRead(gameId, auth(p), Counterpart.ADMIN);
+        assertThat(service.unreadCount(gameId, auth(p))).isZero();
+        assertThat(thread(p, Counterpart.ADMIN).unread()).isZero();
+    }
+
+    @Test
+    void sendingToAdminThreadIsRejected() throws Exception {
+        shuffle(null);
+        assertCode(() -> service.send(gameId, auth(players.getFirst()), Counterpart.ADMIN, "hello?"),
+                "THREAD_READ_ONLY");
+    }
+
+    @Test
+    void removedPlayerStillSeesAdminThread() {
+        UUID p = players.getFirst();
+        jdbc.update("update game.player set status = 'REMOVED' where id = ?", p);
+        adminMessage(p, "You were awarded +5 bonus points: thanks.");
+        assertThat(thread(p, Counterpart.ADMIN).messages()).hasSize(1);
+        assertThat(service.unreadCount(gameId, auth(p))).isEqualTo(1);
+    }
 }

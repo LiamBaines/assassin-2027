@@ -33,7 +33,7 @@ The admin can award or dock bonus points (BP) for a player, with a required reas
 ## Tasks
 1. [x] Migration V18, `PointType.BONUS`, `PointEvent.reason`, `PointService.recordBonus`. IT: ad hoc bonus tagged with the active round, null round before round 1, kill-linked bonus takes the kill's round, and a later kill-method correction leaves the bonus intact.
 2. [x] `BonusService` + admin endpoints (create, list) with validation, the `BONUS_AWARDED` event and the Admin inbox message in one transaction. ITs for each error code, admin-only access, and rollback when the message write fails.
-3. [ ] Admin inbox thread in `MessageService` (list, unread count, mark read, send rejected). ITs: survives a shakeup, unread count, removed player.
+3. [x] Admin inbox thread in `MessageService` (list, unread count, mark read, send rejected). ITs: survives a shakeup, unread count, removed player.
 4. [ ] Leaderboard `bonusPoints` in `LeaderboardService` and both endpoints, with a round filter. Unit tests and ITs.
 5. [ ] Web data layer: `api.ts`, `api-types.ts`, error-code messages in `src/app/admin/actions.ts`, BP column in the shared `Leaderboard` component, `BONUS_AWARDED` rendering in `EventLog`. Vitest.
 6. [ ] Admin Bonuses tab (`requireAdmin()`, nav entry, list, award dialog with player select, amount, reason, optional kill select; empty, loading and error states).

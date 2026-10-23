@@ -21,7 +21,7 @@ public class MessageController {
         this.service = service;
     }
 
-    /** @param with TARGET or ASSASSIN */
+    /** @param with TARGET, ASSASSIN or ADMIN */
     public record SendRequest(Counterpart with, String body) {
     }
 
@@ -37,7 +37,7 @@ public class MessageController {
         return service.threads(gameId, user.authUserId());
     }
 
-    /** 400 INVALID_MESSAGE, 409 NO_ACTIVE_PAIRING, 429 RATE_LIMITED. */
+    /** 400 INVALID_MESSAGE, 403 THREAD_READ_ONLY (ADMIN), 409 NO_ACTIVE_PAIRING, 429 RATE_LIMITED. */
     @PostMapping("/api/me/games/{gameId}/messages")
     @ResponseStatus(HttpStatus.CREATED)
     public MessageService.MessageView send(CurrentUser user, @PathVariable String gameId,
@@ -59,7 +59,7 @@ public class MessageController {
 
     private static Counterpart required(Counterpart with) {
         if (with == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE", "Choose TARGET or ASSASSIN.");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE", "Choose TARGET, ASSASSIN or ADMIN.");
         }
         return with;
     }
