@@ -7,6 +7,7 @@ import { REQUEST_PATH_HEADER } from "@/lib/supabase/proxy";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AdminClaim,
+  AdminDuel,
   AdminGame,
   AdminKill,
   AdminMessage,
@@ -17,6 +18,8 @@ import type {
   ClaimAcceptResult,
   ClaimStatus,
   CreateGameRequest,
+  DuelResult,
+  DuelStatusResult,
   JoinPreview,
   KillMethod,
   KillMethodInput,
@@ -262,6 +265,37 @@ export const markMessagesRead = (gameId: string, thread: MessageCounterpart) =>
 export const getUnreadMessageCount = (gameId: string) =>
   request<{ unread: number }>("GET", `${messagesPath(gameId)}/unread-count`);
 
+const duelsPath = (gameId: string) => `/api/me/games/${seg(gameId)}/duels`;
+
+/** Challenges the caller's target; the challenge lands in their thread. */
+export const challengeDuel = (gameId: string, activity: string) =>
+  request<DuelStatusResult>("POST", duelsPath(gameId), { activity });
+
+const duelAction = (gameId: string, duelId: number, action: string) =>
+  request<DuelStatusResult>("POST", `${duelsPath(gameId)}/${duelId}/${action}`);
+
+export const acceptDuel = (gameId: string, duelId: number) =>
+  duelAction(gameId, duelId, "accept");
+
+export const declineDuel = (gameId: string, duelId: number) =>
+  duelAction(gameId, duelId, "decline");
+
+/** The challenger withdraws a challenge that hasn't been accepted. */
+export const revokeDuel = (gameId: string, duelId: number) =>
+  duelAction(gameId, duelId, "revoke");
+
+/** After acceptance, either player reports who won; `ME` is the reporter. */
+export const reportDuel = (gameId: string, duelId: number, winner: "ME" | "OTHER") =>
+  request<DuelStatusResult>("POST", `${duelsPath(gameId)}/${duelId}/report`, { winner });
+
+/** The non-reporting player agrees with the reported winner, which completes the duel. */
+export const confirmDuel = (gameId: string, duelId: number) =>
+  request<DuelResult>("POST", `${duelsPath(gameId)}/${duelId}/confirm`);
+
+/** The non-reporting player disputes the result; an admin decides. */
+export const contestDuel = (gameId: string, duelId: number) =>
+  duelAction(gameId, duelId, "contest");
+
 // Admin
 
 /** Every game, newest first, including finished ones. */
@@ -434,3 +468,11 @@ export const listAdminMessages = (gameId: string) =>
 /** Soft-deletes a message; it disappears for players too. */
 export const deleteAdminMessage = (gameId: string, messageId: number) =>
   request<void>("DELETE", `${gamePath(gameId)}/messages/${messageId}`);
+
+/** Unresolved duels, oldest first. */
+export const listOpenDuels = (gameId: string) =>
+  request<AdminDuel[]>("GET", `${gamePath(gameId)}/duels`);
+
+/** The admin picks the winner of any open duel. */
+export const resolveDuel = (gameId: string, duelId: number, winnerId: string) =>
+  request<DuelResult>("POST", `${gamePath(gameId)}/duels/${duelId}/resolve`, { winnerId });

@@ -93,6 +93,16 @@ public class KillService {
      * game is ACTIVE, and have loaded the victim and the method from this game.
      */
     public KillResult applyKill(Game game, Player victim, KillMethod method, String registeredBy) {
+        return applyKill(game, victim, method, registeredBy, null);
+    }
+
+    /**
+     * As {@link #applyKill(Game, Player, KillMethod, String)}, but when {@code killerId} is given that player is
+     * credited with the kill instead of the victim's assassin (a duel the challenger lost). The ring is spliced the
+     * same way, so the victim's assassin takes over the victim's target and the killer's own target is unchanged;
+     * the result's {@code newTarget} is then null.
+     */
+    public KillResult applyKill(Game game, Player victim, KillMethod method, String registeredBy, UUID killerId) {
         if (victim.getStatus() != PlayerStatus.ALIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "PLAYER_NOT_ALIVE", "That player is not alive.");
         }
@@ -104,22 +114,23 @@ public class KillService {
         // The splice found the victim in the ring, so a round is open.
         GameRound openRound = rounds.findFirstByGameIdAndEndedAtIsNull(game.getId()).orElseThrow();
         Instant now = Instant.now();
+        UUID creditedId = killerId != null ? killerId : splice.assassinId();
         if (method.getName().equalsIgnoreCase(KillMethodService.DEATH_SENTENCE)) {
             killWords.requireLive(game.getId(), splice.assassinId(), openRound.getRoundNo()).markUsed(now);
         }
         victim.setStatus(PlayerStatus.DEAD);
-        Kill kill = kills.save(new Kill(game.getId(), openRound.getId(), splice.incomingAssignmentId(), splice.assassinId(),
+        Kill kill = kills.save(new Kill(game.getId(), openRound.getId(), splice.incomingAssignmentId(), creditedId,
                 victim.getId(), method.getId(), registeredBy, now));
         pointService.recordKill(kill, method.getPoints());
 
-        Player killer = players.getReferenceById(splice.assassinId());
+        Player killer = players.getReferenceById(creditedId);
         boolean roundEnded = splice.ringCollapsed();
         if (roundEnded) {
             openRound.end(now, killer.getId());
         }
         events.record(game.getId(), "KILL", Map.of("killer", PlayerRef.from(killer),
                 "victim", PlayerRef.from(victim), "method", KillMethodRef.from(method)));
-        Player newTarget = roundEnded ? null : players.getReferenceById(splice.targetId());
+        Player newTarget = roundEnded || killerId != null ? null : players.getReferenceById(splice.targetId());
         return new KillResult(kill.getId(), PlayerRef.from(killer), PlayerRef.from(victim),
                 newTarget == null ? null : PlayerRef.from(newTarget), roundEnded, KillMethodRef.from(method));
     }

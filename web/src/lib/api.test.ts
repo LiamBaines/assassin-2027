@@ -64,6 +64,15 @@ const {
   getUnreadMessageCount,
   listAdminMessages,
   deleteAdminMessage,
+  challengeDuel,
+  acceptDuel,
+  declineDuel,
+  revokeDuel,
+  reportDuel,
+  confirmDuel,
+  contestDuel,
+  listOpenDuels,
+  resolveDuel,
   setPlayerStatus,
   shuffleRing,
   toApiError,
@@ -480,5 +489,50 @@ describe("messages", () => {
     const [delUrl, delInit] = fetchMock.mock.calls[1];
     expect(delUrl).toBe("http://api.test/api/admin/games/g1/messages/7");
     expect(delInit?.method).toBe("DELETE");
+  });
+});
+
+describe("duels", () => {
+  it("challenges and answers under the player's duels path", async () => {
+    fetchMock.mockImplementation(async () => Response.json({ id: 3, status: "PENDING" }));
+    const base = "http://api.test/api/me/games/g%201/duels";
+    await challengeDuel("g 1", "Chess");
+    await acceptDuel("g 1", 3);
+    await declineDuel("g 1", 3);
+    await revokeDuel("g 1", 3);
+    await reportDuel("g 1", 3, "OTHER");
+    await confirmDuel("g 1", 3);
+    await contestDuel("g 1", 3);
+    const calls = fetchMock.mock.calls;
+    expect(calls.map(([url]) => url)).toEqual([
+      base,
+      `${base}/3/accept`,
+      `${base}/3/decline`,
+      `${base}/3/revoke`,
+      `${base}/3/report`,
+      `${base}/3/confirm`,
+      `${base}/3/contest`,
+    ]);
+    expect(calls.every(([, init]) => init?.method === "POST")).toBe(true);
+    expect(calls[0][1]?.body).toBe(JSON.stringify({ activity: "Chess" }));
+    expect(calls[4][1]?.body).toBe(JSON.stringify({ winner: "OTHER" }));
+  });
+
+  it("maps a duel error to an ApiError", async () => {
+    fetchMock.mockResolvedValue(problem(409, { code: "DUEL_ALREADY_OPEN", detail: "Open" }));
+    await expect(challengeDuel("g1", "Chess")).rejects.toMatchObject({
+      status: 409,
+      code: "DUEL_ALREADY_OPEN",
+    });
+  });
+
+  it("lists open duels and resolves one under the admin path", async () => {
+    fetchMock.mockImplementation(async () => Response.json([]));
+    await listOpenDuels("g1");
+    await resolveDuel("g1", 3, "u-1");
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api.test/api/admin/games/g1/duels");
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe("http://api.test/api/admin/games/g1/duels/3/resolve");
+    expect(init?.body).toBe(JSON.stringify({ winnerId: "u-1" }));
   });
 });

@@ -49,6 +49,7 @@ public class RingService {
     private final AllocationRepository allocations;
     private final AssignmentRepository assignments;
     private final KillClaimRepository claims;
+    private final DuelRepository duels;
     private final KillMethodService killMethods;
     private final KillWordService killWords;
     private final JdbcTemplate jdbc;
@@ -56,7 +57,7 @@ public class RingService {
     private final GameEventService events;
 
     public RingService(GameService gameService, PlayerRepository players, GameRoundRepository rounds,
-            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, KillMethodService killMethods, KillWordService killWords, JdbcTemplate jdbc,
+            AllocationRepository allocations, AssignmentRepository assignments, KillClaimRepository claims, DuelRepository duels, KillMethodService killMethods, KillWordService killWords, JdbcTemplate jdbc,
             RandomGenerator random, GameEventService events) {
         this.gameService = gameService;
         this.players = players;
@@ -64,6 +65,7 @@ public class RingService {
         this.allocations = allocations;
         this.assignments = assignments;
         this.claims = claims;
+        this.duels = duels;
         this.killMethods = killMethods;
         this.killWords = killWords;
         this.jdbc = jdbc;
@@ -123,6 +125,7 @@ public class RingService {
         Instant now = Instant.now();
         assignments.supersedeActive(game.getId(), now);
         claims.voidOpenInGame(game.getId(), now);
+        duels.voidOpenInGame(game.getId(), now);
 
         // 6. The first ring creates round 1; later ones belong to the open round. Insert the allocation, flushed so
         // the assignment FKs can reference it.
@@ -189,6 +192,7 @@ public class RingService {
         rounds.flush();
         assignments.supersedeActive(game.getId(), now);
         claims.voidOpenInGame(game.getId(), now);
+        duels.voidOpenInGame(game.getId(), now);
         for (Player p : all) {
             p.setStatus(picked.contains(p.getId()) ? PlayerStatus.ALIVE : PlayerStatus.REMOVED);
         }
@@ -265,6 +269,7 @@ public class RingService {
         Optional<Assignment> outgoing = assignments.findByAssassinIdAndStatus(playerId, AssignmentStatus.ACTIVE);
         Instant now = Instant.now();
         claims.voidOpenForPlayer(playerId, now);
+        duels.voidOpenForPlayer(playerId, now);
         incoming.ifPresent(a -> a.end(incomingEnd, now));
         outgoing.ifPresent(a -> a.end(AssignmentStatus.VOIDED, now));
         if (incoming.isEmpty() || outgoing.isEmpty()) {

@@ -32,7 +32,7 @@ describe("isValidBody", () => {
   });
 });
 
-const msg = (id: number, iso: string): Message => ({ id, mine: false, body: "x", createdAt: iso, read: true });
+const msg = (id: number, iso: string): Message => ({ id, mine: false, kind: "PLAYER", body: "x", createdAt: iso, read: true, duel: null });
 
 describe("clusterMessages", () => {
   it("returns no clusters for no messages", () => {

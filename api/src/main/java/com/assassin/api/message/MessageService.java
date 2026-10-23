@@ -7,9 +7,15 @@ import com.assassin.api.player.PlayerStatus;
 import com.assassin.api.targeting.Assignment;
 import com.assassin.api.targeting.AssignmentRepository;
 import com.assassin.api.targeting.AssignmentStatus;
+import com.assassin.api.targeting.Duel;
+import com.assassin.api.targeting.DuelRepository;
+import com.assassin.api.targeting.DuelStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,7 +38,18 @@ public class MessageService {
     /** Who the caller is talking to. */
     public enum Counterpart { TARGET, ASSASSIN, ADMIN }
 
-    public record MessageView(long id, boolean mine, String body, Instant createdAt, boolean read) {
+    /**
+     * A duel as one participant sees it. {@code assassinName} is set only for the challenged player, and only once
+     * they accepted; it stays set if the duel is later voided. {@code reportedWinner} is ME or OTHER from the
+     * viewer's side, null until a result is reported.
+     */
+    public record DuelView(long id, DuelStatus status, String activity, boolean challengerIsMe, String assassinName,
+            String reportedWinner, boolean reportedByMe) {
+    }
+
+    /** {@code duel} is set for DUEL messages only. */
+    public record MessageView(long id, boolean mine, MessageKind kind, String body, Instant createdAt, boolean read,
+            DuelView duel) {
     }
 
     public record ThreadView(Counterpart with, List<MessageView> messages, int unread) {
@@ -41,8 +58,11 @@ public class MessageService {
     private final MessageRepository messages;
     private final AssignmentRepository assignments;
     private final PlayerRepository players;
+    private final DuelRepository duels;
 
-    public MessageService(MessageRepository messages, AssignmentRepository assignments, PlayerRepository players) {
+    public MessageService(MessageRepository messages, AssignmentRepository assignments, PlayerRepository players,
+            DuelRepository duels) {
+        this.duels = duels;
         this.messages = messages;
         this.assignments = assignments;
         this.players = players;
@@ -84,7 +104,7 @@ public class MessageService {
                     "You're sending too fast. Wait a minute and try again.");
         }
         Message saved = messages.save(new Message(gameId, a.getId(), me.getId(), body, now));
-        return view(saved, me.getId());
+        return view(saved, me.getId(), Map.of());
     }
 
     /** Marks everything the other side sent in the thread as read. A no-op when there is no live thread. */
@@ -111,8 +131,11 @@ public class MessageService {
     }
 
     private ThreadView thread(Counterpart with, Assignment a, Player me) {
-        List<MessageView> views = messages.findByAssignmentIdAndDeletedAtIsNullOrderById(a.getId()).stream()
-                .map(m -> view(m, me.getId())).toList();
+        List<Message> thread = messages.findByAssignmentIdAndDeletedAtIsNullOrderById(a.getId());
+        Map<Long, Duel> byId = duels.findAllById(thread.stream().map(Message::getDuelId)
+                .filter(java.util.Objects::nonNull).toList()).stream()
+                .collect(Collectors.toMap(Duel::getId, Function.identity()));
+        List<MessageView> views = thread.stream().map(m -> view(m, me.getId(), byId)).toList();
         int unread = (int) views.stream().filter(v -> !v.mine() && !v.read()).count();
         return new ThreadView(with, views, unread);
     }
@@ -120,16 +143,27 @@ public class MessageService {
     /** The Admin thread, present once the player has received at least one admin message. */
     private Optional<ThreadView> adminThread(Player me) {
         List<MessageView> views = messages.findByRecipientIdAndKindAndDeletedAtIsNullOrderById(me.getId(),
-                MessageKind.ADMIN).stream().map(m -> view(m, me.getId())).toList();
+                MessageKind.ADMIN).stream().map(m -> view(m, me.getId(), Map.of())).toList();
         if (views.isEmpty()) {
             return Optional.empty();
         }
         return Optional.of(new ThreadView(Counterpart.ADMIN, views, (int) views.stream().filter(v -> !v.read()).count()));
     }
 
-    private static MessageView view(Message m, UUID viewerId) {
-        return new MessageView(m.getId(), viewerId.equals(m.getSenderId()), m.getBody(), m.getCreatedAt(),
-                m.getReadAt() != null);
+    private MessageView view(Message m, UUID viewerId, Map<Long, Duel> duelsById) {
+        Duel duel = m.getDuelId() == null ? null : duelsById.get(m.getDuelId());
+        return new MessageView(m.getId(), viewerId.equals(m.getSenderId()), m.getKind(), m.getBody(),
+                m.getCreatedAt(), m.getReadAt() != null, duel == null ? null : duelView(duel, viewerId));
+    }
+
+    private DuelView duelView(Duel d, UUID viewerId) {
+        boolean challenger = d.getChallengerId().equals(viewerId);
+        String name = !challenger && d.getAcceptedAt() != null
+                ? players.findById(d.getChallengerId()).map(Player::getDisplayName).orElse(null) : null;
+        UUID winner = d.getReportedWinnerId();
+        String reported = winner == null ? null : winner.equals(viewerId) ? "ME" : "OTHER";
+        return new DuelView(d.getId(), d.getStatus(), d.getActivity(), challenger, name, reported,
+                viewerId.equals(d.getReportedById()));
     }
 
     private Player player(String gameId, UUID authUserId) {

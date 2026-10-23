@@ -61,6 +61,17 @@ public class KillMethodService {
                 .anyMatch(m -> m.isEnabled() && m.getName().equalsIgnoreCase(DEATH_SENTENCE));
     }
 
+    /** Name of the method that lets an assassin challenge their target to a duel; matched case-insensitively. */
+    public static final String DUEL = "Duel";
+
+    /** The game's enabled kill method named "Duel", if any. */
+    @Transactional(readOnly = true)
+    public java.util.Optional<KillMethod> enabledDuel(String gameId) {
+        return methods.findByGameIdOrderById(gameId).stream()
+                .filter(m -> m.isEnabled() && m.getName().equalsIgnoreCase(DUEL))
+                .findFirst();
+    }
+
     /** The method a new kill or claim is filed with: it must be given, belong to the game and be enabled. */
     @Transactional(readOnly = true)
     public KillMethod requireEnabled(String gameId, Long methodId) {

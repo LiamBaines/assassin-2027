@@ -22,7 +22,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     /** Unread, undeleted messages in the given assignments that were not sent by {@code readerId}. */
     @Query("""
             select count(m) from Message m
-             where m.assignmentId in :assignmentIds and m.senderId <> :readerId
+             where m.assignmentId in :assignmentIds and (m.senderId is null or m.senderId <> :readerId)
                and m.readAt is null and m.deletedAt is null
             """)
     long countUnread(Collection<Long> assignmentIds, UUID readerId);
@@ -30,7 +30,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Modifying(flushAutomatically = true)
     @Query("""
             update Message m set m.readAt = :at
-             where m.assignmentId = :assignmentId and m.senderId <> :readerId and m.readAt is null
+             where m.assignmentId = :assignmentId and (m.senderId is null or m.senderId <> :readerId)
+               and m.readAt is null
             """)
     int markRead(long assignmentId, UUID readerId, Instant at);
 

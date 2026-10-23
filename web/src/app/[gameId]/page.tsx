@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { Inbox } from "@/components/inbox";
+import { duelInPlay } from "@/lib/duel";
 import { EventLog } from "@/components/event-log";
 import { LastViewRecorder } from "@/components/last-view-recorder";
 import { PlayerLeaderboard } from "@/components/player-leaderboard";
@@ -244,6 +245,7 @@ export default async function GamePage(props: {
       threads={messages ?? []}
       failed={messages === null}
       targetName={assignment?.target.displayName ?? null}
+      duelAvailable={duelInPlay(killMethods)}
     />
   );
 
