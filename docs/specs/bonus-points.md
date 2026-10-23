@@ -20,9 +20,9 @@ The admin can award or dock bonus points (BP) for a player, with a required reas
 - Inbox text: "You were awarded +5 bonus points: <reason>." / "You lost 5 bonus points: <reason>." Sender is shown as "Admin".
 - Kills and deaths counts on the leaderboard are unchanged.
 
-## Data model (Flyway V18)
+## Data model (Flyway V18, V19)
 - `point_event`: widen `point_event_type_ck` to include `BONUS`; add nullable `reason text` (check length 1 to 140 when not null).
-- `message`: add `kind text not null default 'PLAYER'` (`PLAYER|ADMIN`), `recipient_id uuid` (composite FK to player), make `assignment_id` and `sender_id` nullable. Check: `PLAYER` requires both set, `ADMIN` requires `recipient_id` and neither of the others.
+- `message` (V19): add `kind text not null default 'PLAYER'` (`PLAYER|ADMIN`), `recipient_id uuid` (composite FK to player), make `assignment_id` and `sender_id` nullable. Check: `PLAYER` requires both set, `ADMIN` requires `recipient_id` and neither of the others.
 
 ## API
 - `POST /api/admin/games/{gameId}/bonuses` `{playerId, points, reason, killId?}`: validates, writes the `BONUS` row, the `BONUS_AWARDED` event and the Admin message in one transaction. Errors: `INVALID_BONUS_POINTS` (zero or out of range), `REASON_REQUIRED`, `PLAYER_NOT_FOUND`, `KILL_NOT_FOUND`, `KILL_PLAYER_MISMATCH` (`playerId` isn't the kill's killer).
@@ -32,7 +32,7 @@ The admin can award or dock bonus points (BP) for a player, with a required reas
 
 ## Tasks
 1. [x] Migration V18, `PointType.BONUS`, `PointEvent.reason`, `PointService.recordBonus`. IT: ad hoc bonus tagged with the active round, null round before round 1, kill-linked bonus takes the kill's round, and a later kill-method correction leaves the bonus intact.
-2. [ ] `BonusService` + admin endpoints (create, list) with validation, the `BONUS_AWARDED` event and the Admin inbox message in one transaction. ITs for each error code, admin-only access, and rollback when the message write fails.
+2. [x] `BonusService` + admin endpoints (create, list) with validation, the `BONUS_AWARDED` event and the Admin inbox message in one transaction. ITs for each error code, admin-only access, and rollback when the message write fails.
 3. [ ] Admin inbox thread in `MessageService` (list, unread count, mark read, send rejected). ITs: survives a shakeup, unread count, removed player.
 4. [ ] Leaderboard `bonusPoints` in `LeaderboardService` and both endpoints, with a round filter. Unit tests and ITs.
 5. [ ] Web data layer: `api.ts`, `api-types.ts`, error-code messages in `src/app/admin/actions.ts`, BP column in the shared `Leaderboard` component, `BONUS_AWARDED` rendering in `EventLog`. Vitest.

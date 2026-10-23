@@ -12,7 +12,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     List<Message> findByAssignmentIdAndDeletedAtIsNullOrderById(long assignmentId);
 
-    List<Message> findByGameIdAndDeletedAtIsNullOrderById(String gameId);
+    List<Message> findByGameIdAndKindAndDeletedAtIsNullOrderById(String gameId, MessageKind kind);
 
     /** Messages the sender sent in the assignment since {@code since}, deleted ones included, for the rate limit. */
     long countByAssignmentIdAndSenderIdAndCreatedAtAfter(long assignmentId, UUID senderId, Instant since);
