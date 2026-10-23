@@ -38,7 +38,7 @@ The admin can award or dock bonus points (BP) for a player, with a required reas
 5. [x] Web data layer: `api.ts`, `api-types.ts`, error-code messages in `src/app/admin/actions.ts`, BP column in the shared `Leaderboard` component, `BONUS_AWARDED` rendering in `EventLog`. Vitest.
 6. [x] Admin Bonuses tab (`requireAdmin()`, nav entry, list, award dialog with player select, amount, reason, optional kill select; empty, loading and error states).
 7. [x] Player inbox: Admin conversation in the thread list (read-only, no composer).
-8. [ ] E2E spec: award an ad hoc and a kill-linked bonus, check the leaderboard BP column, the log and the inbox message. Update `docs/progress.md` and `docs/architecture.md`.
+8. [x] E2E spec: award an ad hoc and a kill-linked bonus, check the leaderboard BP column, the log and the inbox message. Update `docs/progress.md` and `docs/architecture.md`.
 
 ## Verification
 `./mvnw test -Dtest=...` per task, `./mvnw verify` once at the end; `pnpm lint && pnpm typecheck && pnpm test`; `./scripts/e2e.sh e2e/<new spec>` then the full e2e.

@@ -24,7 +24,17 @@ export function AwardBonus({
   kills: { id: number; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
+  // Bumped after a successful award so the next one starts from an empty form.
+  const [formKey, setFormKey] = useState(0);
   const close = () => setOpen(false);
+  const submit: Action = async (prev, formData) => {
+    const result = await action(prev, formData);
+    if (!result.error) {
+      close();
+      setFormKey((k) => k + 1);
+    }
+    return result;
+  };
 
   return (
     <>
@@ -43,7 +53,7 @@ export function AwardBonus({
         title="Award points"
         description="Use a negative amount to dock points. A bonus can't be undone; fix a mistake with an opposite bonus."
       >
-        <ActionForm action={action} className="space-y-4">
+        <ActionForm key={formKey} action={submit} className="space-y-4">
           <Select
             name="playerId"
             required
