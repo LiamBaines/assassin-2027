@@ -2,5 +2,7 @@ package com.assassin.api.message;
 
 public enum MessageKind {
     PLAYER,
-    ADMIN
+    ADMIN,
+    DUEL,
+    SYSTEM
 }

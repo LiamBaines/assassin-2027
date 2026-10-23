@@ -35,6 +35,9 @@ public class Message {
     @Column(name = "recipient_id")
     private UUID recipientId;
 
+    @Column(name = "duel_id")
+    private Long duelId;
+
     @Column(nullable = false)
     private String body;
 
@@ -66,6 +69,22 @@ public class Message {
         return m;
     }
 
+    /** The challenge card of a duel, sent by the challenger into the assignment's thread; the body is the activity. */
+    public static Message fromDuel(String gameId, long assignmentId, UUID challengerId, long duelId, String activity,
+            Instant createdAt) {
+        Message m = new Message(gameId, assignmentId, challengerId, activity, createdAt);
+        m.kind = MessageKind.DUEL;
+        m.duelId = duelId;
+        return m;
+    }
+
+    /** A notice to the assassin of an assignment, shown in its thread with no sender. */
+    public static Message system(String gameId, long assignmentId, String body, Instant createdAt) {
+        Message m = new Message(gameId, assignmentId, null, body, createdAt);
+        m.kind = MessageKind.SYSTEM;
+        return m;
+    }
+
     public void markDeleted(Instant at) {
         this.deletedAt = at;
     }
@@ -88,6 +107,10 @@ public class Message {
 
     public UUID getRecipientId() {
         return recipientId;
+    }
+
+    public Long getDuelId() {
+        return duelId;
     }
 
     public UUID getSenderId() {
