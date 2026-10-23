@@ -205,6 +205,8 @@ export type LeaderboardEntry = {
   rank: number;
   player: PlayerRef;
   points: number;
+  /** Sum of the bonus points in the selected view; already included in `points`. */
+  bonusPoints: number;
   kills: number;
   deaths: number;
   status: PlayerStatus;
@@ -215,6 +217,26 @@ export type Leaderboard = {
   roundNo: number | null;
   rounds: number[];
   entries: LeaderboardEntry[];
+};
+
+export type BonusKillRef = { id: number; killer: PlayerRef; victim: PlayerRef };
+
+/** An admin-awarded bonus. `roundNo` and `kill` are null for an ad hoc bonus outside a round / not tied to a kill. */
+export type Bonus = {
+  id: number;
+  player: PlayerRef;
+  points: number;
+  reason: string;
+  roundNo: number | null;
+  kill: BonusKillRef | null;
+  createdAt: string;
+};
+
+export type AwardBonusRequest = {
+  playerId: string;
+  points: number;
+  reason: string;
+  killId?: number;
 };
 
 /** One entry of a game's event log; `data` is the type-specific payload. */

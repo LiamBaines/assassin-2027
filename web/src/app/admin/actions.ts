@@ -79,6 +79,9 @@ const MESSAGES: Record<string, string> = {
   KILL_WORD_ALLOCATED: "That word has been given to a player, so it can't be deleted.",
   KILL_WORD_COUNT_INVALID: "Ask for between 1 and 200 words.",
   KILL_WORD_POOL_EXHAUSTED: "There aren't enough unused random words left. Add some yourself.",
+  INVALID_BONUS_POINTS: "Bonus points must be a whole number from -100 to 100, and not zero.",
+  REASON_REQUIRED: "Enter a reason of up to 140 characters.",
+  KILL_PLAYER_MISMATCH: "Bonuses tied to a kill go to the player who made it. Pick that player or another kill.",
   MESSAGE_NOT_FOUND: "That message no longer exists. The page has been refreshed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };

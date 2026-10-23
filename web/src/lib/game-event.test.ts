@@ -26,6 +26,20 @@ describe("describeEvent", () => {
       "Di joined the game",
     );
   });
+  it("describes awarded and docked bonuses", () => {
+    expect(
+      describeEvent({
+        type: "BONUS_AWARDED",
+        data: { player: p("Ann"), points: 5, reason: "Best costume" },
+      }).text,
+    ).toBe("Ann was awarded +5 bonus points: Best costume");
+    expect(
+      describeEvent({
+        type: "BONUS_AWARDED",
+        data: { player: p("Ann"), points: -1, reason: "Late", kill: { id: 3, killer: p("Ann"), victim: p("Bo") } },
+      }),
+    ).toEqual({ kind: "bonus", text: "Ann lost 1 bonus point (for the kill of Bo): Late" });
+  });
   it("describes rounds and shakeups", () => {
     expect(describeEvent({ type: "ROUND_STARTED", data: { roundNo: 2, playerCount: 9 } }).text).toBe(
       "Round 2 started with 9 players",

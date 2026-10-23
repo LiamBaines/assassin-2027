@@ -1,6 +1,6 @@
 import type { GameEvent } from "@/lib/api-types";
 
-export type EventKind = "kill" | "removed" | "restored" | "round" | "shakeup" | "joined" | "other";
+export type EventKind = "kill" | "removed" | "restored" | "round" | "shakeup" | "joined" | "bonus" | "other";
 
 const name = (v: unknown): string => {
   if (v && typeof v === "object" && "displayName" in v) {
@@ -41,6 +41,22 @@ export function describeEvent(e: Pick<GameEvent, "type" | "data">): { kind: Even
       return { kind: "shakeup", text: `Targets were reshuffled in round ${d.roundNo}` };
     case "PLAYER_JOINED":
       return { kind: "joined", text: `${name(d.player)} joined the game` };
+    case "BONUS_AWARDED": {
+      const pts = typeof d.points === "number" ? d.points : 0;
+      const amount = Math.abs(pts);
+      const unit = amount === 1 ? "point" : "points";
+      const reason = typeof d.reason === "string" && d.reason ? `: ${d.reason}` : "";
+      const k = d.kill && typeof d.kill === "object" ? (d.kill as { victim?: unknown }).victim : null;
+      const forKill = k ? ` (for the kill of ${name(k)})` : "";
+      const who = name(d.player);
+      return {
+        kind: "bonus",
+        text:
+          pts < 0
+            ? `${who} lost ${amount} bonus ${unit}${forKill}${reason}`
+            : `${who} was awarded +${amount} bonus ${unit}${forKill}${reason}`,
+      };
+    }
     default:
       return { kind: "other", text: "Something happened in the game" };
   }
