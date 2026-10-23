@@ -251,7 +251,7 @@ export type GameEvent = {
 export type GameEventPage = { events: GameEvent[]; nextBefore: number | null };
 
 /** Who a player is talking to. Messages never carry a name, only this role. */
-export type MessageCounterpart = "TARGET" | "ASSASSIN";
+export type MessageCounterpart = "TARGET" | "ASSASSIN" | "ADMIN";
 
 export type Message = {
   id: number;

@@ -19,6 +19,7 @@ describe("threadTitle", () => {
   it("names the role, never a person", () => {
     expect(threadTitle("TARGET")).toBe("Your target");
     expect(threadTitle("ASSASSIN")).toBe("Your assassin");
+    expect(threadTitle("ADMIN")).toBe("Admin");
   });
 });
 

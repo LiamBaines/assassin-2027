@@ -17,6 +17,7 @@ export function unreadBadge(count: number): { text: string | null; label: string
 }
 
 export function threadTitle(withRole: MessageCounterpart): string {
+  if (withRole === "ADMIN") return "Admin";
   return withRole === "TARGET" ? "Your target" : "Your assassin";
 }
 
