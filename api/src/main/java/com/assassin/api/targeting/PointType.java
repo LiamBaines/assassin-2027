@@ -3,5 +3,6 @@ package com.assassin.api.targeting;
 public enum PointType {
     KILL,
     DEATH,
-    ADJUST
+    ADJUST,
+    BONUS
 }

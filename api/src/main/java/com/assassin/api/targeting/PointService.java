@@ -2,6 +2,7 @@ package com.assassin.api.targeting;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -10,9 +11,22 @@ public class PointService {
     static final int DEATH_POINTS = -5;
 
     private final PointEventRepository events;
+    private final GameRoundRepository rounds;
 
-    public PointService(PointEventRepository events) {
+    public PointService(PointEventRepository events, GameRoundRepository rounds) {
         this.events = events;
+        this.rounds = rounds;
+    }
+
+    /**
+     * Writes an admin bonus row. A kill-linked bonus takes the kill's round; otherwise the round open now, or none.
+     * Runs in the caller's transaction, which has already validated the points, reason and kill.
+     */
+    public PointEvent recordBonus(String gameId, UUID playerId, int points, String reason, Kill kill, String awardedBy) {
+        UUID roundId = kill != null ? kill.getGameRoundId()
+                : rounds.findFirstByGameIdAndEndedAtIsNull(gameId).map(GameRound::getId).orElse(null);
+        return events.saveAndFlush(new PointEvent(gameId, roundId, playerId, points, PointType.BONUS,
+                kill != null ? kill.getId() : null, reason, Instant.now(), awardedBy));
     }
 
     /** Offsets the killer's points for a kill whose method changed. No row when the total is already right. */
