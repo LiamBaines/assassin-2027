@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class LeaderboardRankingTest {
 
     private static Row row(String name, int points, int kills) {
-        return new Row(new PlayerRef(UUID.randomUUID(), name), points, kills, 0, PlayerStatus.ALIVE);
+        return new Row(new PlayerRef(UUID.randomUUID(), name), points, 0, kills, 0, PlayerStatus.ALIVE);
     }
 
     private static List<String> names(List<Entry> entries) {
@@ -50,6 +50,14 @@ class LeaderboardRankingTest {
     void negativeTotalsRankBelowZero() {
         List<Entry> out = LeaderboardService.rank(List.of(row("a", -5, 0), row("b", 0, 0)));
         assertThat(names(out)).containsExactly("b", "a");
+    }
+
+    @Test
+    void bonusPointsAreCarriedToTheEntryWithoutAffectingOrder() {
+        Row withBonus = new Row(new PlayerRef(UUID.randomUUID(), "a"), 5, 5, 0, 0, PlayerStatus.ALIVE);
+        List<Entry> out = LeaderboardService.rank(List.of(withBonus, row("b", 6, 0)));
+        assertThat(names(out)).containsExactly("b", "a");
+        assertThat(out.get(1).bonusPoints()).isEqualTo(5);
     }
 
     @Test

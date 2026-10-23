@@ -107,4 +107,28 @@ class LeaderboardIT extends IntegrationTest {
         assertThatThrownBy(() -> service.leaderboard(gameId, 9))
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getCode()).isEqualTo("ROUND_NOT_FOUND"));
     }
+
+    @Test
+    void bonusPointsAreSummedPerViewAndIncludedInPoints() {
+        event(round1, alice, 10, "KILL");
+        event(round1, alice, 5, "BONUS");
+        event(round2, alice, -2, "BONUS");
+        event(null, alice, 3, "BONUS");
+        event(round1, bob, -4, "BONUS");
+
+        Leaderboard total = service.leaderboard(gameId, null);
+        assertThat(entry(total, alice).bonusPoints()).isEqualTo(6);
+        assertThat(entry(total, alice).points()).isEqualTo(16);
+        assertThat(entry(total, alice).kills()).isEqualTo(1);
+        assertThat(entry(total, bob).bonusPoints()).isEqualTo(-4);
+        assertThat(entry(total, carol).bonusPoints()).isZero();
+
+        Leaderboard r1 = service.leaderboard(gameId, 1);
+        assertThat(entry(r1, alice).bonusPoints()).isEqualTo(5);
+        assertThat(entry(r1, alice).points()).isEqualTo(15);
+
+        Leaderboard r2 = service.leaderboard(gameId, 2);
+        assertThat(entry(r2, alice).bonusPoints()).isEqualTo(-2);
+        assertThat(entry(r2, bob).bonusPoints()).isZero();
+    }
 }
