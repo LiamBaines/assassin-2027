@@ -240,7 +240,7 @@ function ThreadView({
           rows={2}
           maxLength={MESSAGE_MAX_LENGTH + 20}
           placeholder="Write a message"
-          className={inputClass}
+          className={`${inputClass} resize-none`}
         />
         <div className="flex items-center justify-between gap-3">
           <span
