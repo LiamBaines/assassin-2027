@@ -17,6 +17,7 @@ import {
   registerKill,
   renamePlayer,
   requireAdmin,
+  resolveDuel,
   setPlayerStatus,
   shuffleRing,
   startRound,
@@ -84,6 +85,10 @@ const MESSAGES: Record<string, string> = {
   REASON_REQUIRED: "Enter a reason of up to 140 characters.",
   KILL_PLAYER_MISMATCH: "Bonuses tied to a kill go to the player who made it. Pick that player or another kill.",
   MESSAGE_NOT_FOUND: "That message no longer exists. The page has been refreshed.",
+  INVALID_WINNER: "The winner must be one of the two duellists.",
+  DUEL_NOT_FOUND: "That duel no longer exists. The page has been refreshed.",
+  DUEL_NOT_OPEN: "That duel has already been resolved. The page has been refreshed.",
+  DUEL_STALE: "The ring has changed since this duel started, so it can't be resolved. The page has been refreshed.",
   FORBIDDEN: "Your account isn't an admin, so it can't do that.",
 };
 
@@ -332,4 +337,16 @@ export async function suggestKillWordsAction(
     if (isApiError(e)) return { error: MESSAGES[e.code] ?? e.detail };
     throw e;
   }
+}
+
+export async function resolveDuelAction(
+  gameId: string,
+  duelId: number,
+  winnerId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ActionForm passes (prev, formData) after the bound args
+  _prev: ActionResult,
+): Promise<ActionResult> {
+  await requireAdmin();
+  if (!Number.isInteger(duelId) || !isUuid(winnerId)) return INVALID_REQUEST;
+  return run(() => resolveDuel(gameId, duelId, winnerId));
 }

@@ -3,13 +3,20 @@
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/components/action-form";
 import {
+  acceptDuel,
   acceptKillClaim,
+  challengeDuel,
+  confirmDuel,
+  contestDuel,
+  declineDuel,
   contestKillClaim,
   fileKillClaim,
   getMyMessages,
   getUnreadMessageCount,
   isApiError,
   markMessagesRead,
+  reportDuel,
+  revokeDuel,
   sendMessage,
   withdrawKillClaim,
 } from "@/lib/api";
@@ -33,6 +40,13 @@ const MESSAGES: Record<string, string> = {
   NOT_CLAIM_PARTICIPANT: "You can't respond to that claim.",
   INVALID_MESSAGE: "Messages must be 1 to 280 characters.",
   NO_ACTIVE_PAIRING: "That conversation has ended, so you can't send messages in it.",
+  INVALID_ACTIVITY: "Describe the duel in 1 to 80 characters.",
+  INVALID_WINNER: "Choose who won.",
+  DUEL_NOT_AVAILABLE: "Duels aren't enabled in this game.",
+  DUEL_ALREADY_OPEN: "You already have an open duel. Wait for it to finish or revoke it.",
+  DUEL_NOT_OPEN: "That duel has already ended. The page has been refreshed.",
+  DUEL_NOT_FOUND: "That duel no longer exists. The page has been refreshed.",
+  NOT_DUEL_PARTICIPANT: "You can't respond to that duel.",
   RATE_LIMITED: "You're sending too fast. Wait a minute and try again.",
 };
 
@@ -81,6 +95,41 @@ export async function contestClaimAction(
   claimId: number,
 ): Promise<ActionResult> {
   return run(() => contestKillClaim(gameId, claimId));
+}
+
+export async function challengeDuelAction(
+  gameId: string,
+  activity: string,
+): Promise<ActionResult> {
+  return run(() => challengeDuel(gameId, activity));
+}
+
+export async function acceptDuelAction(gameId: string, duelId: number): Promise<ActionResult> {
+  return run(() => acceptDuel(gameId, duelId));
+}
+
+export async function declineDuelAction(gameId: string, duelId: number): Promise<ActionResult> {
+  return run(() => declineDuel(gameId, duelId));
+}
+
+export async function revokeDuelAction(gameId: string, duelId: number): Promise<ActionResult> {
+  return run(() => revokeDuel(gameId, duelId));
+}
+
+export async function reportDuelAction(
+  gameId: string,
+  duelId: number,
+  winner: "ME" | "OTHER",
+): Promise<ActionResult> {
+  return run(() => reportDuel(gameId, duelId, winner));
+}
+
+export async function confirmDuelAction(gameId: string, duelId: number): Promise<ActionResult> {
+  return run(() => confirmDuel(gameId, duelId));
+}
+
+export async function contestDuelAction(gameId: string, duelId: number): Promise<ActionResult> {
+  return run(() => contestDuel(gameId, duelId));
 }
 
 export async function sendMessageAction(

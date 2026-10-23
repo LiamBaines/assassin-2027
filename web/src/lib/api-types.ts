@@ -253,12 +253,58 @@ export type GameEventPage = { events: GameEvent[]; nextBefore: number | null };
 /** Who a player is talking to. Messages never carry a name, only this role. */
 export type MessageCounterpart = "TARGET" | "ASSASSIN" | "ADMIN";
 
+export type MessageKind = "PLAYER" | "ADMIN" | "DUEL" | "SYSTEM";
+
+export type DuelStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "REPORTED"
+  | "CONTESTED"
+  | "COMPLETED"
+  | "DECLINED"
+  | "REVOKED"
+  | "VOIDED";
+
+/** A duel as one participant sees it. `assassinName` is set only for the challenged player, once they accepted. */
+export type Duel = {
+  id: number;
+  status: DuelStatus;
+  activity: string;
+  challengerIsMe: boolean;
+  assassinName: string | null;
+  /** ME or OTHER from the viewer's side; null until a result is reported. */
+  reportedWinner: "ME" | "OTHER" | null;
+  reportedByMe: boolean;
+};
+
+export type DuelStatusResult = { id: number; status: DuelStatus };
+
+export type DuelResult = {
+  id: number;
+  status: DuelStatus;
+  killId: number;
+  roundEnded: boolean;
+};
+
+export type AdminDuel = {
+  id: number;
+  status: DuelStatus;
+  activity: string;
+  challenger: { id: string; displayName: string };
+  challenged: { id: string; displayName: string };
+  reportedWinner: { id: string; displayName: string } | null;
+  createdAt: string;
+};
+
 export type Message = {
   id: number;
   mine: boolean;
+  kind: MessageKind;
   body: string;
   createdAt: string;
   read: boolean;
+  /** Set for DUEL messages only. */
+  duel: Duel | null;
 };
 
 /** One live conversation, oldest message first. */

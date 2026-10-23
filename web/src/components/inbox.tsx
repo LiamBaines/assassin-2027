@@ -1,13 +1,22 @@
 "use client";
 
-import { ArrowLeft, ChevronRight, Inbox as InboxIcon, Send } from "lucide-react";
+import { ArrowLeft, ChevronRight, Inbox as InboxIcon, Send, Swords } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   getMessagesAction,
   markMessagesReadAction,
   sendMessageAction,
 } from "@/app/[gameId]/actions";
-import { Alert, EmptyState, IconButton, inputClass, primaryButtonClass } from "@/components/ui";
+import { ChallengeDialog, DuelCard } from "@/components/duel-card";
+import {
+  Alert,
+  EmptyState,
+  IconButton,
+  inputClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/ui";
+import { myOpenChallenge } from "@/lib/duel";
 import type { MessageCounterpart, MessageThread } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -35,12 +44,15 @@ export function Inbox({
   threads: initialThreads,
   failed,
   targetName,
+  duelAvailable,
 }: {
   gameId: string;
   threads: MessageThread[];
   /** The threads could not be loaded. */
   failed: boolean;
   targetName: string | null;
+  /** An enabled "Duel" kill method exists. */
+  duelAvailable: boolean;
 }) {
   const [open, setOpen] = useState<MessageCounterpart | null>(null);
   // Polled threads replace the server-rendered ones until the page hands down new ones.
@@ -88,6 +100,8 @@ export function Inbox({
         gameId={gameId}
         thread={openThread}
         title={titleFor(open, targetName)}
+        targetName={targetName}
+        duelAvailable={duelAvailable}
         onBack={() => setOpen(null)}
       />
     );
@@ -119,7 +133,9 @@ export function Inbox({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{titleFor(role, targetName)}</span>
                       <span className="block truncate text-sm text-muted">
-                        {last ? `${last.mine ? "You: " : ""}${last.body}` : "No messages yet"}
+                        {last
+                          ? `${last.mine ? "You: " : ""}${last.kind === "DUEL" ? "Duel challenge: " : ""}${last.body}`
+                          : "No messages yet"}
                       </span>
                     </span>
                     {t.unread > 0 && (
@@ -146,17 +162,23 @@ function ThreadView({
   gameId,
   thread,
   title,
+  targetName,
+  duelAvailable,
   onBack,
 }: {
   gameId: string;
   thread: MessageThread;
   title: string;
+  targetName: string | null;
+  duelAvailable: boolean;
   onBack: () => void;
 }) {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [challenging, setChallenging] = useState(false);
   const role = thread.with;
+  const canChallenge = role === "TARGET" && duelAvailable && !myOpenChallenge(thread.messages);
   const unread = thread.unread;
   const scroller = useRef<HTMLDivElement>(null);
   const count = thread.messages.length;
@@ -215,7 +237,14 @@ function ThreadView({
                 >
                   {formatDateTime(cluster[0].createdAt)}
                 </time>
-                {cluster.map((m) => (
+                {cluster.map((m) =>
+                  m.kind === "DUEL" && m.duel ? (
+                    <DuelCard key={m.id} gameId={gameId} duel={m.duel} onChanged={notifyChanged} />
+                  ) : m.kind === "SYSTEM" ? (
+                    <p key={m.id} data-testid="system-message" className="self-center text-sm text-muted">
+                      {m.body}
+                    </p>
+                  ) : (
                   <p
                     key={m.id}
                     data-testid="message"
@@ -225,7 +254,8 @@ function ThreadView({
                   >
                     {m.body}
                   </p>
-                ))}
+                  ),
+                )}
               </div>
             ))}
           </div>
@@ -238,6 +268,17 @@ function ThreadView({
         </p>
       ) : (
       <form onSubmit={send} className="shrink-0 space-y-2 border-t border-line pt-3">
+        {canChallenge && (
+          <button
+            type="button"
+            data-testid="duel-challenge"
+            onClick={() => setChallenging(true)}
+            className={secondaryButtonClass}
+          >
+            <Swords aria-hidden className="size-4" />
+            Challenge to a duel
+          </button>
+        )}
         <label htmlFor="message-body" className="sr-only">
           Message to {threadTitle(role).toLowerCase()}
         </label>
@@ -270,6 +311,13 @@ function ThreadView({
         {error && <Alert>{error}</Alert>}
       </form>
       )}
+      <ChallengeDialog
+        gameId={gameId}
+        targetName={targetName}
+        open={challenging}
+        onClose={() => setChallenging(false)}
+        onSent={notifyChanged}
+      />
     </section>
   );
 }
