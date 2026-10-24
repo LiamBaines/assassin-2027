@@ -73,7 +73,7 @@ function playerRow(name: string) {
 }
 
 async function openAdminClaims(gameId: string) {
-  await admin.goto(`/admin/games/${gameId}/kills`);
+  await admin.goto(`/admin/games/${gameId}/log`);
   const claim = admin.getByTestId("kill-claim");
   await expect(claim).toHaveCount(1);
   await expect(admin.getByTestId("kills-badge")).toHaveText(/1/);
@@ -91,7 +91,7 @@ test("the victim accepts a claim and is killed without the admin", async () => {
 
   await admin.goto(`/admin/games/${gameId}/players`);
   await expect(playerRow(VICTIM)).toContainText("Dead");
-  await admin.goto(`/admin/games/${gameId}/kills`);
+  await admin.goto(`/admin/games/${gameId}/log`);
   await expect(admin.getByTestId("kill-claim")).toHaveCount(0);
   await expect(admin.getByTestId("kills-badge")).toHaveCount(0);
   await expectTarget(killerPage, gameId, inherited);

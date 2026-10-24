@@ -84,10 +84,11 @@ test("a kill appears at the top of the log with its method", async () => {
   await expect(playerRow(victim)).toContainText("Dead");
 
   const text = `${killer} killed ${victim} (Duel)`;
+  const playerText = `${victim} was killed (Duel)`;
   await admin.goto(`/admin/games/${gameId}/log`);
   await expect(admin.getByTestId("event-item").first()).toContainText(text);
 
   const other = pages.get(killer)!;
   await other.goto(`/${gameId}?view=log`);
-  await expect(other.getByTestId("event-item").first()).toContainText(text);
+  await expect(other.getByTestId("event-item").first()).toContainText(playerText);
 });

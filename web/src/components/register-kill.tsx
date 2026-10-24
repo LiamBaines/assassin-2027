@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { KillMethodSelect } from "@/components/kill-method-select";
 import { Dialog, DialogActions } from "@/components/overlay";
-import { dangerButtonClass, iconLabelButtonClass, primaryButtonClass } from "@/components/ui";
+import { dangerButtonClass, iconButtonClass } from "@/components/ui";
 import type { KillMethod } from "@/lib/api-types";
 
 type Action = (
@@ -40,7 +40,7 @@ export function RegisterKill({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`${primaryButtonClass} inline-flex items-center gap-2`}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-blood px-4 py-2 text-sm font-medium text-bone hover:bg-blood-hover"
         >
           <Crosshair aria-hidden className="size-4" />
           Register kill
@@ -51,10 +51,9 @@ export function RegisterKill({
           onClick={() => setOpen(true)}
           aria-label="Register kill"
           title="Register kill"
-          className={iconLabelButtonClass}
+          className={iconButtonClass}
         >
           <Crosshair aria-hidden className="size-4" />
-          <span className="hidden xl:inline">Register kill</span>
         </button>
       )}
       <Dialog open={open} onClose={close} title="Register kill" description={message}>

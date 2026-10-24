@@ -22,6 +22,8 @@ export function Select({
   disabled,
   placeholder = "Select…",
   className = "",
+  variant = "default",
+  prefix,
   "aria-label": ariaLabel,
   "data-testid": testId,
 }: {
@@ -34,6 +36,10 @@ export function Select({
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  /** `subtle` drops the border and fill so the trigger reads as an inline heading. */
+  variant?: "default" | "subtle";
+  /** Static text shown before the selected label in the trigger. */
+  prefix?: string;
   "aria-label"?: string;
   "data-testid"?: string;
 }) {
@@ -155,9 +161,16 @@ export function Select({
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={onKeyDown}
-        className="flex w-full items-center justify-between gap-2 rounded-control border border-line bg-raised py-2 pr-2.5 pl-3 text-left text-sm hover:border-muted disabled:opacity-60"
+        className={`flex w-full items-center justify-between gap-2 text-left disabled:opacity-60 ${
+          variant === "subtle"
+            ? "-mx-2 rounded-control px-2 py-1 font-display text-xl font-semibold hover:bg-raised"
+            : "rounded-control border border-line bg-raised py-2 pr-2.5 pl-3 text-sm hover:border-muted"
+        }`}
       >
-        <span className={selected ? "text-bone" : "text-muted"}>{selected?.label ?? placeholder}</span>
+        <span className={selected ? "text-bone" : "text-muted"}>
+          {prefix && <span className="text-muted">{prefix} · </span>}
+          {selected?.label ?? placeholder}
+        </span>
         <ChevronDown aria-hidden className="size-4 shrink-0 text-muted" />
       </button>
       {name && (

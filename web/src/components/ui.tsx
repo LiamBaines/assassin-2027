@@ -2,6 +2,8 @@ import { AlertTriangle, Info, ShieldCheck, type LucideIcon } from "lucide-react"
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { formatDateTime, formatRelative } from "@/lib/format";
+import { PlayerMenu } from "./player-menu";
+import { SignOutButton } from "./sign-out-button";
 
 /** Mobile-first single-column page used by the player views. */
 export function PlayerShell({
@@ -17,16 +19,18 @@ export function PlayerShell({
     <main className="mx-auto w-full max-w-md flex-1 px-4 py-6">
       <header className="mb-6 flex items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-semibold">{title}</h1>
-        {isAdmin && (
-          <Link
-            href="/admin"
-            aria-label="Admin console"
-            title="Admin console"
-            className="inline-flex size-10 items-center justify-center rounded-control text-muted hover:bg-raised hover:text-bone"
-          >
-            <ShieldCheck aria-hidden className="size-5" />
-          </Link>
-        )}
+        <PlayerMenu>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 rounded-control px-2 py-2.5 hover:bg-raised"
+            >
+              <ShieldCheck aria-hidden className="size-5 text-muted" />
+              Admin console
+            </Link>
+          )}
+          <SignOutButton className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left hover:bg-raised" />
+        </PlayerMenu>
       </header>
       <div className="space-y-4">{children}</div>
     </main>
@@ -80,7 +84,7 @@ export type StatusTone = "alive" | "dead" | "warn" | "neutral";
 
 const toneStyles: Record<StatusTone, string> = {
   alive: "text-alive border-alive/40",
-  dead: "text-muted border-line line-through",
+  dead: "text-muted border-line",
   warn: "text-warn border-warn/40",
   neutral: "text-bone border-line",
 };

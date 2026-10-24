@@ -18,15 +18,27 @@ const methodName = (v: unknown): string | null => {
   return null;
 };
 
-/** Icon kind and one-line text for an event; unknown types get a generic line. */
-export function describeEvent(e: Pick<GameEvent, "type" | "data">): { kind: EventKind; text: string } {
+export type EventAudience = "player" | "admin";
+
+/**
+ * Icon kind and one-line text for an event; unknown types get a generic line.
+ * Players don't see who the killer was.
+ */
+export function describeEvent(
+  e: Pick<GameEvent, "type" | "data">,
+  audience: EventAudience,
+): { kind: EventKind; text: string } {
   const d = e.data ?? {};
   switch (e.type) {
     case "KILL": {
       const method = methodName(d.method);
+      const suffix = method ? ` (${method})` : "";
       return {
         kind: "kill",
-        text: `${name(d.killer)} killed ${name(d.victim)}${method ? ` (${method})` : ""}`,
+        text:
+          audience === "admin"
+            ? `${name(d.killer)} killed ${name(d.victim)}${suffix}`
+            : `${name(d.victim)} was killed${suffix}`,
       };
     }
     case "PLAYER_REMOVED":

@@ -90,7 +90,6 @@ test("a player joins by typing the code on /join", async () => {
 
   await expect(page).toHaveURL(new RegExp(`/${gameId}$`));
   await expect(page.getByRole("heading", { level: 1, name: GAME_NAME })).toBeVisible();
-  await expect(page.getByTestId("player-name")).toHaveText(p.displayName);
   await expect(page.getByTestId("player-status")).toHaveText(/waiting for the game to start/);
   await expect(page.getByTestId("target-name")).toHaveText("No target yet");
 });

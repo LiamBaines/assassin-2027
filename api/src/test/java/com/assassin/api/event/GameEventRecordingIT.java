@@ -98,6 +98,7 @@ class GameEventRecordingIT extends IntegrationTest {
         assertThat(e.get("type").asText()).isEqualTo("KILL");
         assertThat(e.at("/data/victim/displayName").asText()).isEqualTo("Bob");
         assertThat(e.at("/data/killer/id").asText()).isNotBlank();
+        assertThat(e.at("/data/killId").asLong()).isPositive();
         assertThat(e.at("/data/method/name").asText()).isEqualTo("Clamp");
     }
 

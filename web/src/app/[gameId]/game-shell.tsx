@@ -1,25 +1,23 @@
 "use client";
 
-import { Crosshair, History, Inbox, Menu, ScrollText, Trophy, Users, type LucideIcon } from "lucide-react";
+import { Crosshair, Inbox, Menu, ScrollText, Trophy, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Sheet } from "@/components/overlay";
 import { IconButton } from "@/components/ui";
 import { INBOX_CHANGED_EVENT, UNREAD_POLL_MS, unreadBadge } from "@/lib/messages";
 import { getUnreadCountAction } from "./actions";
 
-export type GameView = "target" | "players" | "leaderboard" | "rounds" | "log" | "inbox";
+export type GameView = "target" | "leaderboard" | "log" | "inbox";
 
 const VIEW_META: Record<GameView, { label: string; icon: LucideIcon }> = {
   target: { label: "Target", icon: Crosshair },
-  players: { label: "Players", icon: Users },
   leaderboard: { label: "Leaderboard", icon: Trophy },
-  rounds: { label: "Past rounds", icon: History },
   log: { label: "Game log", icon: ScrollText },
   inbox: { label: "Inbox", icon: Inbox },
 };
 
 /** The bottom bar holds the frequent views; the rest live in the menu. */
-const BAR_VIEWS: GameView[] = ["target", "players", "leaderboard", "log", "inbox"];
+const BAR_VIEWS: GameView[] = ["target", "leaderboard", "log", "inbox"];
 
 /**
  * Client chrome for the player game page. Each view's content is rendered on
@@ -30,7 +28,6 @@ export function GameShell({
   gameId,
   initialUnread,
   gameName,
-  playerName,
   roundNo,
   views,
   initialView,
@@ -40,7 +37,6 @@ export function GameShell({
   gameId: string;
   initialUnread: number;
   gameName: string;
-  playerName: string;
   roundNo: number | null;
   views: Partial<Record<GameView, ReactNode>>;
   initialView: GameView;
@@ -98,15 +94,11 @@ export function GameShell({
           <h1 className="font-display truncate text-2xl leading-tight font-semibold">
             {gameName}
           </h1>
-          <p className="truncate text-sm text-muted">
-            <span data-testid="player-name">{playerName}</span>
-            {roundNo !== null && (
-              <>
-                {" · "}
-                <span data-testid="round-badge">Round {roundNo}</span>
-              </>
-            )}
-          </p>
+          {roundNo !== null && (
+            <p data-testid="round-badge" className="truncate text-sm text-muted">
+              Round {roundNo}
+            </p>
+          )}
         </div>
         <IconButton icon={Menu} label="Menu" onClick={() => setMenuOpen(true)} />
       </header>

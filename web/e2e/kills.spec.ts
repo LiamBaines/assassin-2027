@@ -10,7 +10,6 @@ import {
   readJoinLinkPath,
   readRing,
   registerKill as registerKillIn,
-  selectMethod,
 } from "./support";
 
 // The admin registers kills from the players page. Each step builds on the previous one's game state.
@@ -86,14 +85,4 @@ test("the kill that leaves one player ends the round, not the game", async () =>
   await admin.getByRole("button", { name: "Round actions" }).click();
   await expect(admin.getByRole("menuitem", { name: "Generate ring" })).toBeDisabled();
   await expect(admin.getByRole("menuitem", { name: "Start next round" })).toBeEnabled();
-});
-
-test("the kill list shows the method and the admin can correct it", async () => {
-  await admin.goto(`/admin/games/${gameId}/kills`);
-  const row = admin.getByTestId("kill-row").filter({ hasText: VICTIM });
-  await expect(row.getByTestId("kill-method")).toHaveText("Duel");
-
-  await selectMethod(row, "Poison");
-  await row.getByRole("button", { name: "Change method" }).click();
-  await expect(row.getByTestId("kill-method")).toHaveText("Poison");
 });

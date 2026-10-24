@@ -56,7 +56,7 @@ export function InlineEdit({
     return (
       <span className="inline-flex items-center gap-1">
         {children ?? <span>{value}</span>}
-        <IconButton icon={Pencil} label={`Edit ${label}`} onClick={start} className="size-8" />
+        <IconButton icon={Pencil} label={`Edit ${label}`} onClick={start} className="size-6 opacity-60 hover:opacity-100 [&>svg]:size-3.5" />
       </span>
     );
   }

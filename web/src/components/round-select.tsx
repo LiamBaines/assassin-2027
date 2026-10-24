@@ -10,13 +10,17 @@ export function RoundSelect({
   rounds,
   value,
   onChange,
+  subtle,
 }: {
   rounds: number[];
   value: number | null;
   onChange: (round: number | null) => void;
+  /** Render as an inline "Leaderboard · Total" heading-style trigger. */
+  subtle?: boolean;
 }) {
   return (
     <Select
+      {...(subtle ? { variant: "subtle", prefix: "Leaderboard" } : {})}
       aria-label="Leaderboard view"
       data-testid="leaderboard-view"
       value={value === null ? "" : String(value)}
