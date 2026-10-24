@@ -88,8 +88,8 @@ class AdminDuelEndpointIT extends IntegrationTest {
         mvc.perform(asAdmin(post(admin + "/" + id + "/resolve").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"winnerId\":\"" + playerId(challenger) + "\"}"))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
-        assertThat(jdbc.queryForObject("select count(*) from game.game_event where game_id = ? and type = 'DUEL_RESOLVED'",
-                Integer.class, gameId)).isEqualTo(1);
+        assertThat(jdbc.queryForList("select type from game.game_event where game_id = ? and type in ('KILL', 'DUEL_RESOLVED')",
+                String.class, gameId)).containsExactly("KILL");
         mvc.perform(asAdmin(post(admin + "/" + id + "/resolve").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"winnerId\":\"" + playerId(challenger) + "\"}"))).andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUEL_NOT_OPEN"));
