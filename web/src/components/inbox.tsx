@@ -16,7 +16,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/ui";
-import { myOpenChallenge } from "@/lib/duel";
+import { myOpenChallenge, revealedAssassinName } from "@/lib/duel";
 import type { MessageCounterpart, MessageThread } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -33,9 +33,14 @@ function notifyChanged() {
   window.dispatchEvent(new Event(INBOX_CHANGED_EVENT));
 }
 
-/** Your target's name isn't secret from you, so it follows the title; your assassin stays unnamed. */
-function titleFor(role: MessageCounterpart, targetName: string | null): string {
-  return role === "TARGET" && targetName ? `${threadTitle(role)} · ${targetName}` : threadTitle(role);
+/** Your target's name follows the title; your assassin's only once a duel you accepted revealed it. */
+function titleFor(
+  role: MessageCounterpart,
+  targetName: string | null,
+  assassinName: string | null,
+): string {
+  const name = role === "TARGET" ? targetName : role === "ASSASSIN" ? assassinName : null;
+  return name ? `${threadTitle(role)} · ${name}` : threadTitle(role);
 }
 
 /** Two fixed conversations ("Your target", "Your assassin"), each live only while its assignment is. */
@@ -99,7 +104,7 @@ export function Inbox({
       <ThreadView
         gameId={gameId}
         thread={openThread}
-        title={titleFor(open, targetName)}
+        title={titleFor(open, targetName, revealedAssassinName(openThread.messages))}
         targetName={targetName}
         duelAvailable={duelAvailable}
         onBack={() => setOpen(null)}
@@ -131,7 +136,7 @@ export function Inbox({
                     className="flex w-full items-center gap-3 py-3 text-left hover:bg-raised"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{titleFor(role, targetName)}</span>
+                      <span className="block truncate font-medium">{titleFor(role, targetName, revealedAssassinName(t.messages))}</span>
                       <span className="block truncate text-sm text-muted">
                         {last
                           ? `${last.mine ? "You: " : ""}${last.kind === "DUEL" ? "Duel challenge: " : ""}${last.body}`
@@ -214,7 +219,12 @@ function ThreadView({
     <section data-testid="inbox-thread" className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-2">
         <IconButton icon={ArrowLeft} label="Back to inbox" onClick={onBack} />
-        <h2 className="min-w-0 truncate font-display text-xl font-semibold">{title}</h2>
+        <h2
+          data-testid={revealedAssassinName(thread.messages) ? "duel-reveal" : undefined}
+          className="min-w-0 truncate font-display text-xl font-semibold"
+        >
+          {title}
+        </h2>
       </div>
 
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto border-t border-line py-3">

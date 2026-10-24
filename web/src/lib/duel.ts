@@ -43,13 +43,13 @@ export function duelActions(duel: Duel): DuelAction[] {
   }
 }
 
-/** One line saying where the duel stands, from the viewer's side. */
-export function duelStatusText(duel: Duel): string {
+/** One line saying where the duel stands, from the viewer's side; null when the buttons say it all. */
+export function duelStatusText(duel: Duel): string | null {
   switch (duel.status) {
     case "PENDING":
-      return duel.challengerIsMe ? "Waiting for your target to answer" : "Challenge waiting for your answer";
+      return duel.challengerIsMe ? "Waiting for your target to answer" : null;
     case "ACCEPTED":
-      return "Accepted. Fight, then report the winner";
+      return null;
     case "REPORTED":
       return duel.reportedByMe
         ? "Waiting for them to confirm your result"
@@ -81,4 +81,12 @@ export function duelAdminStatus(duel: AdminDuel): string {
     default:
       return "Closed";
   }
+}
+
+/** The assassin's name once they have revealed themselves by challenging a target who accepted. */
+export function revealedAssassinName(messages: Message[]): string | null {
+  for (const m of messages) {
+    if (m.duel?.assassinName) return m.duel.assassinName;
+  }
+  return null;
 }
