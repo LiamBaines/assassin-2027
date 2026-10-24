@@ -128,7 +128,7 @@ public class KillService {
         if (roundEnded) {
             openRound.end(now, killer.getId());
         }
-        events.record(game.getId(), "KILL", Map.of("killer", PlayerRef.from(killer),
+        events.record(game.getId(), "KILL", Map.of("killId", kill.getId(), "killer", PlayerRef.from(killer),
                 "victim", PlayerRef.from(victim), "method", KillMethodRef.from(method)));
         Player newTarget = roundEnded || killerId != null ? null : players.getReferenceById(splice.targetId());
         return new KillResult(kill.getId(), PlayerRef.from(killer), PlayerRef.from(victim),

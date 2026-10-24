@@ -19,14 +19,13 @@ export function GameNav({
   const items = [
     { href: `${base}/leaderboard`, label: "Leaderboard", badge: 0 },
     { href: `${base}/players`, label: "Players", badge: 0 },
-    { href: `${base}/kills`, label: "Kills", badge: openClaims },
     ...(killWords
       ? [{ href: `${base}/kill-words`, label: "Kill words", badge: 0 }]
       : []),
     { href: `${base}/bonuses`, label: "Bonuses", badge: 0 },
     { href: `${base}/messages`, label: "Messages", badge: 0 },
     { href: `${base}/settings`, label: "Settings", badge: 0 },
-    { href: `${base}/log`, label: "Log", badge: 0 },
+    { href: `${base}/log`, label: "Log", badge: openClaims },
   ];
 
   return (

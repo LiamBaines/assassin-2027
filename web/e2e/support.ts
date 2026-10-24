@@ -202,7 +202,6 @@ export async function joinThroughLink(
   await page.getByRole("button", { name: "Join the game" }).click();
   await page.waitForURL(/:\d+\/[a-z0-9]+(-[a-z0-9]+)*$/);
   await expect(page.getByRole("heading", { level: 1, name: gameName })).toBeVisible();
-  await expect(page.getByTestId("player-name")).toHaveText(displayName);
 }
 
 type MailpitSearch = { messages: { ID: string }[] };

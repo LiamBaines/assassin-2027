@@ -21,7 +21,7 @@ export function PlayerLeaderboard({
   const data = round === null ? total : rounds[round];
   return (
     <div className="space-y-4">
-      <RoundSelect rounds={total.rounds} value={round} onChange={setRound} />
+      <RoundSelect subtle rounds={total.rounds} value={round} onChange={setRound} />
       <LeaderboardTable data={data} />
     </div>
   );

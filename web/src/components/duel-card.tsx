@@ -205,7 +205,7 @@ export function ProposeDuel({
         type="button"
         data-testid="duel-state"
         disabled
-        className={`${secondaryButtonClass} inline-flex items-center gap-2`}
+        className={`${secondaryButtonClass} w-full`}
       >
         <Swords aria-hidden className="size-4" />
         {openDuel.status === "PENDING" ? "Duel proposed" : "Duel accepted"}
@@ -218,7 +218,7 @@ export function ProposeDuel({
         type="button"
         data-testid="duel-propose"
         onClick={() => setDialog(true)}
-        className={`${secondaryButtonClass} inline-flex items-center gap-2`}
+        className={`${secondaryButtonClass} w-full`}
       >
         <Swords aria-hidden className="size-4" />
         Propose duel

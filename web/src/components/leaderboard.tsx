@@ -21,10 +21,10 @@ export function LeaderboardTable({ data }: { data: LeaderboardData }) {
           <tr>
             <th className="px-2 py-2 sm:px-3 font-medium">#</th>
             <th className="px-2 py-2 sm:px-3 font-medium">Player</th>
-            <th className="px-2 py-2 sm:px-3 text-right font-medium">Pts</th>
-            <th className="px-2 py-2 sm:px-3 text-right font-medium">BP</th>
-            <th className="px-2 py-2 sm:px-3 text-right font-medium">Kills</th>
-            <th className="px-2 py-2 sm:px-3 text-right font-medium">Deaths</th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium"><abbr title="Points" className="no-underline">P</abbr></th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium"><abbr title="Bonus points" className="no-underline">BP</abbr></th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium"><abbr title="Kills" className="no-underline">K</abbr></th>
+            <th className="px-2 py-2 sm:px-3 text-right font-medium"><abbr title="Deaths" className="no-underline">D</abbr></th>
             <th className="px-2 py-2 sm:px-3 font-medium">Status</th>
           </tr>
         </thead>

@@ -13,9 +13,8 @@ import {
   EmptyState,
   IconButton,
   inputClass,
-  primaryButtonClass,
-  secondaryButtonClass,
 } from "@/components/ui";
+import { HiddenName } from "@/components/target-reveal";
 import { myOpenChallenge, revealedAssassinName } from "@/lib/duel";
 import type { MessageCounterpart, MessageThread } from "@/lib/api-types";
 import { formatDateTime } from "@/lib/format";
@@ -29,18 +28,20 @@ import {
   threadTitle,
 } from "@/lib/messages";
 
+/** The length counter appears once the message is this close to the limit. */
+const COUNTER_FROM = Math.floor(MESSAGE_MAX_LENGTH * 0.8);
+
 function notifyChanged() {
   window.dispatchEvent(new Event(INBOX_CHANGED_EVENT));
 }
 
-/** Your target's name follows the title; your assassin's only once a duel you accepted revealed it. */
-function titleFor(
+/** The counterpart's name when known: your target's always, your assassin's only once a duel you accepted revealed it. */
+function knownName(
   role: MessageCounterpart,
   targetName: string | null,
   assassinName: string | null,
-): string {
-  const name = role === "TARGET" ? targetName : role === "ASSASSIN" ? assassinName : null;
-  return name ? `${threadTitle(role)} · ${name}` : threadTitle(role);
+): string | null {
+  return role === "TARGET" ? targetName : role === "ASSASSIN" ? assassinName : null;
 }
 
 /** Two fixed conversations ("Your target", "Your assassin"), each live only while its assignment is. */
@@ -104,7 +105,7 @@ export function Inbox({
       <ThreadView
         gameId={gameId}
         thread={openThread}
-        title={titleFor(open, targetName, revealedAssassinName(openThread.messages))}
+        name={knownName(open, targetName, revealedAssassinName(openThread.messages))}
         targetName={targetName}
         duelAvailable={duelAvailable}
         onBack={() => setOpen(null)}
@@ -136,7 +137,7 @@ export function Inbox({
                     className="flex w-full items-center gap-3 py-3 text-left hover:bg-raised"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{titleFor(role, targetName, revealedAssassinName(t.messages))}</span>
+                      <span className="block truncate font-medium">{threadTitle(role)}</span>
                       <span className="block truncate text-sm text-muted">
                         {last
                           ? `${last.mine ? "You: " : ""}${last.kind === "DUEL" ? "Duel challenge: " : ""}${last.body}`
@@ -166,14 +167,14 @@ export function Inbox({
 function ThreadView({
   gameId,
   thread,
-  title,
+  name,
   targetName,
   duelAvailable,
   onBack,
 }: {
   gameId: string;
   thread: MessageThread;
-  title: string;
+  name: string | null;
   targetName: string | null;
   duelAvailable: boolean;
   onBack: () => void;
@@ -219,11 +220,11 @@ function ThreadView({
     <section data-testid="inbox-thread" className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-2">
         <IconButton icon={ArrowLeft} label="Back to inbox" onClick={onBack} />
-        <h2
-          data-testid={revealedAssassinName(thread.messages) ? "duel-reveal" : undefined}
-          className="min-w-0 truncate font-display text-xl font-semibold"
-        >
-          {title}
+        <h2 className="flex min-w-0 items-center gap-2 font-display text-xl font-semibold">
+          <span className="shrink-0">{threadTitle(role)}</span>
+          {name && (
+            <HiddenName name={name} label={`Hold to show ${threadTitle(role).toLowerCase()}`} testId="duel-reveal" />
+          )}
         </h2>
       </div>
 
@@ -234,7 +235,7 @@ function ThreadView({
           ) : (
           <p className="text-sm text-muted">
             No messages yet. They won&apos;t see your name, only that it&apos;s from{" "}
-            {role === "TARGET" ? "your assassin" : "their target"}.
+            {role === "TARGET" ? "their assassin" : "their target"}.
           </p>
           )
         ) : (
@@ -278,46 +279,49 @@ function ThreadView({
         </p>
       ) : (
       <form onSubmit={send} className="shrink-0 space-y-2 border-t border-line pt-3">
-        {canChallenge && (
-          <button
-            type="button"
-            data-testid="duel-challenge"
-            onClick={() => setChallenging(true)}
-            className={secondaryButtonClass}
-          >
-            <Swords aria-hidden className="size-4" />
-            Challenge to a duel
-          </button>
-        )}
-        <label htmlFor="message-body" className="sr-only">
-          Message to {threadTitle(role).toLowerCase()}
-        </label>
-        <textarea
-          id="message-body"
-          data-testid="message-body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={2}
-          maxLength={MESSAGE_MAX_LENGTH + 20}
-          placeholder="Write a message"
-          className={`${inputClass} resize-none`}
-        />
-        <div className="flex items-center justify-between gap-3">
-          <span
-            className={`tabular text-sm ${body.trim().length > MESSAGE_MAX_LENGTH ? "text-blood" : "text-muted"}`}
+        <div className="flex items-end gap-2">
+          {canChallenge && (
+            <IconButton
+              icon={Swords}
+              label="Challenge to a duel"
+              data-testid="duel-challenge"
+              onClick={() => setChallenging(true)}
+              className="size-9 shrink-0 border border-line"
+            />
+          )}
+          <label htmlFor="message-body" className="sr-only">
+            Message to {threadTitle(role).toLowerCase()}
+          </label>
+          <textarea
+            id="message-body"
+            data-testid="message-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={1}
+            maxLength={MESSAGE_MAX_LENGTH + 20}
+            placeholder="Write a message"
+            className={`${inputClass} min-w-0 flex-1 resize-none`}
+          />
+          {(pending || isValidBody(body)) && (
+            <button
+              type="submit"
+              data-testid="message-send"
+              aria-label="Send message"
+              title="Send message"
+              disabled={pending}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-blood text-bone hover:bg-blood-hover disabled:opacity-60"
+            >
+              <Send aria-hidden className="size-4" />
+            </button>
+          )}
+        </div>
+        {body.trim().length >= COUNTER_FROM && (
+          <p
+            className={`tabular text-right text-sm ${body.trim().length > MESSAGE_MAX_LENGTH ? "text-blood" : "text-muted"}`}
           >
             {body.trim().length}/{MESSAGE_MAX_LENGTH}
-          </span>
-          <button
-            type="submit"
-            data-testid="message-send"
-            disabled={pending || !isValidBody(body)}
-            className={primaryButtonClass}
-          >
-            <Send aria-hidden className="size-4" />
-            {pending ? "Sending…" : "Send"}
-          </button>
-        </div>
+          </p>
+        )}
         {error && <Alert>{error}</Alert>}
       </form>
       )}

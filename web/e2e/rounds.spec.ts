@@ -94,17 +94,13 @@ test("starting round 2 revives, removes the unticked and includes the late joine
   await expect(playerRow(dropped)).toContainText("Removed");
 });
 
-test("players see Round 2, and past round 1", async () => {
+test("players see Round 2", async () => {
   const page = pages.get(victim)!;
   await page.goto(`/${gameId}`);
   await expect(page.getByTestId("round-badge")).toHaveText("Round 2");
   await revealTarget(page);
   await expect(page.getByTestId("target-name")).not.toHaveText("No target yet");
   await releaseTarget(page);
-  await page.getByRole("button", { name: "Menu" }).click();
-  await page.getByRole("button", { name: "Past rounds" }).click();
-  await expect(page.getByTestId("past-round")).toHaveCount(1);
-  await expect(page.getByTestId("past-round")).toContainText("Round 1");
 
   const out = pages.get(dropped)!;
   await out.goto(`/${gameId}`);

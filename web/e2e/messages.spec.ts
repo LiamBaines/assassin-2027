@@ -91,7 +91,11 @@ test("a new message shows up in the open thread and the list without a reload", 
   const mine = pages.get(assassin)!;
   const theirs = pages.get(target)!;
   // The assassin's thread is still open from the previous test.
-  await expect(mine.getByTestId("inbox-thread")).toContainText(`Your target · ${target}`);
+  await expect(mine.getByTestId("inbox-thread")).toContainText("Your target");
+  await mine.getByRole("button", { name: "Hold to show your target" }).hover();
+  await mine.mouse.down();
+  await expect(mine.getByTestId("duel-reveal")).toContainText(target);
+  await mine.mouse.up();
   // Messages sent close together share one timestamp.
   await expect(mine.locator("[data-testid=inbox-thread] time")).toHaveCount(1);
 
@@ -106,7 +110,9 @@ test("a new message shows up in the open thread and the list without a reload", 
   await expect(mine.getByTestId("message")).toHaveCount(3);
   // The composer stays pinned and the page itself doesn't scroll.
   await expect(mine.getByTestId("message-body")).toBeInViewport();
+  await mine.getByTestId("message-body").fill("Draft");
   await expect(mine.getByTestId("message-send")).toBeInViewport();
+  await mine.getByTestId("message-body").fill("");
   expect(await mine.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
   await mine.getByRole("button", { name: "Back to inbox" }).click();
   await expect(mine.getByTestId("inbox-thread-target")).toContainText("Still here");

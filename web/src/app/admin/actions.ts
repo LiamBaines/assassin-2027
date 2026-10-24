@@ -295,7 +295,7 @@ export async function addKillWordsAction(
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-  const words = splitWordLines(String(formData.get("words") ?? ""));
+  const words = splitWordLines(formData.getAll("words").map(String).join("\n"));
   if (words.length === 0) return { error: MESSAGES.KILL_WORD_REQUIRED };
   return run(() => addKillWords(gameId, words));
 }

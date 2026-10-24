@@ -1,11 +1,11 @@
 import { CheckCircle2, CircleDashed, MessageSquareQuote, Trash2, UserRound } from "lucide-react";
 import { ActionForm, ConfirmSubmit, SubmitButton } from "@/components/action-form";
+import { KillWordsInput } from "@/components/kill-words-input";
 import {
   EmptyState,
   Panel,
   StatusChip,
   dangerButtonClass,
-  inputClass,
   primaryButtonClass,
   type StatusTone,
 } from "@/components/ui";
@@ -54,22 +54,8 @@ export default async function AdminKillWordsPage(props: {
             action={addKillWordsAction.bind(null, game.id)}
             className="space-y-3"
           >
-            <label htmlFor="kill-words-input" className="block text-sm font-medium">
-              Add words
-            </label>
-            <textarea
-              id="kill-words-input"
-              name="words"
-              rows={4}
-              required
-              placeholder="One word or phrase per line"
-              data-testid="kill-words-input"
-              className={inputClass}
-            />
-            <p className="text-sm text-muted">
-              Words are unique within the game, ignoring case. A word given to a
-              player stays burned and is never reused.
-            </p>
+            <p className="text-sm font-medium">Add words</p>
+            <KillWordsInput />
             <SubmitButton pendingLabel="Adding…" className={primaryButtonClass}>
               Add words
             </SubmitButton>

@@ -42,10 +42,6 @@ test("two players join, then the admin renames one to match the other", async ()
   await admin.getByRole("textbox", { name: `Edit name of ${alice.displayName}` }).fill(bob.displayName);
   await admin.getByRole("textbox", { name: `Edit name of ${alice.displayName}` }).press("Enter");
   await expect(admin.getByTestId("admin-player-name").filter({ hasText: bob.displayName })).toHaveCount(2);
-
-  // The player sees the new name in this game only.
-  await pages.get(alice.displayName)!.goto(`/${gameId}`);
-  await expect(pages.get(alice.displayName)!.getByTestId("player-name")).toHaveText(bob.displayName);
 });
 
 test("generating the ring is blocked until the names differ", async () => {

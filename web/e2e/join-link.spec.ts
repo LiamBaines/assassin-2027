@@ -40,7 +40,6 @@ async function joinAndExpectGamePage(page: Page, displayName: string): Promise<v
   await page.getByRole("button", { name: "Join the game" }).click();
   await expect(page).toHaveURL(/:\d+\/[a-z0-9]+(-[a-z0-9]+)*$/);
   await expect(page.getByRole("heading", { level: 1, name: GAME_NAME })).toBeVisible();
-  await expect(page.getByTestId("player-name")).toHaveText(displayName);
 }
 
 test("the magic link from the email returns to the join link", async ({ page }) => {

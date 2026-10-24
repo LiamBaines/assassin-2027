@@ -75,7 +75,10 @@ test.describe("assassin wins", () => {
     await expect(target.getByTestId("duel-reveal")).toHaveCount(0);
     await target.getByTestId("duel-accept").click();
     await expectStatus(target, "ACCEPTED");
+    await target.getByRole("button", { name: "Hold to show your assassin" }).hover();
+    await target.mouse.down();
     await expect(target.getByTestId("duel-reveal")).toContainText(game.assassin);
+    await target.mouse.up();
   });
 
   test("the assassin reports a win and the target confirms", async () => {
@@ -142,7 +145,7 @@ test.describe("void by kill, then the target wins a contested duel", () => {
     await challenged.getByTestId("duel-contest").click();
     await expectStatus(challenged, "CONTESTED");
 
-    await admin.goto(`/admin/games/${game.gameId}/kills`);
+    await admin.goto(`/admin/games/${game.gameId}/log`);
     const open = admin.getByTestId("open-duel");
     await expect(open).toHaveCount(1);
     await expect(open).toContainText("Thumb war");

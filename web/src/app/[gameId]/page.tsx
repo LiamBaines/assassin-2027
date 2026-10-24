@@ -1,4 +1,4 @@
-import { History, ShieldCheck, Swords, Users } from "lucide-react";
+import { ShieldCheck, Swords } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,20 +15,17 @@ import { KillWordReveal } from "@/components/kill-word-reveal";
 import { TargetReveal } from "@/components/target-reveal";
 import {
   Alert,
-  EmptyState,
   StatusChip,
   dangerButtonClass,
   secondaryButtonClass,
 } from "@/components/ui";
 import {
-  getGamePlayers,
   getMe,
   getMyEvents,
   getMyKillClaims,
   getMyKillMethods,
   getMyLeaderboard,
   getMyMessages,
-  getMyRounds,
   getMyTarget,
   getUnreadMessageCount,
 } from "@/lib/api";
@@ -36,8 +33,7 @@ import type { Leaderboard } from "@/lib/api-types";
 import { isOpenClaim, outgoingClaimLabel } from "@/lib/claim-status";
 import { formatDateTime } from "@/lib/format";
 import { parseRoundParam } from "@/lib/leaderboard";
-import { playerStatusView, rosterStatusView } from "@/lib/player-status";
-import { roundOutcomeLabel } from "@/lib/round-outcome";
+import { playerStatusView } from "@/lib/player-status";
 import {
   acceptClaimAction,
   contestClaimAction,
@@ -48,7 +44,7 @@ import { GameShell, type GameView } from "./game-shell";
 
 export const metadata: Metadata = { title: "Game · Assassin 2027" };
 
-const VIEWS: GameView[] = ["target", "players", "leaderboard", "rounds", "log", "inbox"];
+const VIEWS: GameView[] = ["target", "leaderboard", "log", "inbox"];
 
 export default async function GamePage(props: {
   params: Promise<{ gameId: string }>;
@@ -67,11 +63,9 @@ export default async function GamePage(props: {
   const active = game.status === "ACTIVE";
   const started = game.status !== "SETUP";
   const before = typeof search.before === "string" ? Number(search.before) : NaN;
-  const [assignment, roster, claims, pastRounds, killMethods, total, events, messages, unread] = await Promise.all([
+  const [assignment, claims, killMethods, total, events, messages, unread] = await Promise.all([
     finished ? null : getMyTarget(gameId),
-    started ? getGamePlayers(gameId) : null,
     active ? getMyKillClaims(gameId) : null,
-    game.currentRoundNo === null ? [] : getMyRounds(gameId),
     active ? getMyKillMethods(gameId) : [],
     started ? getMyLeaderboard(gameId) : null,
     getMyEvents(gameId, Number.isSafeInteger(before) && before > 0 ? before : undefined).catch(
@@ -154,10 +148,10 @@ export default async function GamePage(props: {
               {outgoingClaimLabel(outgoing.status)}
             </p>
           )}
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-2">
             {outgoing && isOpenClaim(outgoing.status) ? (
               <ActionForm action={withdrawClaimAction.bind(null, gameId, outgoing.id)}>
-                <SubmitButton className={secondaryButtonClass}>Withdraw claim</SubmitButton>
+                <SubmitButton className={`${secondaryButtonClass} w-full`}>Withdraw claim</SubmitButton>
               </ActionForm>
             ) : (
               <RegisterKill
@@ -180,36 +174,8 @@ export default async function GamePage(props: {
     </div>
   );
 
-  const playersView = roster && (
-    <section>
-      <h2 className="mb-3 font-display text-xl font-semibold">Players</h2>
-      {roster.players.length === 0 ? (
-        <EmptyState icon={Users} title="No players yet" />
-      ) : (
-        <ul className="divide-y divide-line border-y border-line">
-          {roster.players.map((p, i) => {
-            const view = rosterStatusView(p.status);
-            return (
-              <li
-                key={i}
-                data-testid="roster-row"
-                className="flex items-center justify-between gap-3 py-3"
-              >
-                <span className="break-words">{p.displayName}</span>
-                <StatusChip data-testid="roster-status" tone={view.tone} icon={view.icon}>
-                  {view.label}
-                </StatusChip>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-
   const leaderboardView = total && (
     <section>
-      <h2 className="mb-3 font-display text-xl font-semibold">Leaderboard</h2>
       <PlayerLeaderboard
         total={total}
         rounds={perRound}
@@ -218,34 +184,10 @@ export default async function GamePage(props: {
     </section>
   );
 
-  const roundsView = (
-    <section>
-      <h2 className="mb-3 font-display text-xl font-semibold">Past rounds</h2>
-      {pastRounds.length === 0 ? (
-        <EmptyState icon={History} title="No finished rounds">
-          Winners appear here after each round ends.
-        </EmptyState>
-      ) : (
-        <ul className="divide-y divide-line border-y border-line">
-          {pastRounds.map((r) => (
-            <li key={r.roundNo} data-testid="past-round" className="space-y-0.5 py-3">
-              <p className="font-medium">Round {r.roundNo}</p>
-              <p className="text-sm text-muted">
-                {r.winner ? `Winner: ${r.winner.displayName}` : "No winner"}
-                {" · "}
-                <span data-testid="past-round-outcome">{roundOutcomeLabel(r)}</span>
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-
   const logView = (
     <section>
       <h2 className="mb-3 font-display text-xl font-semibold">Game log</h2>
-      <EventLog page={events} moreHref={(b) => `?view=log&before=${b}`} />
+      <EventLog page={events} audience="player" moreHref={(b) => `?view=log&before=${b}`} />
     </section>
   );
 
@@ -267,16 +209,13 @@ export default async function GamePage(props: {
       <LastViewRecorder area="player" gameId={game.id} />
     <GameShell
       gameName={game.name}
-      playerName={player.displayName}
       roundNo={game.currentRoundNo}
       gameId={game.id}
       initialUnread={unread}
       initialView={initialView}
       views={{
         target: targetView,
-        players: playersView || undefined,
         leaderboard: leaderboardView || undefined,
-        rounds: started ? roundsView : undefined,
         log: logView,
         inbox: active ? inboxView : undefined,
       }}

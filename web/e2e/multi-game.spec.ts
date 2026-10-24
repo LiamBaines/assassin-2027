@@ -78,13 +78,11 @@ test("a player in both games sees both on /me with the right target in each", as
 
   await cardB.getByRole("link").click();
   await expect(alicePage).toHaveURL(new RegExp(`/${gameB}$`));
-  await expect(alicePage.getByTestId("player-name")).toHaveText(alice.displayName);
   await revealTarget(alicePage);
   await expect(alicePage.getByTestId("target-name")).toHaveText(carol.displayName);
   await releaseTarget(alicePage);
 
   await expectTarget(alicePage, gameA, bob.displayName);
-  await expect(alicePage.getByTestId("player-name")).toHaveText(alice.displayName);
   await expectTarget(bobPage, gameA, alice.displayName);
   await expectTarget(carolPage, gameB, alice.displayName);
 });

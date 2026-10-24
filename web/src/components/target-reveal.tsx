@@ -34,6 +34,40 @@ export function useHoldReveal() {
   return { shown, holdProps };
 }
 
+/** A name hidden behind a hold-to-reveal eye; `testId` goes on the name once revealed. */
+export function HiddenName({
+  name,
+  label,
+  testId,
+  className = "",
+}: {
+  name: string;
+  label: string;
+  testId?: string;
+  className?: string;
+}) {
+  const { shown, holdProps } = useHoldReveal();
+  return (
+    <span className={`flex min-w-0 items-center gap-1 ${className}`}>
+      {shown ? (
+        <span data-testid={testId} className="min-w-0 truncate">
+          {name}
+        </span>
+      ) : (
+        <span aria-hidden className="text-muted select-none">
+          ••••••
+        </span>
+      )}
+      <IconButton
+        icon={shown ? EyeOff : Eye}
+        label={label}
+        className="touch-none select-none"
+        {...holdProps}
+      />
+    </span>
+  );
+}
+
 /** The target's name, hidden on every load so it can't be read over a shoulder. */
 export function TargetReveal({ name, assignedAt }: { name: string; assignedAt: string }) {
   const { shown, holdProps } = useHoldReveal();
