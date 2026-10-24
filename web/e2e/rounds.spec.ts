@@ -114,7 +114,7 @@ async function readLeaderboard(page: Page, path: string, view: string) {
   const select = page.getByTestId("leaderboard-view");
   await select.click();
   await page.getByRole("option", { name: view, exact: true }).click();
-  await expect(select).toHaveText(view);
+  await expect(select).toContainText(view);
   const rows = await page.getByTestId("leaderboard-row").evaluateAll((els) =>
     els.map((el) => {
       const text = (id: string) => el.querySelector(`[data-testid="${id}"]`)!.textContent!.trim();

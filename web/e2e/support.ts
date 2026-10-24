@@ -110,13 +110,27 @@ export async function readRing(admin: Page, gameId: string): Promise<Pair[]> {
   await admin.goto(`/admin/games/${gameId}/players`);
   const rows = admin.getByTestId("player-row");
   await expect(rows.first()).toBeVisible();
-  const pairs = await rows.evaluateAll((els) =>
-    els.map((el) => {
-      const cells = el.querySelectorAll("td");
-      return { assassin: cells[0].textContent!.trim(), target: cells[3].textContent!.trim() };
-    }),
-  );
-  return pairs.filter((p) => p.target !== "—");
+  const count = await rows.count();
+  const pairs: Pair[] = [];
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    const eye = row.getByRole("button", { name: /^Hold to show target of / });
+    if ((await eye.count()) === 0) continue; // no current target
+    const assassin = (await row.locator("td").first().textContent())!.trim();
+    // Targets show only while the eye is held (waits for hydration, like revealTarget).
+    await eye.hover();
+    const name = row.getByTestId("admin-player-target");
+    await expect(async () => {
+      if ((await name.count()) === 0) {
+        await admin.mouse.up();
+        await admin.mouse.down();
+      }
+      await expect(name).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    pairs.push({ assassin, target: (await name.textContent())!.trim() });
+    await admin.mouse.up();
+  }
+  return pairs;
 }
 
 /** Fills every player's kill word in an open start dialog with random words. */
