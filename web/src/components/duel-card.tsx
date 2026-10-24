@@ -1,6 +1,7 @@
 "use client";
 
 import { Swords } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   acceptDuelAction,
@@ -43,6 +44,7 @@ export function DuelCard({
   const [pending, start] = useTransition();
   const [reporting, setReporting] = useState(false);
   const actions = duelActions(duel);
+  const statusText = duelStatusText(duel);
 
   function run(fn: () => Promise<ActionResult>) {
     start(async () => {
@@ -68,14 +70,11 @@ export function DuelCard({
       <p data-testid="duel-activity" className="break-words">
         {duel.activity}
       </p>
-      {duel.assassinName && (
-        <p data-testid="duel-reveal" className="text-sm">
-          Your assassin is <span className="font-medium">{duel.assassinName}</span>.
+      {statusText && (
+        <p data-testid="duel-status" className="text-sm text-muted">
+          {statusText}
         </p>
       )}
-      <p data-testid="duel-status" className="text-sm text-muted">
-        {duelStatusText(duel)}
-      </p>
 
       {actions.length > 0 && !reporting && (
         <div className="flex flex-wrap gap-2">
@@ -85,7 +84,7 @@ export function DuelCard({
               data-testid="duel-accept"
               disabled={pending}
               onClick={() => run(() => acceptDuelAction(gameId, duel.id))}
-              className={primaryButtonClass}
+              className={`${primaryButtonClass} flex-1`}
             >
               Accept
             </button>
@@ -96,7 +95,7 @@ export function DuelCard({
               data-testid="duel-decline"
               disabled={pending}
               onClick={() => run(() => declineDuelAction(gameId, duel.id))}
-              className={secondaryButtonClass}
+              className={`${secondaryButtonClass} flex-1`}
             >
               Decline
             </button>
@@ -183,6 +182,55 @@ export function DuelCard({
       )}
       {error && <Alert>{error}</Alert>}
     </div>
+  );
+}
+
+/** "Propose duel" on the home screen; shows where an open challenge stands instead once one exists. */
+export function ProposeDuel({
+  gameId,
+  targetName,
+  open: openDuel,
+}: {
+  gameId: string;
+  targetName: string | null;
+  /** The player's own unresolved challenge, if any. */
+  open: Duel | null;
+}) {
+  const [dialog, setDialog] = useState(false);
+  const router = useRouter();
+
+  if (openDuel) {
+    return (
+      <button
+        type="button"
+        data-testid="duel-state"
+        disabled
+        className={`${secondaryButtonClass} inline-flex items-center gap-2`}
+      >
+        <Swords aria-hidden className="size-4" />
+        {openDuel.status === "PENDING" ? "Duel proposed" : "Duel accepted"}
+      </button>
+    );
+  }
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="duel-propose"
+        onClick={() => setDialog(true)}
+        className={`${secondaryButtonClass} inline-flex items-center gap-2`}
+      >
+        <Swords aria-hidden className="size-4" />
+        Propose duel
+      </button>
+      <ChallengeDialog
+        gameId={gameId}
+        targetName={targetName}
+        open={dialog}
+        onClose={() => setDialog(false)}
+        onSent={() => router.refresh()}
+      />
+    </>
   );
 }
 

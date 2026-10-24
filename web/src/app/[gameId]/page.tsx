@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/action-form";
 import { Inbox } from "@/components/inbox";
-import { duelInPlay } from "@/lib/duel";
+import { ProposeDuel } from "@/components/duel-card";
+import { duelInPlay, myOpenChallenge } from "@/lib/duel";
 import { EventLog } from "@/components/event-log";
 import { LastViewRecorder } from "@/components/last-view-recorder";
 import { PlayerLeaderboard } from "@/components/player-leaderboard";
@@ -153,18 +154,27 @@ export default async function GamePage(props: {
               {outgoingClaimLabel(outgoing.status)}
             </p>
           )}
-          {outgoing && isOpenClaim(outgoing.status) ? (
-            <ActionForm action={withdrawClaimAction.bind(null, gameId, outgoing.id)}>
-              <SubmitButton className={secondaryButtonClass}>Withdraw claim</SubmitButton>
-            </ActionForm>
-          ) : (
-            <RegisterKill
-              labelled
-              action={fileClaimAction.bind(null, gameId)}
-              methods={killMethods}
-              message="Choose how you killed your target."
-            />
-          )}
+          <div className="flex flex-wrap gap-2">
+            {outgoing && isOpenClaim(outgoing.status) ? (
+              <ActionForm action={withdrawClaimAction.bind(null, gameId, outgoing.id)}>
+                <SubmitButton className={secondaryButtonClass}>Withdraw claim</SubmitButton>
+              </ActionForm>
+            ) : (
+              <RegisterKill
+                labelled
+                action={fileClaimAction.bind(null, gameId)}
+                methods={killMethods}
+                message="Choose how you killed your target."
+              />
+            )}
+            {duelInPlay(killMethods) && messages && (
+              <ProposeDuel
+                gameId={gameId}
+                targetName={assignment.target.displayName}
+                open={myOpenChallenge(messages.find((t) => t.with === "TARGET")?.messages ?? [])}
+              />
+            )}
+          </div>
         </section>
       )}
     </div>
