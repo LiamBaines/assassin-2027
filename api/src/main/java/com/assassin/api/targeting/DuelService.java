@@ -1,7 +1,6 @@
 package com.assassin.api.targeting;
 
 import com.assassin.api.common.ApiException;
-import com.assassin.api.event.GameEventService;
 import com.assassin.api.game.Game;
 import com.assassin.api.game.GameService;
 import com.assassin.api.game.GameStatus;
@@ -15,7 +14,6 @@ import com.assassin.api.player.PlayerRepository;
 import com.assassin.api.player.PlayerStatus;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,13 +35,11 @@ public class DuelService {
     private final MessageRepository messages;
     private final KillMethodService killMethods;
     private final KillService killService;
-    private final GameEventService events;
 
     public DuelService(GameService gameService, PlayerRepository players, AssignmentRepository assignments,
             DuelRepository duels, MessageRepository messages, KillMethodService killMethods,
-            KillService killService, GameEventService events) {
+            KillService killService) {
         this.killService = killService;
-        this.events = events;
         this.gameService = gameService;
         this.players = players;
         this.assignments = assignments;
@@ -208,8 +204,6 @@ public class DuelService {
             }
         }
         duel.linkKill(kill.killId());
-        events.record(game.getId(), "DUEL_RESOLVED", Map.of("winner", kill.killer(), "loser", kill.victim(),
-                "activity", duel.getActivity()));
         return new DuelResult(duel.getId(), DuelStatus.COMPLETED, kill.killId(), kill.roundEnded());
     }
 
