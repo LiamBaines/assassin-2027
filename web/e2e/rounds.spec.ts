@@ -156,8 +156,8 @@ test("the leaderboard totals points across both rounds", async () => {
   expect([...r2.values()].reduce((n, e) => n + e.kills, 0)).toBe(1);
   expect([...r2.values()].reduce((n, e) => n + e.points, 0)).toBe(5);
 
-  // Total: each entry is the sum of its two rounds.
-  const total = await readLeaderboard(admin, adminPath, "Total");
+  // Overall: each entry is the sum of its two rounds.
+  const total = await readLeaderboard(admin, adminPath, "Overall");
   for (const [name, e] of total) {
     expect(e.points).toBe(r1.get(name)!.points + r2.get(name)!.points);
     expect(e.kills).toBe(r1.get(name)!.kills + r2.get(name)!.kills);
@@ -165,6 +165,6 @@ test("the leaderboard totals points across both rounds", async () => {
   }
 
   // Players see the same table.
-  const seen = await readLeaderboard(pages.get(survivor)!, playerPath, "Total");
+  const seen = await readLeaderboard(pages.get(survivor)!, playerPath, "Overall");
   expect([...seen.values()]).toEqual([...total.values()]);
 });

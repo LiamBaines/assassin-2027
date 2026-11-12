@@ -5,7 +5,7 @@ import type { Leaderboard } from "@/lib/api-types";
 import { LeaderboardTable } from "./leaderboard";
 import { RoundSelect } from "./round-select";
 
-/** Total plus one board per round, all fetched up front so switching is instant. */
+/** Overall plus one board per round, all fetched up front so switching is instant. */
 export function PlayerLeaderboard({
   total,
   rounds,

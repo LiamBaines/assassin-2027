@@ -5,7 +5,7 @@ import { Select } from "@/components/select";
 import { leaderboardHref } from "@/lib/leaderboard";
 import { roundLabel } from "./leaderboard";
 
-/** Total plus one option per round. */
+/** Overall plus one option per round. */
 export function RoundSelect({
   rounds,
   value,
@@ -15,7 +15,7 @@ export function RoundSelect({
   rounds: number[];
   value: number | null;
   onChange: (round: number | null) => void;
-  /** Render as an inline "Leaderboard · Total" heading-style trigger. */
+  /** Render as an inline "Leaderboard · Overall" heading-style trigger. */
   subtle?: boolean;
 }) {
   return (

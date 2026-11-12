@@ -167,7 +167,7 @@ export function Select({
             : "rounded-control border border-line bg-raised py-2 pr-2.5 pl-3 text-sm hover:border-muted"
         }`}
       >
-        <span className={selected ? "text-bone" : "text-muted"}>
+        <span className={`whitespace-nowrap ${selected ? "text-bone" : "text-muted"}`}>
           {prefix && <span className="text-muted">{prefix} · </span>}
           {selected?.label ?? placeholder}
         </span>
