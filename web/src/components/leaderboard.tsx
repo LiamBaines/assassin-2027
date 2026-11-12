@@ -3,7 +3,7 @@ import { EmptyState, StatusChip } from "@/components/ui";
 import type { Leaderboard as LeaderboardData } from "@/lib/api-types";
 import { rosterStatusView } from "@/lib/player-status";
 
-export const roundLabel = (r: number | null) => (r === null ? "Total" : `Round ${r}`);
+export const roundLabel = (r: number | null) => (r === null ? "Overall" : `Round ${r}`);
 
 /** Ranked table; the caller supplies the round selector. */
 export function LeaderboardTable({ data }: { data: LeaderboardData }) {
