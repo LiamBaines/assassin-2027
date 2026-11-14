@@ -220,12 +220,17 @@ function ThreadView({
     <section data-testid="inbox-thread" className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-2">
         <IconButton icon={ArrowLeft} label="Back to inbox" onClick={onBack} />
-        <h2 className="flex min-w-0 items-center gap-2 font-display text-xl font-semibold">
-          <span className="shrink-0">{threadTitle(role)}</span>
-          {name && (
-            <HiddenName name={name} label={`Hold to show ${threadTitle(role).toLowerCase()}`} testId="duel-reveal" />
-          )}
-        </h2>
+        {name ? (
+          <HiddenName
+            name={name}
+            caption={threadTitle(role)}
+            label={`Hold to show ${threadTitle(role).toLowerCase()}`}
+            testId="duel-reveal"
+            className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold"
+          />
+        ) : (
+          <h2 className="font-display text-xl font-semibold">{threadTitle(role)}</h2>
+        )}
       </div>
 
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto border-t border-line py-3">
