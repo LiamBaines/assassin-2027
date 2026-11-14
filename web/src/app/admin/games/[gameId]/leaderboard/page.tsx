@@ -50,13 +50,12 @@ export default async function AdminLeaderboardPage(props: {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-semibold">Leaderboard</h2>
+        <AdminRoundSelect
+          rounds={data.rounds}
+          value={data.roundNo}
+          basePath={`/admin/games/${encodeURIComponent(game.id)}/leaderboard`}
+        />
         <div className="flex items-center gap-2">
-          <AdminRoundSelect
-            rounds={data.rounds}
-            value={data.roundNo}
-            basePath={`/admin/games/${encodeURIComponent(game.id)}/leaderboard`}
-          />
           <RoundActions
             key={`${latestRound?.roundNo}-${latestRound?.endedAt}-${ring?.roundNo}`}
             gameActive={game.status !== "FINISHED"}
