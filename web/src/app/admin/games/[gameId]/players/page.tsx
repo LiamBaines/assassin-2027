@@ -219,7 +219,7 @@ function PlayerAction({
             label="Remove"
             confirmLabel="Remove"
             icon={<UserMinus {...ICON} />}
-            iconOnly
+            alwaysIconOnly
             message={removePlayerMessage(player)}
             confirmClassName={dangerButtonClass}
           />

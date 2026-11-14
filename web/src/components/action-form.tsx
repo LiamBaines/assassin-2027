@@ -5,7 +5,7 @@ import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Dialog, DialogActions } from "@/components/overlay";
 import { DuplicateNamesDialog } from "@/components/duplicate-names-dialog";
-import { Alert, iconLabelButtonClass } from "@/components/ui";
+import { Alert, iconButtonClass, iconLabelButtonClass } from "@/components/ui";
 import type { PlayerRef } from "@/lib/api-types";
 
 export type ActionResult = {
@@ -121,10 +121,13 @@ export function ConfirmSubmit({
   confirmClassName,
   icon,
   iconOnly,
+  alwaysIconOnly,
 }: {
   /** An element, not a component: Server Components can pass elements across the boundary. */
   icon?: ReactNode;
   iconOnly?: boolean;
+  /** Icon only at every breakpoint (no label at xl), like the kill button. */
+  alwaysIconOnly?: boolean;
   label: string;
   confirmLabel: string;
   /** Dialog heading; defaults to the trigger label. */
@@ -143,13 +146,23 @@ export function ConfirmSubmit({
         type="button"
         onClick={() => setConfirming(true)}
         disabled={pending}
-        aria-label={iconOnly ? label : undefined}
-        title={iconOnly ? label : undefined}
-        className={iconOnly ? `${iconLabelButtonClass} ${className ?? ""}` : className}
+        aria-label={iconOnly || alwaysIconOnly ? label : undefined}
+        title={iconOnly || alwaysIconOnly ? label : undefined}
+        className={
+          alwaysIconOnly
+            ? `${iconButtonClass} ${className ?? ""}`
+            : iconOnly
+              ? `${iconLabelButtonClass} ${className ?? ""}`
+              : className
+        }
       >
-        <ButtonFace icon={icon} iconOnly={iconOnly} pending={pending}>
-          {pending ? "Working…" : label}
-        </ButtonFace>
+        {alwaysIconOnly ? (
+          pending ? <Loader2 aria-hidden className="size-4 animate-spin" /> : icon
+        ) : (
+          <ButtonFace icon={icon} iconOnly={iconOnly} pending={pending}>
+            {pending ? "Working…" : label}
+          </ButtonFace>
+        )}
       </button>
       <Dialog open={confirming} onClose={close} title={title ?? label} description={message}>
         <DialogActions onCancel={close} disabled={pending}>
