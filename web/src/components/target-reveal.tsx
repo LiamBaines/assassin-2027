@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { useState } from "react";
 import { IconButton } from "@/components/ui";
 
@@ -39,25 +39,37 @@ export function HiddenName({
   name,
   label,
   testId,
+  caption,
   className = "",
 }: {
   name: string;
   label: string;
   testId?: string;
+  /** Small label above the name; when set, the eye is pushed to the far end. */
+  caption?: ReactNode;
   className?: string;
 }) {
   const { shown, holdProps } = useHoldReveal();
   return (
     <span className={`flex min-w-0 items-center gap-1 ${className}`}>
-      {shown ? (
-        <span data-testid={testId} className="min-w-0 truncate">
+      {/* Mask and name share one grid cell so the width is always the name's. */}
+      <span className={`min-w-0 ${caption ? "flex-1" : ""}`}>
+        {caption && <span className="block font-sans text-xs font-normal text-muted">{caption}</span>}
+        <span className="grid min-w-0">
+        <span
+          data-testid={shown ? testId : undefined}
+          aria-hidden={!shown}
+          className={`col-start-1 row-start-1 truncate ${shown ? "" : "invisible"}`}
+        >
           {name}
         </span>
-      ) : (
-        <span aria-hidden className="text-muted select-none">
-          ••••••
+        {!shown && (
+          <span aria-hidden className="col-start-1 row-start-1 text-muted select-none">
+            ••••••
+          </span>
+        )}
         </span>
-      )}
+      </span>
       <IconButton
         icon={shown ? EyeOff : Eye}
         label={label}
