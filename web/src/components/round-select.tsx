@@ -46,6 +46,7 @@ export function AdminRoundSelect({
   const router = useRouter();
   return (
     <RoundSelect
+      subtle
       rounds={rounds}
       value={value}
       onChange={(r) => router.push(leaderboardHref(basePath, r))}
